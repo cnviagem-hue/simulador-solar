@@ -117,7 +117,6 @@ const kitsMicro = [
   { Kit: 'KIT MICRO 5040KWh', Placas: '66', Modulo: '620W', Inversor: 'TSUNESS TSOL', Valor: '88.228,95' }
 ];
 
-
 // --- COMPONENTE LAYOUT BASE ---
 const DashboardLayout = ({ children, title, setView, role, currentTab, setCurrentTab }) => {
   return (
@@ -931,3 +930,45 @@ const VendedorView = ({ setView }) => {
     </div>
   );
 };
+
+export default function App() {
+  const [currentView, setCurrentView] = useState('login'); 
+
+  // --- EFEITO DE BLINDAGEM DO SISTEMA ---
+  useEffect(() => {
+    // 1. Bloquear clique direito do rato (Menu Contextual)
+    const blockContextMenu = (e) => {
+      e.preventDefault();
+    };
+
+    // 2. Bloquear atalhos de teclado (F12, Ctrl+Shift+I, Ctrl+U)
+    const blockKeyboardShortcuts = (e) => {
+      if (
+        e.key === 'F12' || 
+        (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'C' || e.key === 'c' || e.key === 'J' || e.key === 'j')) ||
+        (e.ctrlKey && (e.key === 'U' || e.key === 'u'))
+      ) {
+        e.preventDefault();
+      }
+    };
+
+    // Adiciona os ouvintes de eventos quando o sistema inicia
+    document.addEventListener('contextmenu', blockContextMenu);
+    document.addEventListener('keydown', blockKeyboardShortcuts);
+
+    // Limpa os ouvintes caso o componente seja desmontado
+    return () => {
+      document.removeEventListener('contextmenu', blockContextMenu);
+      document.removeEventListener('keydown', blockKeyboardShortcuts);
+    };
+  }, []);
+
+  return (
+    <div className="font-sans antialiased bg-[#030811] min-h-screen w-full select-none">
+      {currentView === 'login' && <LoginView setView={setCurrentView} />}
+      {currentView === 'master' && <MasterView setView={setCurrentView} />}
+      {currentView === 'empresa' && <EmpresaView setView={setCurrentView} />}
+      {currentView === 'vendedor' && <VendedorView setView={setCurrentView} />}
+    </div>
+  );
+}
