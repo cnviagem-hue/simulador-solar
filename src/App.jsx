@@ -49,70 +49,70 @@ const kitsString = [
 ];
 
 const kitsMicro = [
-  { Kit: 'KIT MICRO 230KWh', Placas: '3', Modulo: '620W', Inversor: 'TSUNESS', Valor: '7.725,81' },
-  { Kit: 'KIT MICRO 310KWh', Placas: '4', Modulo: '620W', Inversor: 'TSUNESS', Valor: '8.342,16' },
-  { Kit: 'KIT MICRO 390KWh', Placas: '5', Modulo: '620W', Inversor: 'TSUNESS', Valor: '9.620,01' },
-  { Kit: 'KIT MICRO 460KWh', Placas: '6', Modulo: '620W', Inversor: 'TSUNESS', Valor: '10.236,36' },
-  { Kit: 'KIT MICRO 540KWh', Placas: '7', Modulo: '620W', Inversor: 'TSUNESS', Valor: '12.679,71' },
-  { Kit: 'KIT MICRO 620KWh', Placas: '8', Modulo: '620W', Inversor: 'TSUNESS', Valor: '13.924,63' },
-  { Kit: 'KIT MICRO 690KWh', Placas: '9', Modulo: '620W', Inversor: 'TSUNESS', Valor: '14.734,62' },
-  { Kit: 'KIT MICRO 770KWh', Placas: '10', Modulo: '620W', Inversor: 'TSUNESS', Valor: '15.579,54' },
-  { Kit: 'KIT MICRO 840KWh', Placas: '11', Modulo: '620W', Inversor: 'TSUNESS', Valor: '16.424,46' },
-  { Kit: 'KIT MICRO 920KWh', Placas: '12', Modulo: '620W', Inversor: 'TSUNESS', Valor: '17.269,38' },
-  { Kit: 'KIT MICRO 1000KWh', Placas: '13', Modulo: '620W', Inversor: 'TSUNESS', Valor: '20.136,94' },
-  { Kit: 'KIT MICRO 1070KWh', Placas: '14', Modulo: '620W', Inversor: 'TSUNESS', Valor: '21.264,26' },
-  { Kit: 'KIT MICRO 1150KWh', Placas: '15', Modulo: '620W', Inversor: 'TSUNESS', Valor: '22.130,75' },
-  { Kit: 'KIT MICRO 1230KWh', Placas: '16', Modulo: '620W', Inversor: 'TSUNESS', Valor: '22.997,24' },
-  { Kit: 'KIT MICRO 1300KWh', Placas: '17', Modulo: '620W', Inversor: 'TSUNESS', Valor: '24.005,01' },
-  { Kit: 'KIT MICRO 1380KWh', Placas: '18', Modulo: '620W', Inversor: 'TSUNESS', Valor: '24.871,51' },
-  { Kit: 'KIT MICRO 1450KWh', Placas: '19', Modulo: '620W', Inversor: 'TSUNESS', Valor: '28.057,52' },
-  { Kit: 'KIT MICRO 1530KWh', Placas: '20', Modulo: '620W', Inversor: 'TSUNESS', Valor: '28.924,01' },
-  { Kit: 'KIT MICRO 1610KWh', Placas: '21', Modulo: '620W', Inversor: 'TSUNESS', Valor: '30.160,35' },
-  { Kit: 'KIT MICRO 1680KWh', Placas: '22', Modulo: '620W', Inversor: 'TSUNESS', Valor: '31.026,84' },
-  { Kit: 'KIT MICRO 1760KWh', Placas: '23', Modulo: '620W', Inversor: 'TSUNESS', Valor: '31.893,35' },
-  { Kit: 'KIT MICRO 1840KWh', Placas: '24', Modulo: '620W', Inversor: 'TSUNESS', Valor: '32.759,84' },
-  { Kit: 'KIT MICRO 1910KWh', Placas: '25', Modulo: '620W', Inversor: 'TSUNESS', Valor: '35.397,73' },
-  { Kit: 'KIT MICRO 1990KWh', Placas: '26', Modulo: '620W', Inversor: 'TSUNESS', Valor: '37.010,76' },
-  { Kit: 'KIT MICRO 2060KWh', Placas: '27', Modulo: '620W', Inversor: 'TSUNESS', Valor: '37.877,26' },
-  { Kit: 'KIT MICRO 2140KWh', Placas: '28', Modulo: '620W', Inversor: 'TSUNESS', Valor: '38.743,75' },
-  { Kit: 'KIT MICRO 2220KWh', Placas: '29', Modulo: '620W', Inversor: 'TSUNESS', Valor: '39.751,52' },
-  { Kit: 'KIT MICRO 2290KWh', Placas: '30', Modulo: '620W', Inversor: 'TSUNESS', Valor: '40.618,01' },
-  { Kit: 'KIT MICRO 2370KWh', Placas: '31', Modulo: '620W', Inversor: 'TSUNESS', Valor: '44.043,20' },
-  { Kit: 'KIT MICRO 2450KWh', Placas: '32', Modulo: '620W', Inversor: 'TSUNESS', Valor: '45.170,51' },
-  { Kit: 'KIT MICRO 2520KWh', Placas: '33', Modulo: '620W', Inversor: 'TSUNESS', Valor: '46.178,29' },
-  { Kit: 'KIT MICRO 2600KWh', Placas: '34', Modulo: '620W', Inversor: 'TSUNESS', Valor: '47.044,78' },
-  { Kit: 'KIT MICRO 2670KWh', Placas: '35', Modulo: '620W', Inversor: 'TSUNESS', Valor: '47.911,28' },
-  { Kit: 'KIT MICRO 2750KWh', Placas: '36', Modulo: '620W', Inversor: 'TSUNESS', Valor: '48.777,77' },
-  { Kit: 'KIT MICRO 2830KWh', Placas: '37', Modulo: '620W', Inversor: 'TSUNESS', Valor: '51.844,23' },
-  { Kit: 'KIT MICRO 2900KWh', Placas: '38', Modulo: '620W', Inversor: 'TSUNESS', Valor: '52.971,55' },
-  { Kit: 'KIT MICRO 2980KWh', Placas: '39', Modulo: '620W', Inversor: 'TSUNESS', Valor: '53.838,05' },
-  { Kit: 'KIT MICRO 3060KWh', Placas: '40', Modulo: '620W', Inversor: 'TSUNESS', Valor: '54.704,54' },
-  { Kit: 'KIT MICRO 3130KWh', Placas: '41', Modulo: '620W', Inversor: 'TSUNESS', Valor: '56.069,45' },
-  { Kit: 'KIT MICRO 3210KWh', Placas: '42', Modulo: '620W', Inversor: 'TSUNESS', Valor: '56.935,94' },
-  { Kit: 'KIT MICRO 3280KWh', Placas: '43', Modulo: '620W', Inversor: 'TSUNESS', Valor: '59.432,56' },
-  { Kit: 'KIT MICRO 3360KWh', Placas: '44', Modulo: '620W', Inversor: 'TSUNESS', Valor: '60.559,88' },
-  { Kit: 'KIT MICRO 3440KWh', Placas: '45', Modulo: '620W', Inversor: 'TSUNESS', Valor: '61.567,65' },
-  { Kit: 'KIT MICRO 3510KWh', Placas: '46', Modulo: '620W', Inversor: 'TSUNESS', Valor: '62.434,14' },
-  { Kit: 'KIT MICRO 3590KWh', Placas: '47', Modulo: '620W', Inversor: 'TSUNESS', Valor: '63.300,64' },
-  { Kit: 'KIT MICRO 3670KWh', Placas: '48', Modulo: '620W', Inversor: 'TSUNESS', Valor: '64.167,13' },
-  { Kit: 'KIT MICRO 3740KWh', Placas: '49', Modulo: '620W', Inversor: 'TSUNESS', Valor: '66.805,02' },
-  { Kit: 'KIT MICRO 3820KWh', Placas: '50', Modulo: '620W', Inversor: 'TSUNESS', Valor: '67.671,51' },
-  { Kit: 'KIT MICRO 3890KWh', Placas: '51', Modulo: '620W', Inversor: 'TSUNESS', Valor: '69.655,98' },
-  { Kit: 'KIT MICRO 3970KWh', Placas: '52', Modulo: '620W', Inversor: 'TSUNESS', Valor: '70.522,47' },
-  { Kit: 'KIT MICRO 4050KWh', Placas: '53', Modulo: '620W', Inversor: 'TSUNESS', Valor: '71.530,24' },
-  { Kit: 'KIT MICRO 4120KWh', Placas: '54', Modulo: '620W', Inversor: 'TSUNESS', Valor: '72.396,73' },
-  { Kit: 'KIT MICRO 4200KWh', Placas: '55', Modulo: '620W', Inversor: 'TSUNESS', Valor: '75.321,93' },
-  { Kit: 'KIT MICRO 4280KWh', Placas: '56', Modulo: '620W', Inversor: 'TSUNESS', Valor: '76.188,42' },
-  { Kit: 'KIT MICRO 4350KWh', Placas: '57', Modulo: '620W', Inversor: 'TSUNESS', Valor: '77.457,01' },
-  { Kit: 'KIT MICRO 4430KWh', Placas: '58', Modulo: '620W', Inversor: 'TSUNESS', Valor: '78.323,50' },
-  { Kit: 'KIT MICRO 4500KWh', Placas: '59', Modulo: '620W', Inversor: 'TSUNESS', Valor: '79.190,00' },
-  { Kit: 'KIT MICRO 4580KWh', Placas: '60', Modulo: '620W', Inversor: 'TSUNESS', Valor: '80.056,49' },
-  { Kit: 'KIT MICRO 4660KWh', Placas: '61', Modulo: '620W', Inversor: 'TSUNESS', Valor: '83.494,38' },
-  { Kit: 'KIT MICRO 4730KWh', Placas: '62', Modulo: '620W', Inversor: 'TSUNESS', Valor: '84.360,88' },
-  { Kit: 'KIT MICRO 4810KWh', Placas: '63', Modulo: '620W', Inversor: 'TSUNESS', Valor: '85.488,20' },
-  { Kit: 'KIT MICRO 4890KWh', Placas: '64', Modulo: '620W', Inversor: 'TSUNESS', Valor: '86.354,69' },
-  { Kit: 'KIT MICRO 4960KWh', Placas: '65', Modulo: '620W', Inversor: 'TSUNESS', Valor: '87.362,46' },
-  { Kit: 'KIT MICRO 5040KWh', Placas: '66', Modulo: '620W', Inversor: 'TSUNESS', Valor: '88.228,95' }
+  { Kit: 'KIT MICRO 230KWh', Placas: '3 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX2250', Valor: '7.725,81' },
+  { Kit: 'KIT MICRO 310KWh', Placas: '4 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX2250', Valor: '8.342,16' },
+  { Kit: 'KIT MICRO 390KWh', Placas: '5 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '9.620,01' },
+  { Kit: 'KIT MICRO 460KWh', Placas: '6 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '10.236,36' },
+  { Kit: 'KIT MICRO 540KWh', Placas: '7 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '12.679,71' },
+  { Kit: 'KIT MICRO 620KWh', Placas: '8 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '13.924,63' },
+  { Kit: 'KIT MICRO 690KWh', Placas: '9 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '14.734,62' },
+  { Kit: 'KIT MICRO 770KWh', Placas: '10 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '15.579,54' },
+  { Kit: 'KIT MICRO 840KWh', Placas: '11 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '16.424,46' },
+  { Kit: 'KIT MICRO 920KWh', Placas: '12 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '17.269,38' },
+  { Kit: 'KIT MICRO 1000KWh', Placas: '13 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '20.136,94' },
+  { Kit: 'KIT MICRO 1070KWh', Placas: '14 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '21.264,26' },
+  { Kit: 'KIT MICRO 1150KWh', Placas: '15 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '22.130,75' },
+  { Kit: 'KIT MICRO 1230KWh', Placas: '16 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '22.997,24' },
+  { Kit: 'KIT MICRO 1300KWh', Placas: '17 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '24.005,01' },
+  { Kit: 'KIT MICRO 1380KWh', Placas: '18 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '24.871,51' },
+  { Kit: 'KIT MICRO 1450KWh', Placas: '19 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '28.057,52' },
+  { Kit: 'KIT MICRO 1530KWh', Placas: '20 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '28.924,01' },
+  { Kit: 'KIT MICRO 1610KWh', Placas: '21 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '30.160,35' },
+  { Kit: 'KIT MICRO 1680KWh', Placas: '22 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '31.026,84' },
+  { Kit: 'KIT MICRO 1760KWh', Placas: '23 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '31.893,35' },
+  { Kit: 'KIT MICRO 1840KWh', Placas: '24 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '32.759,84' },
+  { Kit: 'KIT MICRO 1910KWh', Placas: '25 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '35.397,73' },
+  { Kit: 'KIT MICRO 1990KWh', Placas: '26 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '37.010,76' },
+  { Kit: 'KIT MICRO 2060KWh', Placas: '27 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '37.877,26' },
+  { Kit: 'KIT MICRO 2140KWh', Placas: '28 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '38.743,75' },
+  { Kit: 'KIT MICRO 2220KWh', Placas: '29 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '39.751,52' },
+  { Kit: 'KIT MICRO 2290KWh', Placas: '30 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '40.618,01' },
+  { Kit: 'KIT MICRO 2370KWh', Placas: '31 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '44.043,20' },
+  { Kit: 'KIT MICRO 2450KWh', Placas: '32 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '45.170,51' },
+  { Kit: 'KIT MICRO 2520KWh', Placas: '33 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '46.178,29' },
+  { Kit: 'KIT MICRO 2600KWh', Placas: '34 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '47.044,78' },
+  { Kit: 'KIT MICRO 2670KWh', Placas: '35 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '47.911,28' },
+  { Kit: 'KIT MICRO 2750KWh', Placas: '36 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '48.777,77' },
+  { Kit: 'KIT MICRO 2830KWh', Placas: '37 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '51.844,23' },
+  { Kit: 'KIT MICRO 2900KWh', Placas: '38 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '52.971,55' },
+  { Kit: 'KIT MICRO 2980KWh', Placas: '39 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '53.838,05' },
+  { Kit: 'KIT MICRO 3060KWh', Placas: '40 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '54.704,54' },
+  { Kit: 'KIT MICRO 3130KWh', Placas: '41 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '56.069,45' },
+  { Kit: 'KIT MICRO 3210KWh', Placas: '42 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '56.935,94' },
+  { Kit: 'KIT MICRO 3280KWh', Placas: '43 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '59.432,56' },
+  { Kit: 'KIT MICRO 3360KWh', Placas: '44 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '60.559,88' },
+  { Kit: 'KIT MICRO 3440KWh', Placas: '45 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '61.567,65' },
+  { Kit: 'KIT MICRO 3510KWh', Placas: '46 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '62.434,14' },
+  { Kit: 'KIT MICRO 3590KWh', Placas: '47 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '63.300,64' },
+  { Kit: 'KIT MICRO 3670KWh', Placas: '48 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '64.167,13' },
+  { Kit: 'KIT MICRO 3740KWh', Placas: '49 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '66.805,02' },
+  { Kit: 'KIT MICRO 3820KWh', Placas: '50 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '67.671,51' },
+  { Kit: 'KIT MICRO 3890KWh', Placas: '51 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '69.655,98' },
+  { Kit: 'KIT MICRO 3970KWh', Placas: '52 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '70.522,47' },
+  { Kit: 'KIT MICRO 4050KWh', Placas: '53 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '71.530,24' },
+  { Kit: 'KIT MICRO 4120KWh', Placas: '54 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '72.396,73' },
+  { Kit: 'KIT MICRO 4200KWh', Placas: '55 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '75.321,93' },
+  { Kit: 'KIT MICRO 4280KWh', Placas: '56 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '76.188,42' },
+  { Kit: 'KIT MICRO 4350KWh', Placas: '57 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '77.457,01' },
+  { Kit: 'KIT MICRO 4430KWh', Placas: '58 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '78.323,50' },
+  { Kit: 'KIT MICRO 4500KWh', Placas: '59 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '79.190,00' },
+  { Kit: 'KIT MICRO 4580KWh', Placas: '60 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '80.056,49' },
+  { Kit: 'KIT MICRO 4660KWh', Placas: '61 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '83.494,38' },
+  { Kit: 'KIT MICRO 4730KWh', Placas: '62 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '84.360,88' },
+  { Kit: 'KIT MICRO 4810KWh', Placas: '63 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '85.488,20' },
+  { Kit: 'KIT MICRO 4890KWh', Placas: '64 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '86.354,69' },
+  { Kit: 'KIT MICRO 4960KWh', Placas: '65 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '87.362,46' },
+  { Kit: 'KIT MICRO 5040KWh', Placas: '66 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '88.228,95' }
 ];
 
 // Dados Falsos (Mockup CRM)
@@ -489,28 +489,65 @@ const VendedorView = ({ setView }) => {
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                             <div className="relative group">
-                                <select id="kitString" value={formData.kitString} onChange={handleInputChange} className="w-full bg-[#0B192C] border border-slate-700 focus:border-amber-500 rounded-xl py-3.5 px-4 text-sm text-white transition outline-none appearance-none shadow-inner cursor-pointer">
+                                <label className="block text-xs font-semibold text-slate-300 mb-2">1: Kits String *</label>
+                                <span className="absolute inset-y-0 left-0 flex items-center pl-4 mt-6 text-amber-400"><Zap className="w-4 h-4"/></span>
+                                <select id="kitString" value={formData.kitString} onChange={handleInputChange} className="w-full bg-[#0B192C] border border-slate-700 focus:border-amber-500 rounded-xl py-3.5 pl-11 pr-4 text-sm text-white transition outline-none appearance-none shadow-inner cursor-pointer">
                                     <option value="" disabled>-- Selecione Kit String --</option>
                                     {kitsString.map((k, i) => <option key={i} value={i}>{k.Kit} - R$ {k.Valor}</option>)}
                                 </select>
-                                <span className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none text-slate-400"><ChevronDown className="w-4 h-4"/></span>
+                                <span className="absolute inset-y-0 right-0 flex items-center pr-4 mt-6 pointer-events-none text-slate-400"><ChevronDown className="w-4 h-4"/></span>
                             </div>
                             <div className="relative group">
-                                <select id="kitMicro" value={formData.kitMicro} onChange={handleInputChange} className="w-full bg-[#0B192C] border border-slate-700 focus:border-amber-500 rounded-xl py-3.5 px-4 text-sm text-white transition outline-none appearance-none shadow-inner cursor-pointer">
+                                <label className="block text-xs font-semibold text-slate-300 mb-2">2: Kits Micro *</label>
+                                <span className="absolute inset-y-0 left-0 flex items-center pl-4 mt-6 text-amber-400"><Zap className="w-4 h-4"/></span>
+                                <select id="kitMicro" value={formData.kitMicro} onChange={handleInputChange} className="w-full bg-[#0B192C] border border-slate-700 focus:border-amber-500 rounded-xl py-3.5 pl-11 pr-4 text-sm text-white transition outline-none appearance-none shadow-inner cursor-pointer">
                                     <option value="" disabled>-- Selecione Kit Micro --</option>
                                     {kitsMicro.map((k, i) => <option key={i} value={i}>{k.Kit} - R$ {k.Valor}</option>)}
                                 </select>
-                                <span className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none text-slate-400"><ChevronDown className="w-4 h-4"/></span>
+                                <span className="absolute inset-y-0 right-0 flex items-center pr-4 mt-6 pointer-events-none text-slate-400"><ChevronDown className="w-4 h-4"/></span>
                             </div>
                         </div>
                         <div>
                             <div className="relative group">
-                                <select id="roofStructure" value={formData.roofStructure} onChange={handleInputChange} className="w-full bg-[#0B192C] border border-slate-700 focus:border-amber-500 rounded-xl py-3.5 px-4 text-sm text-white transition outline-none appearance-none shadow-inner cursor-pointer">
+                                <label className="block text-xs font-semibold text-slate-300 mb-2">Estrutura do Telhado *</label>
+                                <span className="absolute inset-y-0 left-0 flex items-center pl-4 mt-6 text-slate-400 group-focus-within:text-amber-400 transition-colors"><Building className="w-4 h-4"/></span>
+                                <select id="roofStructure" value={formData.roofStructure} onChange={handleInputChange} className="w-full bg-[#0B192C] border border-slate-700 focus:border-amber-500 rounded-xl py-3.5 pl-11 pr-4 text-sm text-white transition outline-none appearance-none shadow-inner cursor-pointer">
                                     <option value="" disabled>-- Selecione a Estrutura --</option>
-                                    <option value="Madeira">Madeira</option>
-                                    <option value="Ferro">Ferro</option>
+                                    <option value="Madeira">1: Madeira</option>
+                                    <option value="Ferro">2: Ferro</option>
                                 </select>
-                                <span className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none text-slate-400"><ChevronDown className="w-4 h-4"/></span>
+                                <span className="absolute inset-y-0 right-0 flex items-center pr-4 mt-6 pointer-events-none text-slate-400"><ChevronDown className="w-4 h-4"/></span>
+                            </div>
+                        </div>
+                        <div className="bg-gradient-to-br from-[#0B192C] to-slate-900 border border-slate-700/80 rounded-2xl p-6 mt-2 grid grid-cols-2 md:grid-cols-4 gap-6 relative overflow-hidden shadow-lg">
+                            <div className="absolute -right-8 -bottom-8 text-slate-800/40 pointer-events-none transform rotate-12"><Sun className="w-48 h-48"/></div>
+                            
+                            <div className="space-y-1.5 relative z-10">
+                                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block flex items-center gap-1.5">
+                                    Qtd. Placas
+                                </span>
+                                <span id="detail-placas" className="text-lg font-extrabold text-white block">{activeKit ? activeKit.Placas : '--'}</span>
+                            </div>
+
+                            <div className="space-y-1.5 relative z-10">
+                                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block flex items-center gap-1.5">
+                                    Potência
+                                </span>
+                                <span id="detail-modulo" className="text-lg font-extrabold text-white truncate max-w-full block">{activeKit ? activeKit.Modulo.replace(/Módulo\s*/gi, '').trim() : '--'}</span>
+                            </div>
+
+                            <div className="space-y-1.5 relative z-10">
+                                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block flex items-center gap-1.5">
+                                    Inversor
+                                </span>
+                                <span id="detail-inversor" className="text-lg font-extrabold text-white truncate max-w-full block">{activeKit ? activeKit.Inversor : '--'}</span>
+                            </div>
+
+                            <div className="space-y-1.5 relative z-10">
+                                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block flex items-center gap-1.5">
+                                    <span className="text-emerald-600">Valor do Kit</span>
+                                </span>
+                                <span className="text-lg font-extrabold text-emerald-400 block">{activeKit ? `R$ ${activeKit.Valor}` : '--'}</span>
                             </div>
                         </div>
                     </div>
@@ -523,10 +560,14 @@ const VendedorView = ({ setView }) => {
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                             <div className="relative group">
+                                <label className="block text-xs font-semibold text-slate-300 mb-2">Nome do Cliente *</label>
+                                <span className="absolute inset-y-0 left-0 flex items-center pl-4 mt-6 text-slate-400 group-focus-within:text-orange-500 transition-colors"><User className="w-4 h-4"/></span>
                                 <input type="text" id="clientName" value={formData.clientName} onChange={handleInputChange} placeholder="Nome do Cliente" 
-                                       className="w-full bg-[#0B192C] border border-slate-700 focus:border-orange-500 rounded-xl py-3.5 px-4 text-sm text-white placeholder-slate-500 transition outline-none shadow-inner" />
+                                       className="w-full bg-[#0B192C] border border-slate-700 focus:border-orange-500 rounded-xl py-3.5 pl-11 pr-4 text-sm text-white placeholder-slate-500 transition outline-none shadow-inner" />
                             </div>
                             <div className="relative group">
+                                <label className="block text-xs font-semibold text-slate-300 mb-2">WhatsApp *</label>
+                                <span className="absolute inset-y-0 left-0 flex items-center pl-4 mt-6 text-slate-400 group-focus-within:text-orange-500 transition-colors"><Smartphone className="w-4 h-4"/></span>
                                 <input type="tel" id="clientWhatsapp" value={formData.clientWhatsapp} onChange={(e) => {
                                       let val = e.target.value.replace(/\D/g, '');
                                       if (val.length > 11) val = val.substring(0, 11);
@@ -534,12 +575,14 @@ const VendedorView = ({ setView }) => {
                                       if (val.length > 2) formatted += ') ' + val.substring(2, 7);
                                       if (val.length > 7) formatted += '-' + val.substring(7, 11);
                                       setFormData({...formData, clientWhatsapp: formatted});
-                                  }} placeholder="WhatsApp (00) 00000-0000" 
-                                       className="w-full bg-[#0B192C] border border-slate-700 focus:border-orange-500 rounded-xl py-3.5 px-4 text-sm text-white placeholder-slate-500 transition outline-none shadow-inner" />
+                                  }} placeholder="(00) 00000-0000" 
+                                       className="w-full bg-[#0B192C] border border-slate-700 focus:border-orange-500 rounded-xl py-3.5 pl-11 pr-4 text-sm text-white placeholder-slate-500 transition outline-none shadow-inner" />
                             </div>
                             <div className="relative group">
+                                <label className="block text-xs font-semibold text-slate-300 mb-2">Cidade / Estado *</label>
+                                <span className="absolute inset-y-0 left-0 flex items-center pl-4 mt-6 text-slate-400 group-focus-within:text-orange-500 transition-colors"><MapPin className="w-4 h-4"/></span>
                                 <input type="text" id="clientCity" value={formData.clientCity} onChange={handleInputChange} placeholder="Cidade - Estado" 
-                                       className="w-full bg-[#0B192C] border border-slate-700 focus:border-orange-500 rounded-xl py-3.5 px-4 text-sm text-white placeholder-slate-500 transition outline-none shadow-inner" />
+                                       className="w-full bg-[#0B192C] border border-slate-700 focus:border-orange-500 rounded-xl py-3.5 pl-11 pr-4 text-sm text-white placeholder-slate-500 transition outline-none shadow-inner" />
                             </div>
                         </div>
                     </div>
