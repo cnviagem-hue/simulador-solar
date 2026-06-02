@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { Search, Building, Users, Zap, Plus, Settings, AlertCircle, LogOut, CheckCircle, ChevronDown, User, Smartphone, MapPin, BarChart3, Sun, FileSpreadsheet, ClipboardList, MessageCircle, BookOpen } from 'lucide-react';
+import { Search, Building, Users, Zap, Plus, Settings, AlertCircle, LogOut, CheckCircle, ChevronDown, User, Smartphone, MapPin, BarChart3, Sun, FileSpreadsheet, ClipboardList, MessageCircle, BookOpen, Menu, X } from 'lucide-react';
 
 // ==========================================
 // 1. CONFIGURAÇÃO DO FIREBASE
@@ -140,32 +140,65 @@ const chartData = [
 // 3. LAYOUT BASE DO SAAS (Apenas para Master/Empresa)
 // ==========================================
 const DashboardLayout = ({ children, title, setView, role, currentTab, setCurrentTab }) => {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+
+  const handleTabChange = (tab) => {
+    setCurrentTab(tab);
+    setIsMobileMenuOpen(false); // Fecha o menu ao clicar num item no telemóvel
+  };
+
   return (
     <div className="flex h-screen bg-[#030811] text-slate-100 font-sans selection:bg-orange-500 overflow-hidden w-full">
-      <aside className="w-64 bg-[#0B192C] border-r border-slate-800 flex flex-col justify-between hidden md:flex shrink-0">
+      
+      {/* MOBILE MENU OVERLAY (Fundo escuro ao abrir o menu no telemóvel) */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/80 z-40 md:hidden backdrop-blur-sm" 
+          onClick={toggleMobileMenu}
+        ></div>
+      )}
+
+      {/* Sidebar Lateral (Responsiva) */}
+      <aside className={`
+        fixed md:static inset-y-0 left-0 z-50
+        w-64 bg-[#0B192C] border-r border-slate-800 
+        flex flex-col justify-between shrink-0
+        transition-transform duration-300 ease-in-out
+        ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+      `}>
         <div>
-          <div className="h-20 flex items-center px-6 border-b border-slate-800 space-x-3">
-            <div className="bg-gradient-to-tr from-amber-500 to-orange-500 p-1.5 rounded-lg"><Sun className="w-5 h-5 text-[#0B192C]" /></div>
-            <span className="font-extrabold text-white tracking-tight">LD <span className="text-amber-500">SIMULADOR</span></span>
+          <div className="h-20 flex items-center justify-between px-6 border-b border-slate-800">
+            <div className="flex items-center space-x-3">
+              <div className="bg-gradient-to-tr from-amber-500 to-orange-500 p-1.5 rounded-lg"><Sun className="w-5 h-5 text-[#0B192C]" /></div>
+              <span className="font-extrabold text-white tracking-tight">LD <span className="text-amber-500">SIMULADOR</span></span>
+            </div>
+            {/* Botão fechar apenas visível no mobile dentro do menu */}
+            <button onClick={toggleMobileMenu} className="md:hidden text-slate-400 hover:text-white">
+              <X className="w-6 h-6" />
+            </button>
           </div>
-          <nav className="p-4 space-y-2">
-            <button onClick={() => setCurrentTab('dashboard')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition font-medium ${currentTab === 'dashboard' ? 'bg-slate-800 text-white border-l-2 border-amber-500' : 'text-slate-400 hover:bg-slate-900/50 hover:text-white'}`}>
+          <nav className="p-4 space-y-2 overflow-y-auto">
+            <button onClick={() => handleTabChange('dashboard')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition font-medium ${currentTab === 'dashboard' ? 'bg-slate-800 text-white border-l-2 border-amber-500' : 'text-slate-400 hover:bg-slate-900/50 hover:text-white'}`}>
               <BarChart3 className={`w-5 h-5 ${currentTab === 'dashboard' ? 'text-amber-500' : ''}`} /> <span>Dashboard Central</span>
             </button>
             {role === 'master' && (
-              <button onClick={() => setCurrentTab('empresas')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition font-medium ${currentTab === 'empresas' ? 'bg-slate-800 text-white border-l-2 border-amber-500' : 'text-slate-400 hover:bg-slate-900/50 hover:text-white'}`}>
+              <button onClick={() => handleTabChange('empresas')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition font-medium ${currentTab === 'empresas' ? 'bg-slate-800 text-white border-l-2 border-amber-500' : 'text-slate-400 hover:bg-slate-900/50 hover:text-white'}`}>
                 <Building className={`w-5 h-5 ${currentTab === 'empresas' ? 'text-amber-500' : ''}`} /> <span>Gestão de Empresas</span>
               </button>
             )}
             {role === 'empresa' && (
               <>
-                <button onClick={() => setCurrentTab('resultados')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition font-medium ${currentTab === 'resultados' ? 'bg-slate-800 text-white border-l-2 border-amber-500' : 'text-slate-400 hover:bg-slate-900/50 hover:text-white'}`}>
+                <button onClick={() => handleTabChange('resultados')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition font-medium ${currentTab === 'resultados' ? 'bg-slate-800 text-white border-l-2 border-amber-500' : 'text-slate-400 hover:bg-slate-900/50 hover:text-white'}`}>
                   <ClipboardList className={`w-5 h-5 ${currentTab === 'resultados' ? 'text-amber-500' : ''}`} /> <span>Resultados (CRM)</span>
                 </button>
-                <button onClick={() => setCurrentTab('vendedores')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition font-medium ${currentTab === 'vendedores' ? 'bg-slate-800 text-white border-l-2 border-amber-500' : 'text-slate-400 hover:bg-slate-900/50 hover:text-white'}`}>
+                <button onClick={() => handleTabChange('vendedores')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition font-medium ${currentTab === 'vendedores' ? 'bg-slate-800 text-white border-l-2 border-amber-500' : 'text-slate-400 hover:bg-slate-900/50 hover:text-white'}`}>
                   <Users className={`w-5 h-5 ${currentTab === 'vendedores' ? 'text-amber-500' : ''}`} /> <span>Meus Vendedores</span>
                 </button>
-                <button onClick={() => setCurrentTab('kits')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition font-medium ${currentTab === 'kits' ? 'bg-slate-800 text-white border-l-2 border-amber-500' : 'text-slate-400 hover:bg-slate-900/50 hover:text-white'}`}>
+                <button onClick={() => handleTabChange('kits')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition font-medium ${currentTab === 'kits' ? 'bg-slate-800 text-white border-l-2 border-amber-500' : 'text-slate-400 hover:bg-slate-900/50 hover:text-white'}`}>
                   <Zap className={`w-5 h-5 ${currentTab === 'kits' ? 'text-amber-500' : ''}`} /> <span>Gestão de Kits</span>
                 </button>
                 <div className="pt-4 mt-4 border-t border-slate-800/50">
@@ -177,26 +210,40 @@ const DashboardLayout = ({ children, title, setView, role, currentTab, setCurren
             )}
           </nav>
         </div>
-        <div className="p-4 border-t border-slate-800">
+        <div className="p-4 border-t border-slate-800 shrink-0">
           <button onClick={() => setView('login')} className="flex items-center space-x-3 text-slate-500 hover:text-red-400 transition px-4 py-2 w-full text-left font-medium">
             <LogOut className="w-5 h-5" /> <span>Sair com Segurança</span>
           </button>
         </div>
       </aside>
+
+      {/* Área Principal (Header + Conteúdo) */}
       <main className="flex-1 flex flex-col h-full relative bg-[#030811] overflow-hidden w-full">
         <header className="h-20 border-b border-slate-800 bg-[#0B192C]/80 backdrop-blur-md flex items-center justify-between px-4 sm:px-8 relative z-10 w-full shrink-0">
-          <h1 className="text-lg sm:text-xl font-bold text-white truncate pr-2">{title}</h1>
+          
+          <div className="flex items-center gap-3">
+            {/* O BOTÃO HAMBURGUER (Aparece apenas em telemóveis) */}
+            <button 
+              onClick={toggleMobileMenu} 
+              className="md:hidden p-2 -ml-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800/50 transition-colors"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+            <h1 className="text-lg sm:text-xl font-bold text-white truncate pr-2">{title}</h1>
+          </div>
+
           <div className="flex items-center space-x-3 sm:space-x-4 shrink-0">
             <div className="text-right">
               <p className="text-xs sm:text-sm font-bold text-white truncate max-w-[120px] sm:max-w-none">{role === 'master' ? 'Super Admin' : 'Admin Empresa'}</p>
               <p className="text-[10px] sm:text-xs text-emerald-400">Online</p>
             </div>
-            {/* NOVO BOTÃO SAIR NO TOPO (Apenas visível em telemóveis - MD:HIDDEN) */}
+            {/* Botão Sair Rápido no Topo para Telemóveis (Opcional, mas útil) */}
             <button onClick={() => setView('login')} className="md:hidden p-2 text-slate-400 hover:text-red-400 transition-colors rounded-lg bg-slate-800/50 border border-slate-700/50" title="Sair">
               <LogOut className="w-5 h-5" />
             </button>
           </div>
         </header>
+        
         <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-8 relative z-10 w-full">
           {children}
         </div>
@@ -294,7 +341,6 @@ const MasterView = ({ setView }) => {
 
       {currentTab === 'empresas' && (
         <div className="bg-[#0B192C] border border-slate-800 rounded-2xl overflow-hidden shadow-xl relative w-full">
-          {/* CORREÇÃO DO LAYOUT ESMAGADO NO MOBILE (flex-col para empilhar) */}
           <div className="p-4 sm:p-5 border-b border-slate-800 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-[#0B192C]/50 w-full">
             <div className="w-full flex flex-col sm:flex-row gap-3 flex-1">
               <div className="relative flex-1 group w-full">
@@ -383,7 +429,6 @@ const MasterView = ({ setView }) => {
                    <div className="relative group">
                      <label className="text-xs font-bold text-slate-400 mb-1 block">Plano Contratado</label>
                      <select className="w-full bg-[#030811] border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-amber-500 appearance-none cursor-pointer">
-                        {/* PLANOS ATUALIZADOS AQUI */}
                         <option>Free [Teste Ilimitado 14 dias]</option>
                         <option>Básico até 5 vendedores [R$ 100,00]</option>
                         <option>Pró até 10 vendedores [R$ 125,00]</option>
@@ -479,7 +524,6 @@ const EmpresaView = ({ setView }) => {
 
       {currentTab === 'resultados' && (
          <div className="bg-[#0B192C] border border-slate-800 rounded-2xl overflow-hidden shadow-xl flex flex-col h-full w-full">
-            {/* CORREÇÃO DO FILTRO NO MOBILE (Barra lateral elegante com scroll no telemóvel) */}
             <div className="p-4 sm:p-6 border-b border-slate-800 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-[#0B192C]/80 w-full">
               <div>
                 <h3 className="text-xl font-bold text-white flex items-center gap-2"><ClipboardList className="w-6 h-6 text-amber-500"/> Histórico de Orçamentos</h3>
@@ -498,7 +542,6 @@ const EmpresaView = ({ setView }) => {
                   <ChevronDown className="w-4 h-4 absolute right-3 top-2.5 text-slate-500 pointer-events-none" />
                 </div>
 
-                {/* FILTROS E BOTÃO EXCEL NUMA SÓ LINHA (COM SCROLL NO MOBILE) */}
                 <div className="w-full overflow-x-auto pb-2 sm:pb-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
                   <div className="flex items-center gap-2 w-max">
                     <div className="flex items-center bg-[#030811] border border-slate-700 rounded-xl p-1 shadow-inner shrink-0">
