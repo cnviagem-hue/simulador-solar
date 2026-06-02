@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, getDocs, writeBatch, doc } from 'firebase/firestore';
-import { getAuth, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, getDocs, writeBatch, doc, getDoc, setDoc } from 'firebase/firestore';
+import { getAuth, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from 'firebase/auth';
 import { Search, Building, Users, Zap, Plus, Settings, AlertCircle, LogOut, CheckCircle, ChevronDown, User, Smartphone, MapPin, BarChart3, Sun, FileSpreadsheet, ClipboardList, MessageCircle, BookOpen, Menu, X } from 'lucide-react';
 
 // ==========================================
@@ -19,6 +19,10 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app); 
+
+// MÁGICA: App secundário para cadastrar vendedores sem deslogar a Empresa
+const secondaryApp = initializeApp(firebaseConfig, "Secondary");
+const secondaryAuth = getAuth(secondaryApp);
 
 // ==========================================
 // 2. KITS DE SEGURANÇA (Caso a nuvem esteja vazia)
@@ -135,7 +139,7 @@ const DashboardLayout = ({ children, title, setView, role, currentTab, setCurren
 // ==========================================
 // 4. TELA DE LOGIN (Autenticação Real Firebase)
 // ==========================================
-const LoginView = ({ setView }) => {
+const LoginView = ({ setView, setUserData }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -152,12 +156,29 @@ const LoginView = ({ setView }) => {
     setError('');
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      // Lógica de Redirecionamento 
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      
+      // Lógica de Redirecionamento Inteligente
       if (email.toLowerCase() === 'cnviagem@gmail.com') {
+        setUserData({ role: 'master', uid: user.uid, email: user.email });
         setView('master');
       } else {
-        setView('empresa'); 
+        // Verifica no banco de dados se é Vendedor ou Empresa
+        const userDoc = await getDoc(doc(db, 'usuarios', user.uid));
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          setUserData({ ...data, uid: user.uid });
+          if (data.role === 'vendedor') {
+            setView('vendedor');
+          } else {
+            setView('empresa');
+          }
+        } else {
+          // Fallback para as contas de teste antigas
+          setUserData({ role: 'empresa', uid: user.uid, email: user.email });
+          setView('empresa'); 
+        }
       }
     } catch (err) {
       console.error(err);
@@ -359,7 +380,7 @@ const MasterView = ({ setView }) => {
 // ==========================================
 // 6. VISÃO EMPRESA (Upload Seguro e Invisível)
 // ==========================================
-const EmpresaView = ({ setView }) => {
+const EmpresaView = ({ setView, userData }) => {
   const [currentTab, setCurrentTab] = useState('kits');
   const [dateFilter, setDateFilter] = useState('semana');
   const [resultadosFilter, setResultadosFilter] = useState('7dias');
@@ -368,6 +389,10 @@ const EmpresaView = ({ setView }) => {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [uploadStatus, setUploadStatus] = useState('idle');
   
+  // Novos estados para criar vendedor
+  const [novoVendedor, setNovoVendedor] = useState({ nome: '', email: '', senha: '' });
+  const [vendedorLoading, setVendedorLoading] = useState(false);
+
   const [orcamentos, setOrcamentos] = useState([]);
   const [loadingCRM, setLoadingCRM] = useState(true);
 
@@ -403,6 +428,9 @@ const EmpresaView = ({ setView }) => {
   }, []);
 
   const orcamentosFiltrados = orcamentos.filter(orc => {
+      // Isolamento: A Empresa só vê os orçamentos ligados ao seu ID
+      if (userData && userData.uid && orc.empresaId && orc.empresaId !== userData.uid) return false;
+
       if (vendedorFilter !== 'todos' && orc.vendedor !== vendedorFilter) return false;
       const hojeMs = new Date().getTime();
       const umDiaMs = 24 * 60 * 60 * 1000;
@@ -471,7 +499,8 @@ const EmpresaView = ({ setView }) => {
                Modulo: String(kit.Modulo || kit.modulo || kit.MODULO || ''),
                Inversor: String(kit.Inversor || kit.inversor || kit.INVERSOR || ''),
                Valor: String(kit.Valor || kit.valor || kit.VALOR || '').replace('R$', '').trim(),
-               Tipo: String(kit.Tipo || kit.tipo || kit.TIPO || tipoInferido)
+               Tipo: String(kit.Tipo || kit.tipo || kit.TIPO || tipoInferido),
+               empresaId: userData?.uid || 'padrao' // Associa o Kit à Empresa
              });
           });
 
@@ -638,17 +667,46 @@ const EmpresaView = ({ setView }) => {
                  <div className="space-y-4">
                    <div>
                      <label className="text-xs font-bold text-slate-400 mb-1 block">Nome Completo do Consultor</label>
-                     <input type="text" placeholder="Ex: Carlos Mendes" className="w-full bg-[#030811] border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-amber-500"/>
+                     <input type="text" value={novoVendedor.nome} onChange={(e) => setNovoVendedor({...novoVendedor, nome: e.target.value})} placeholder="Ex: Carlos Mendes" className="w-full bg-[#030811] border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-amber-500"/>
                    </div>
                    <div>
                      <label className="text-xs font-bold text-slate-400 mb-1 block">E-mail (Login de Acesso)</label>
-                     <input type="email" placeholder="carlos@suaempresa.com" className="w-full bg-[#030811] border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-amber-500"/>
+                     <input type="email" value={novoVendedor.email} onChange={(e) => setNovoVendedor({...novoVendedor, email: e.target.value})} placeholder="carlos@suaempresa.com" className="w-full bg-[#030811] border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-amber-500"/>
                    </div>
                    <div>
-                     <label className="text-xs font-bold text-slate-400 mb-1 block">Senha Provisória Automática</label>
-                     <input type="text" readOnly value="Solar@2026" className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-amber-500 font-mono text-sm outline-none cursor-not-allowed"/>
+                     <label className="text-xs font-bold text-slate-400 mb-1 block">Senha Provisória</label>
+                     <input type="text" value={novoVendedor.senha} onChange={(e) => setNovoVendedor({...novoVendedor, senha: e.target.value})} placeholder="Mínimo 6 caracteres" className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-amber-500 font-mono text-sm outline-none focus:border-amber-500"/>
                    </div>
-                   <button onClick={() => setIsVendedorModalOpen(false)} className="w-full bg-gradient-to-r from-amber-400 to-orange-500 text-slate-900 font-extrabold py-3 rounded-xl mt-2 transition">Cadastrar Vendedor</button>
+                   <button 
+                     onClick={async () => {
+                        if(!novoVendedor.nome || !novoVendedor.email || novoVendedor.senha.length < 6) return alert('Preencha os dados e use uma senha com no mínimo 6 caracteres.');
+                        setVendedorLoading(true);
+                        try {
+                          // Criar usuário no Auth silenciosamente
+                          const cred = await createUserWithEmailAndPassword(secondaryAuth, novoVendedor.email, novoVendedor.senha);
+                          // Salvar perfil no banco de dados, vinculando à Empresa
+                          await setDoc(doc(db, 'usuarios', cred.user.uid), {
+                            nome: novoVendedor.nome,
+                            email: novoVendedor.email,
+                            role: 'vendedor',
+                            empresaId: userData?.uid || 'padrao',
+                            dataCriacao: serverTimestamp()
+                          });
+                          await signOut(secondaryAuth);
+                          alert('Vendedor cadastrado com sucesso e já pode fazer login!');
+                          setNovoVendedor({ nome: '', email: '', senha: '' });
+                          setIsVendedorModalOpen(false);
+                        } catch (err) {
+                          console.error(err);
+                          alert('Erro ao criar vendedor: ' + err.message);
+                        } finally {
+                          setVendedorLoading(false);
+                        }
+                     }} 
+                     disabled={vendedorLoading}
+                     className="w-full bg-gradient-to-r from-amber-400 to-orange-500 text-slate-900 font-extrabold py-3 rounded-xl mt-2 transition disabled:opacity-50">
+                     {vendedorLoading ? 'A Registar...' : 'Cadastrar Vendedor'}
+                   </button>
                  </div>
                </div>
             </div>
@@ -717,8 +775,8 @@ const EmpresaView = ({ setView }) => {
 // ==========================================
 // 7. VISÃO VENDEDOR (Agora com dados da Nuvem)
 // ==========================================
-const VendedorView = ({ setView, kitsString, kitsMicro }) => {
-  const [formData, setFormData] = useState({ sellerName: '', kitString: '', kitMicro: '', roofStructure: '', clientName: '', clientWhatsapp: '', clientCity: '' });
+const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
+  const [formData, setFormData] = useState({ sellerName: userData?.nome || '', kitString: '', kitMicro: '', roofStructure: '', clientName: '', clientWhatsapp: '', clientCity: '' });
   const [timeFilter, setTimeFilter] = useState('hoje');
   const [toast, setToast] = useState(null);
 
@@ -767,8 +825,17 @@ const VendedorView = ({ setView, kitsString, kitsMicro }) => {
       showToast('A enviar dados...', 'success');
       await addDoc(collection(db, "orcamentos"), {
         data: new Date().toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }),
-        vendedor: formData.sellerName, cliente: formData.clientName, whatsapp: formData.clientWhatsapp, cidade: formData.clientCity,
-        estrutura: formData.roofStructure, tipoKit: formData.kitString !== '' ? 'String' : 'Micro', kit: activeKit.Kit, valor: activeKit.Valor, timestamp: serverTimestamp()
+        vendedor: formData.sellerName, 
+        cliente: formData.clientName, 
+        whatsapp: formData.clientWhatsapp, 
+        cidade: formData.clientCity,
+        estrutura: formData.roofStructure, 
+        tipoKit: formData.kitString !== '' ? 'String' : 'Micro', 
+        kit: activeKit.Kit, 
+        valor: activeKit.Valor, 
+        timestamp: serverTimestamp(),
+        empresaId: userData?.empresaId || 'padrao', // Liga o orçamento à empresa dona
+        vendedorUid: userData?.uid || 'padrao'
       });
       const textMessage = buildMessage();
       const encodedText = encodeURIComponent(textMessage);
@@ -942,6 +1009,7 @@ const VendedorView = ({ setView, kitsString, kitsMicro }) => {
 // ==========================================
 export default function App() {
   const [currentView, setCurrentView] = useState('login'); 
+  const [userData, setUserData] = useState(null); // Memória Global do Usuário Logado
   
   // Estados Globais para os Kits que vêm do Firebase
   const [kitsString, setKitsString] = useState(fallbackKitsString);
@@ -971,8 +1039,15 @@ export default function App() {
         const strings = [];
         const micros = [];
         
+        // O Vendedor usa o ID da Empresa dele. A Empresa usa o seu próprio ID.
+        const targetEmpresaId = userData?.role === 'vendedor' ? userData?.empresaId : userData?.uid;
+        
         querySnapshot.forEach((doc) => {
           const kit = doc.data();
+
+          // ISOLAMENTO DE DADOS: Ignorar kits que não pertençam à empresa atual
+          if (targetEmpresaId && kit.empresaId && kit.empresaId !== targetEmpresaId) return;
+
           if (kit.Tipo === 'Micro' || (kit.Kit && String(kit.Kit).toUpperCase().includes('MICRO'))) {
             micros.push(kit);
           } else {
@@ -980,19 +1055,25 @@ export default function App() {
           }
         });
         
-        setKitsString(strings);
-        setKitsMicro(micros);
+        // Se após filtrar a lista ficar vazia, usar os de fallback para não quebrar a tela
+        if(strings.length === 0 && micros.length === 0) {
+            setKitsString(fallbackKitsString);
+            setKitsMicro(fallbackKitsMicro);
+        } else {
+            setKitsString(strings);
+            setKitsMicro(micros);
+        }
       }
     });
     return () => unsubscribe();
-  }, []);
+  }, [userData]);
 
   return (
     <div className="font-sans antialiased bg-[#030811] min-h-screen w-full select-none">
-      {currentView === 'login' && <LoginView setView={setCurrentView} />}
+      {currentView === 'login' && <LoginView setView={setCurrentView} setUserData={setUserData} />}
       {currentView === 'master' && <MasterView setView={setCurrentView} />}
-      {currentView === 'empresa' && <EmpresaView setView={setCurrentView} />}
-      {currentView === 'vendedor' && <VendedorView setView={setCurrentView} kitsString={kitsString} kitsMicro={kitsMicro} />}
+      {currentView === 'empresa' && <EmpresaView setView={setCurrentView} userData={userData} />}
+      {currentView === 'vendedor' && <VendedorView setView={setCurrentView} kitsString={kitsString} kitsMicro={kitsMicro} userData={userData} />}
     </div>
   );
 }
