@@ -126,9 +126,9 @@ const mockSimulacoes = [
 
 // Mock das Empresas (Visão Master) para gestão offline de pagamentos
 const mockEmpresas = [
-  { id: 1, nome: 'SolarTech Brasil', email: 'contato@solartech.com', plano: 'Pro (Até 20)', equipa: 12, status: 'Ativa', pgto: 'Pago' },
-  { id: 2, nome: 'Goiás Solar Integrador', email: 'vendas@goiassolar.com', plano: 'Básico (Até 5)', equipa: 4, status: 'Ativa', pgto: 'Atrasado' },
-  { id: 3, nome: 'Energia Pura Lda', email: 'diretoria@energiapura.com', plano: 'Free (Até 1)', equipa: 1, status: 'Bloqueada', pgto: 'Free' },
+  { id: 1, nome: 'SolarTech Brasil', email: 'contato@solartech.com', plano: 'Plano Pró 15 vendedores', equipa: 12, status: 'Ativa', pgto: 'Pago' },
+  { id: 2, nome: 'Goiás Solar Integrador', email: 'vendas@goiassolar.com', plano: 'Plano Básico 5 vendedores', equipa: 4, status: 'Ativa', pgto: 'Atrasado' },
+  { id: 3, nome: 'Energia Pura Lda', email: 'diretoria@energiapura.com', plano: 'Plano Free (Teste Ilimitado 14 Dias)', equipa: 14, status: 'Bloqueada', pgto: 'Free' },
 ];
 
 // Gráfico Nativo à prova de falhas
@@ -386,10 +386,10 @@ const MasterView = ({ setView }) => {
                    <div className="relative group">
                      <label className="text-xs font-bold text-slate-400 mb-1 block">Plano Contratado</label>
                      <select className="w-full bg-[#030811] border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-amber-500 appearance-none cursor-pointer">
-                        <option>Plano Free (Até 1 Vendedor)</option>
-                        <option>Plano Básico (Até 5 Vendedores)</option>
-                        <option>Plano Pro (Até 20 Vendedores)</option>
-                        <option>Plano Ilimitado</option>
+                        <option>Plano Free (Teste Ilimitado 14 Dias)</option>
+                        <option>Plano Básico 5 vendedores</option>
+                        <option>Plano Pró 15 vendedores</option>
+                        <option>Plano Master Ilimitado</option>
                      </select>
                      <span className="absolute inset-y-0 right-0 flex items-center pr-4 pt-5 pointer-events-none text-slate-400"><ChevronDown className="w-4 h-4"/></span>
                    </div>
