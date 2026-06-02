@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { Search, Building, Users, Zap, Plus, Settings, AlertCircle, LogOut, CheckCircle, ChevronDown, User, Smartphone, MapPin, BarChart3, Sun, FileSpreadsheet, ClipboardList, MessageCircle, BookOpen } from 'lucide-react';
+import { Search, Building, Users, Zap, Plus, Settings, AlertCircle, LogOut, CheckCircle, ChevronDown, User, Smartphone, MapPin, BarChart3, Sun, FileSpreadsheet, ClipboardList, MessageCircle, BookOpen, DollarSign } from 'lucide-react';
 
 // ==========================================
 // 1. CONFIGURAÇÃO DO FIREBASE
@@ -49,70 +49,70 @@ const kitsString = [
 ];
 
 const kitsMicro = [
-  { Kit: 'KIT MICRO 230KWh', Placas: '3 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX2250', Valor: '7.725,81' },
-  { Kit: 'KIT MICRO 310KWh', Placas: '4 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX2250', Valor: '8.342,16' },
-  { Kit: 'KIT MICRO 390KWh', Placas: '5 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '9.620,01' },
-  { Kit: 'KIT MICRO 460KWh', Placas: '6 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '10.236,36' },
-  { Kit: 'KIT MICRO 540KWh', Placas: '7 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '12.679,71' },
-  { Kit: 'KIT MICRO 620KWh', Placas: '8 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '13.924,63' },
-  { Kit: 'KIT MICRO 690KWh', Placas: '9 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '14.734,62' },
-  { Kit: 'KIT MICRO 770KWh', Placas: '10 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '15.579,54' },
-  { Kit: 'KIT MICRO 840KWh', Placas: '11 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '16.424,46' },
-  { Kit: 'KIT MICRO 920KWh', Placas: '12 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '17.269,38' },
-  { Kit: 'KIT MICRO 1000KWh', Placas: '13 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '20.136,94' },
-  { Kit: 'KIT MICRO 1070KWh', Placas: '14 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '21.264,26' },
-  { Kit: 'KIT MICRO 1150KWh', Placas: '15 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '22.130,75' },
-  { Kit: 'KIT MICRO 1230KWh', Placas: '16 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '22.997,24' },
-  { Kit: 'KIT MICRO 1300KWh', Placas: '17 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '24.005,01' },
-  { Kit: 'KIT MICRO 1380KWh', Placas: '18 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '24.871,51' },
-  { Kit: 'KIT MICRO 1450KWh', Placas: '19 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '28.057,52' },
-  { Kit: 'KIT MICRO 1530KWh', Placas: '20 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '28.924,01' },
-  { Kit: 'KIT MICRO 1610KWh', Placas: '21 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '30.160,35' },
-  { Kit: 'KIT MICRO 1680KWh', Placas: '22 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '31.026,84' },
-  { Kit: 'KIT MICRO 1760KWh', Placas: '23 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '31.893,35' },
-  { Kit: 'KIT MICRO 1840KWh', Placas: '24 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '32.759,84' },
-  { Kit: 'KIT MICRO 1910KWh', Placas: '25 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '35.397,73' },
-  { Kit: 'KIT MICRO 1990KWh', Placas: '26 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '37.010,76' },
-  { Kit: 'KIT MICRO 2060KWh', Placas: '27 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '37.877,26' },
-  { Kit: 'KIT MICRO 2140KWh', Placas: '28 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '38.743,75' },
-  { Kit: 'KIT MICRO 2220KWh', Placas: '29 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '39.751,52' },
-  { Kit: 'KIT MICRO 2290KWh', Placas: '30 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '40.618,01' },
-  { Kit: 'KIT MICRO 2370KWh', Placas: '31 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '44.043,20' },
-  { Kit: 'KIT MICRO 2450KWh', Placas: '32 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '45.170,51' },
-  { Kit: 'KIT MICRO 2520KWh', Placas: '33 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '46.178,29' },
-  { Kit: 'KIT MICRO 2600KWh', Placas: '34 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '47.044,78' },
-  { Kit: 'KIT MICRO 2670KWh', Placas: '35 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '47.911,28' },
-  { Kit: 'KIT MICRO 2750KWh', Placas: '36 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '48.777,77' },
-  { Kit: 'KIT MICRO 2830KWh', Placas: '37 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '51.844,23' },
-  { Kit: 'KIT MICRO 2900KWh', Placas: '38 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '52.971,55' },
-  { Kit: 'KIT MICRO 2980KWh', Placas: '39 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '53.838,05' },
-  { Kit: 'KIT MICRO 3060KWh', Placas: '40 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '54.704,54' },
-  { Kit: 'KIT MICRO 3130KWh', Placas: '41 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '56.069,45' },
-  { Kit: 'KIT MICRO 3210KWh', Placas: '42 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '56.935,94' },
-  { Kit: 'KIT MICRO 3280KWh', Placas: '43 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '59.432,56' },
-  { Kit: 'KIT MICRO 3360KWh', Placas: '44 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '60.559,88' },
-  { Kit: 'KIT MICRO 3440KWh', Placas: '45 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '61.567,65' },
-  { Kit: 'KIT MICRO 3510KWh', Placas: '46 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '62.434,14' },
-  { Kit: 'KIT MICRO 3590KWh', Placas: '47 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '63.300,64' },
-  { Kit: 'KIT MICRO 3670KWh', Placas: '48 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '64.167,13' },
-  { Kit: 'KIT MICRO 3740KWh', Placas: '49 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '66.805,02' },
-  { Kit: 'KIT MICRO 3820KWh', Placas: '50 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '67.671,51' },
-  { Kit: 'KIT MICRO 3890KWh', Placas: '51 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '69.655,98' },
-  { Kit: 'KIT MICRO 3970KWh', Placas: '52 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '70.522,47' },
-  { Kit: 'KIT MICRO 4050KWh', Placas: '53 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '71.530,24' },
-  { Kit: 'KIT MICRO 4120KWh', Placas: '54 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '72.396,73' },
-  { Kit: 'KIT MICRO 4200KWh', Placas: '55 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '75.321,93' },
-  { Kit: 'KIT MICRO 4280KWh', Placas: '56 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '76.188,42' },
-  { Kit: 'KIT MICRO 4350KWh', Placas: '57 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '77.457,01' },
-  { Kit: 'KIT MICRO 4430KWh', Placas: '58 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '78.323,50' },
-  { Kit: 'KIT MICRO 4500KWh', Placas: '59 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '79.190,00' },
-  { Kit: 'KIT MICRO 4580KWh', Placas: '60 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '80.056,49' },
-  { Kit: 'KIT MICRO 4660KWh', Placas: '61 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '83.494,38' },
-  { Kit: 'KIT MICRO 4730KWh', Placas: '62 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '84.360,88' },
-  { Kit: 'KIT MICRO 4810KWh', Placas: '63 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '85.488,20' },
-  { Kit: 'KIT MICRO 4890KWh', Placas: '64 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '86.354,69' },
-  { Kit: 'KIT MICRO 4960KWh', Placas: '65 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '87.362,46' },
-  { Kit: 'KIT MICRO 5040KWh', Placas: '66 placas', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '88.228,95' }
+  { Kit: 'KIT MICRO 230KWh', Placas: '3', Modulo: '620W', Inversor: 'TSUNESS', Valor: '7.725,81' },
+  { Kit: 'KIT MICRO 310KWh', Placas: '4', Modulo: '620W', Inversor: 'TSUNESS', Valor: '8.342,16' },
+  { Kit: 'KIT MICRO 390KWh', Placas: '5', Modulo: '620W', Inversor: 'TSUNESS', Valor: '9.620,01' },
+  { Kit: 'KIT MICRO 460KWh', Placas: '6', Modulo: '620W', Inversor: 'TSUNESS', Valor: '10.236,36' },
+  { Kit: 'KIT MICRO 540KWh', Placas: '7', Modulo: '620W', Inversor: 'TSUNESS', Valor: '12.679,71' },
+  { Kit: 'KIT MICRO 620KWh', Placas: '8', Modulo: '620W', Inversor: 'TSUNESS', Valor: '13.924,63' },
+  { Kit: 'KIT MICRO 690KWh', Placas: '9', Modulo: '620W', Inversor: 'TSUNESS', Valor: '14.734,62' },
+  { Kit: 'KIT MICRO 770KWh', Placas: '10', Modulo: '620W', Inversor: 'TSUNESS', Valor: '15.579,54' },
+  { Kit: 'KIT MICRO 840KWh', Placas: '11', Modulo: '620W', Inversor: 'TSUNESS', Valor: '16.424,46' },
+  { Kit: 'KIT MICRO 920KWh', Placas: '12', Modulo: '620W', Inversor: 'TSUNESS', Valor: '17.269,38' },
+  { Kit: 'KIT MICRO 1000KWh', Placas: '13', Modulo: '620W', Inversor: 'TSUNESS', Valor: '20.136,94' },
+  { Kit: 'KIT MICRO 1070KWh', Placas: '14', Modulo: '620W', Inversor: 'TSUNESS', Valor: '21.264,26' },
+  { Kit: 'KIT MICRO 1150KWh', Placas: '15', Modulo: '620W', Inversor: 'TSUNESS', Valor: '22.130,75' },
+  { Kit: 'KIT MICRO 1230KWh', Placas: '16', Modulo: '620W', Inversor: 'TSUNESS', Valor: '22.997,24' },
+  { Kit: 'KIT MICRO 1300KWh', Placas: '17', Modulo: '620W', Inversor: 'TSUNESS', Valor: '24.005,01' },
+  { Kit: 'KIT MICRO 1380KWh', Placas: '18', Modulo: '620W', Inversor: 'TSUNESS', Valor: '24.871,51' },
+  { Kit: 'KIT MICRO 1450KWh', Placas: '19', Modulo: '620W', Inversor: 'TSUNESS', Valor: '28.057,52' },
+  { Kit: 'KIT MICRO 1530KWh', Placas: '20', Modulo: '620W', Inversor: 'TSUNESS', Valor: '28.924,01' },
+  { Kit: 'KIT MICRO 1610KWh', Placas: '21', Modulo: '620W', Inversor: 'TSUNESS', Valor: '30.160,35' },
+  { Kit: 'KIT MICRO 1680KWh', Placas: '22', Modulo: '620W', Inversor: 'TSUNESS', Valor: '31.026,84' },
+  { Kit: 'KIT MICRO 1760KWh', Placas: '23', Modulo: '620W', Inversor: 'TSUNESS', Valor: '31.893,35' },
+  { Kit: 'KIT MICRO 1840KWh', Placas: '24', Modulo: '620W', Inversor: 'TSUNESS', Valor: '32.759,84' },
+  { Kit: 'KIT MICRO 1910KWh', Placas: '25', Modulo: '620W', Inversor: 'TSUNESS', Valor: '35.397,73' },
+  { Kit: 'KIT MICRO 1990KWh', Placas: '26', Modulo: '620W', Inversor: 'TSUNESS', Valor: '37.010,76' },
+  { Kit: 'KIT MICRO 2060KWh', Placas: '27', Modulo: '620W', Inversor: 'TSUNESS', Valor: '37.877,26' },
+  { Kit: 'KIT MICRO 2140KWh', Placas: '28', Modulo: '620W', Inversor: 'TSUNESS', Valor: '38.743,75' },
+  { Kit: 'KIT MICRO 2220KWh', Placas: '29', Modulo: '620W', Inversor: 'TSUNESS', Valor: '39.751,52' },
+  { Kit: 'KIT MICRO 2290KWh', Placas: '30', Modulo: '620W', Inversor: 'TSUNESS', Valor: '40.618,01' },
+  { Kit: 'KIT MICRO 2370KWh', Placas: '31', Modulo: '620W', Inversor: 'TSUNESS', Valor: '44.043,20' },
+  { Kit: 'KIT MICRO 2450KWh', Placas: '32', Modulo: '620W', Inversor: 'TSUNESS', Valor: '45.170,51' },
+  { Kit: 'KIT MICRO 2520KWh', Placas: '33', Modulo: '620W', Inversor: 'TSUNESS', Valor: '46.178,29' },
+  { Kit: 'KIT MICRO 2600KWh', Placas: '34', Modulo: '620W', Inversor: 'TSUNESS', Valor: '47.044,78' },
+  { Kit: 'KIT MICRO 2670KWh', Placas: '35', Modulo: '620W', Inversor: 'TSUNESS', Valor: '47.911,28' },
+  { Kit: 'KIT MICRO 2750KWh', Placas: '36', Modulo: '620W', Inversor: 'TSUNESS', Valor: '48.777,77' },
+  { Kit: 'KIT MICRO 2830KWh', Placas: '37', Modulo: '620W', Inversor: 'TSUNESS', Valor: '51.844,23' },
+  { Kit: 'KIT MICRO 2900KWh', Placas: '38', Modulo: '620W', Inversor: 'TSUNESS', Valor: '52.971,55' },
+  { Kit: 'KIT MICRO 2980KWh', Placas: '39', Modulo: '620W', Inversor: 'TSUNESS', Valor: '53.838,05' },
+  { Kit: 'KIT MICRO 3060KWh', Placas: '40', Modulo: '620W', Inversor: 'TSUNESS', Valor: '54.704,54' },
+  { Kit: 'KIT MICRO 3130KWh', Placas: '41', Modulo: '620W', Inversor: 'TSUNESS', Valor: '56.069,45' },
+  { Kit: 'KIT MICRO 3210KWh', Placas: '42', Modulo: '620W', Inversor: 'TSUNESS', Valor: '56.935,94' },
+  { Kit: 'KIT MICRO 3280KWh', Placas: '43', Modulo: '620W', Inversor: 'TSUNESS', Valor: '59.432,56' },
+  { Kit: 'KIT MICRO 3360KWh', Placas: '44', Modulo: '620W', Inversor: 'TSUNESS', Valor: '60.559,88' },
+  { Kit: 'KIT MICRO 3440KWh', Placas: '45', Modulo: '620W', Inversor: 'TSUNESS', Valor: '61.567,65' },
+  { Kit: 'KIT MICRO 3510KWh', Placas: '46', Modulo: '620W', Inversor: 'TSUNESS', Valor: '62.434,14' },
+  { Kit: 'KIT MICRO 3590KWh', Placas: '47', Modulo: '620W', Inversor: 'TSUNESS', Valor: '63.300,64' },
+  { Kit: 'KIT MICRO 3670KWh', Placas: '48', Modulo: '620W', Inversor: 'TSUNESS', Valor: '64.167,13' },
+  { Kit: 'KIT MICRO 3740KWh', Placas: '49', Modulo: '620W', Inversor: 'TSUNESS', Valor: '66.805,02' },
+  { Kit: 'KIT MICRO 3820KWh', Placas: '50', Modulo: '620W', Inversor: 'TSUNESS', Valor: '67.671,51' },
+  { Kit: 'KIT MICRO 3890KWh', Placas: '51', Modulo: '620W', Inversor: 'TSUNESS', Valor: '69.655,98' },
+  { Kit: 'KIT MICRO 3970KWh', Placas: '52', Modulo: '620W', Inversor: 'TSUNESS', Valor: '70.522,47' },
+  { Kit: 'KIT MICRO 4050KWh', Placas: '53', Modulo: '620W', Inversor: 'TSUNESS', Valor: '71.530,24' },
+  { Kit: 'KIT MICRO 4120KWh', Placas: '54', Modulo: '620W', Inversor: 'TSUNESS', Valor: '72.396,73' },
+  { Kit: 'KIT MICRO 4200KWh', Placas: '55', Modulo: '620W', Inversor: 'TSUNESS', Valor: '75.321,93' },
+  { Kit: 'KIT MICRO 4280KWh', Placas: '56', Modulo: '620W', Inversor: 'TSUNESS', Valor: '76.188,42' },
+  { Kit: 'KIT MICRO 4350KWh', Placas: '57', Modulo: '620W', Inversor: 'TSUNESS', Valor: '77.457,01' },
+  { Kit: 'KIT MICRO 4430KWh', Placas: '58', Modulo: '620W', Inversor: 'TSUNESS', Valor: '78.323,50' },
+  { Kit: 'KIT MICRO 4500KWh', Placas: '59', Modulo: '620W', Inversor: 'TSUNESS', Valor: '79.190,00' },
+  { Kit: 'KIT MICRO 4580KWh', Placas: '60', Modulo: '620W', Inversor: 'TSUNESS', Valor: '80.056,49' },
+  { Kit: 'KIT MICRO 4660KWh', Placas: '61', Modulo: '620W', Inversor: 'TSUNESS', Valor: '83.494,38' },
+  { Kit: 'KIT MICRO 4730KWh', Placas: '62', Modulo: '620W', Inversor: 'TSUNESS', Valor: '84.360,88' },
+  { Kit: 'KIT MICRO 4810KWh', Placas: '63', Modulo: '620W', Inversor: 'TSUNESS', Valor: '85.488,20' },
+  { Kit: 'KIT MICRO 4890KWh', Placas: '64', Modulo: '620W', Inversor: 'TSUNESS', Valor: '86.354,69' },
+  { Kit: 'KIT MICRO 4960KWh', Placas: '65', Modulo: '620W', Inversor: 'TSUNESS', Valor: '87.362,46' },
+  { Kit: 'KIT MICRO 5040KWh', Placas: '66', Modulo: '620W', Inversor: 'TSUNESS', Valor: '88.228,95' }
 ];
 
 // Dados Falsos (Mockup CRM)
@@ -122,6 +122,13 @@ const mockSimulacoes = [
   { id: 3, data: '31/05/2026 09:15', vendedor: 'Carlos Mendes', cliente: 'Pedro Santos', whatsapp: '(64) 97777-3333', cidade: 'Caldas Novas - GO', estrutura: 'Madeira', tipo: 'String', kit: 'KIT 1020kWh', valor: '17.758,83' },
   { id: 4, data: '30/05/2026 11:20', vendedor: 'Ricardo Alves', cliente: 'Lucas Fernandes', whatsapp: '(61) 96666-4444', cidade: 'Brasília - DF', estrutura: 'Ferro', tipo: 'Micro', kit: 'KIT MICRO 230KWh', valor: '7.725,81' },
   { id: 5, data: '28/05/2026 16:50', vendedor: 'Ana Paula', cliente: 'Fernanda Lima', whatsapp: '(62) 95555-5555', cidade: 'Anápolis - GO', estrutura: 'Madeira', tipo: 'String', kit: 'KIT 370kWh', valor: '9.335,68' },
+];
+
+// Mock das Empresas (Visão Master) para gestão offline de pagamentos
+const mockEmpresas = [
+  { id: 1, nome: 'SolarTech Brasil', email: 'contato@solartech.com', plano: 'Pro (Até 20)', equipa: 12, status: 'Ativa', pgto: 'Pago' },
+  { id: 2, nome: 'Goiás Solar Integrador', email: 'vendas@goiassolar.com', plano: 'Básico (Até 5)', equipa: 4, status: 'Ativa', pgto: 'Atrasado' },
+  { id: 3, nome: 'Energia Pura Lda', email: 'diretoria@energiapura.com', plano: 'Free (Até 1)', equipa: 1, status: 'Bloqueada', pgto: 'Free' },
 ];
 
 // Gráfico Nativo à prova de falhas
@@ -237,10 +244,10 @@ const LoginView = ({ setView }) => (
 );
 
 // ==========================================
-// 5. VISÃO MASTER (Resumida para focar no Vendedor)
+// 5. VISÃO MASTER 
 // ==========================================
 const MasterView = ({ setView }) => {
-  const [currentTab, setCurrentTab] = useState('dashboard');
+  const [currentTab, setCurrentTab] = useState('empresas');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -254,14 +261,14 @@ const MasterView = ({ setView }) => {
               <div className="bg-[#0B192C] border border-slate-800 rounded-2xl p-6 shadow-sm flex items-center justify-between">
                 <div>
                   <p className="text-xs uppercase font-bold tracking-wider text-slate-500 mb-1">Empresas Ativas</p>
-                  <h3 className="text-3xl font-extrabold text-white">24</h3>
+                  <h3 className="text-3xl font-extrabold text-white">3</h3>
                 </div>
                 <div className="bg-emerald-500/10 p-3 rounded-xl border border-emerald-500/20"><Building className="w-6 h-6 text-emerald-400"/></div>
               </div>
               <div className="bg-[#0B192C] border border-slate-800 rounded-2xl p-6 shadow-sm flex items-center justify-between">
                 <div>
                   <p className="text-xs uppercase font-bold tracking-wider text-slate-500 mb-1">Total de Vendedores</p>
-                  <h3 className="text-3xl font-extrabold text-white">156</h3>
+                  <h3 className="text-3xl font-extrabold text-white">17</h3>
                 </div>
                 <div className="bg-blue-500/10 p-3 rounded-xl border border-blue-500/20"><Users className="w-6 h-6 text-blue-400"/></div>
               </div>
@@ -310,28 +317,36 @@ const MasterView = ({ setView }) => {
                 <tr>
                   <th className="px-6 py-4">Empresa / Contato</th>
                   <th className="px-6 py-4 text-center">Plano</th>
-                  <th className="px-6 py-4 text-center">Equipa</th>
+                  <th className="px-6 py-4 text-center">Financeiro</th>
                   <th className="px-6 py-4 text-center">Status</th>
                   <th className="px-6 py-4 text-right">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/50">
-                {[1, 2, 3].map((item) => (
-                  <tr key={item} className="hover:bg-slate-800/40 transition">
+                {mockEmpresas.map((item) => (
+                  <tr key={item.id} className="hover:bg-slate-800/40 transition">
                     <td className="px-6 py-4">
-                      <div className="font-extrabold text-white text-base">SolarTech Brasil {item}</div>
-                      <div className="text-xs text-slate-500 mt-0.5">contato@solartech{item}.com</div>
+                      <div className="font-extrabold text-white text-base">{item.nome}</div>
+                      <div className="text-xs text-slate-500 mt-0.5">{item.email}</div>
                     </td>
-                    <td className="px-6 py-4 text-center"><span className="bg-slate-800 px-3 py-1 rounded-md text-xs font-medium border border-slate-700">Pro 50</span></td>
-                    <td className="px-6 py-4 text-center"><span className="text-slate-300 font-bold">12</span> <span className="text-xs text-slate-500">ativos</span></td>
                     <td className="px-6 py-4 text-center">
-                      <span className="inline-flex items-center space-x-1.5 text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider mx-auto">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                        <span>Ativa</span>
+                      <span className="bg-slate-800 px-3 py-1 rounded-md text-xs font-medium border border-slate-700">{item.plano}</span>
+                      <div className="text-xs text-slate-500 mt-1">{item.equipa} ativos</div>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className={`inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider mx-auto ${item.pgto === 'Pago' ? 'text-emerald-400 bg-emerald-400/10 border border-emerald-400/20' : item.pgto === 'Atrasado' ? 'text-red-400 bg-red-400/10 border border-red-400/20' : 'text-slate-400 bg-slate-800 border border-slate-700'}`}>
+                        {item.pgto === 'Pago' ? <CheckCircle className="w-3 h-3"/> : item.pgto === 'Atrasado' ? <AlertCircle className="w-3 h-3"/> : <DollarSign className="w-3 h-3"/>}
+                        <span>{item.pgto}</span>
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className={`inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider mx-auto ${item.status === 'Ativa' ? 'text-emerald-400 bg-emerald-400/10 border border-emerald-400/20' : 'text-red-400 bg-red-400/10 border border-red-400/20'}`}>
+                        {item.status === 'Ativa' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>}
+                        <span>{item.status}</span>
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right space-x-2">
-                      <button className="text-slate-400 hover:text-white transition p-1" title="Editar / Nova Senha"><Settings className="w-4 h-4" /></button>
+                      <button className="text-slate-400 hover:text-white transition p-1" title="Editar / Financeiro"><Settings className="w-4 h-4" /></button>
                       <button className="text-slate-400 hover:text-amber-500 transition p-1" title="Suspender / Bloquear Acesso"><AlertCircle className="w-4 h-4" /></button>
                       <button className="text-slate-400 hover:text-red-400 transition p-1" title="Login como Empresa (Log as)"><LogOut className="w-4 h-4 rotate-180" /></button>
                     </td>
@@ -377,7 +392,6 @@ const MasterView = ({ setView }) => {
                         <option>Plano Ilimitado</option>
                      </select>
                      <span className="absolute inset-y-0 right-0 flex items-center pr-4 pt-5 pointer-events-none text-slate-400"><ChevronDown className="w-4 h-4"/></span>
-                     <p className="text-[10px] text-slate-500 mt-2">Valores e configurações de cada plano devem ser geridos na aba <strong>"Planos"</strong> (Funcionalidade em desenvolvimento).</p>
                    </div>
                    <button onClick={() => setIsModalOpen(false)} className="w-full bg-gradient-to-r from-amber-400 to-orange-500 text-slate-900 font-extrabold py-3 rounded-xl mt-2 transition">Criar Conta e Enviar Senha</button>
                  </div>
