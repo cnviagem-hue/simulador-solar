@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { Search, Building, Users, Zap, Plus, Settings, AlertCircle, LogOut, CheckCircle, ChevronDown, User, Smartphone, MapPin, BarChart3, Sun, FileSpreadsheet, ClipboardList, MessageCircle, BookOpen, DollarSign } from 'lucide-react';
+import { Search, Building, Users, Zap, Plus, Settings, AlertCircle, LogOut, CheckCircle, ChevronDown, User, Smartphone, MapPin, BarChart3, Sun, FileSpreadsheet, ClipboardList, MessageCircle, BookOpen } from 'lucide-react';
 
 // ==========================================
 // 1. CONFIGURAÇÃO DO FIREBASE
@@ -124,7 +124,6 @@ const mockSimulacoes = [
   { id: 5, data: '28/05/2026 16:50', vendedor: 'Ana Paula', cliente: 'Fernanda Lima', whatsapp: '(62) 95555-5555', cidade: 'Anápolis - GO', estrutura: 'Madeira', tipo: 'String', kit: 'KIT 370kWh', valor: '9.335,68' },
 ];
 
-// Mock das Empresas (Visão Master) para gestão offline de pagamentos
 const mockEmpresas = [
   { id: 1, nome: 'SolarTech Brasil', email: 'contato@solartech.com', plano: 'Plano Pró 15 vendedores', equipa: 12, status: 'Ativa', pgto: 'Pago' },
   { id: 2, nome: 'Goiás Solar Integrador', email: 'vendas@goiassolar.com', plano: 'Plano Básico 5 vendedores', equipa: 4, status: 'Ativa', pgto: 'Atrasado' },
@@ -188,7 +187,7 @@ const DashboardLayout = ({ children, title, setView, role, currentTab, setCurren
         <header className="h-20 border-b border-slate-800 bg-[#0B192C]/80 backdrop-blur-md flex items-center justify-between px-8 relative z-10">
           <h1 className="text-xl font-bold text-white">{title}</h1>
           <div className="flex items-center space-x-4">
-            <div className="text-right hidden sm:block">
+            <div className="text-right hidden sm:block pr-8">
               <p className="text-sm font-bold text-white">{role === 'master' ? 'Super Admin' : 'Admin Empresa'}</p>
               <p className="text-xs text-emerald-400">Online</p>
             </div>
@@ -317,7 +316,6 @@ const MasterView = ({ setView }) => {
                 <tr>
                   <th className="px-6 py-4">Empresa / Contato</th>
                   <th className="px-6 py-4 text-center">Plano</th>
-                  <th className="px-6 py-4 text-center">Financeiro</th>
                   <th className="px-6 py-4 text-center">Status</th>
                   <th className="px-6 py-4 text-right">Ações</th>
                 </tr>
@@ -334,21 +332,15 @@ const MasterView = ({ setView }) => {
                       <div className="text-xs text-slate-500 mt-1">{item.equipa} ativos</div>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span className={`inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider mx-auto ${item.pgto === 'Pago' ? 'text-emerald-400 bg-emerald-400/10 border border-emerald-400/20' : item.pgto === 'Atrasado' ? 'text-red-400 bg-red-400/10 border border-red-400/20' : 'text-slate-400 bg-slate-800 border border-slate-700'}`}>
-                        {item.pgto === 'Pago' ? <CheckCircle className="w-3 h-3"/> : item.pgto === 'Atrasado' ? <AlertCircle className="w-3 h-3"/> : <DollarSign className="w-3 h-3"/>}
-                        <span>{item.pgto}</span>
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-center">
                       <span className={`inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider mx-auto ${item.status === 'Ativa' ? 'text-emerald-400 bg-emerald-400/10 border border-emerald-400/20' : 'text-red-400 bg-red-400/10 border border-red-400/20'}`}>
                         {item.status === 'Ativa' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>}
                         <span>{item.status}</span>
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right space-x-2">
-                      <button className="text-slate-400 hover:text-white transition p-1" title="Editar / Financeiro"><Settings className="w-4 h-4" /></button>
-                      <button className="text-slate-400 hover:text-amber-500 transition p-1" title="Suspender / Bloquear Acesso"><AlertCircle className="w-4 h-4" /></button>
-                      <button className="text-slate-400 hover:text-red-400 transition p-1" title="Login como Empresa (Log as)"><LogOut className="w-4 h-4 rotate-180" /></button>
+                      <button className="text-slate-400 hover:text-white transition p-1" title="Editar / Nova Senha" onClick={() => alert('Abrirá pop-up de edição')}><Settings className="w-4 h-4" /></button>
+                      <button className="text-slate-400 hover:text-amber-500 transition p-1" title="Suspender / Bloquear Acesso" onClick={() => alert('Deseja realmente bloquear esta empresa?')}><AlertCircle className="w-4 h-4" /></button>
+                      <button className="text-slate-400 hover:text-red-400 transition p-1" title="Login como Empresa (Log as)" onClick={() => setView('empresa')}><LogOut className="w-4 h-4 rotate-180" /></button>
                     </td>
                   </tr>
                 ))}
@@ -386,10 +378,10 @@ const MasterView = ({ setView }) => {
                    <div className="relative group">
                      <label className="text-xs font-bold text-slate-400 mb-1 block">Plano Contratado</label>
                      <select className="w-full bg-[#030811] border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-amber-500 appearance-none cursor-pointer">
-                        <option>Plano Free (Teste Ilimitado 14 Dias)</option>
-                        <option>Plano Básico 5 vendedores</option>
-                        <option>Plano Pró 15 vendedores</option>
-                        <option>Plano Master Ilimitado</option>
+                        <option>Free [Teste Ilimitado 14 dias]</option>
+                        <option>Básico até 5 vendedores [R$ 100,00]</option>
+                        <option>Pró até 10 vendedores [R$ 125,00]</option>
+                        <option>Master Ilimitado [R$ 150,00]</option>
                      </select>
                      <span className="absolute inset-y-0 right-0 flex items-center pr-4 pt-5 pointer-events-none text-slate-400"><ChevronDown className="w-4 h-4"/></span>
                    </div>
@@ -405,7 +397,7 @@ const MasterView = ({ setView }) => {
 };
 
 // ==========================================
-// 6. VISÃO EMPRESA (COM FILTROS RESTAURADOS)
+// 6. VISÃO EMPRESA
 // ==========================================
 const EmpresaView = ({ setView }) => {
   const [currentTab, setCurrentTab] = useState('resultados');
@@ -498,15 +490,17 @@ const EmpresaView = ({ setView }) => {
                   <ChevronDown className="w-4 h-4 absolute right-3 top-2.5 text-slate-500 pointer-events-none" />
                 </div>
 
-                <div className="bg-[#030811] border border-slate-700 rounded-xl p-1 inline-flex shadow-inner w-full sm:w-auto flex-wrap">
+                {/* FILTROS UNIFICADOS NUMA SÓ LINHA ESTÉTICA */}
+                <div className="flex flex-wrap items-center bg-[#030811] border border-slate-700 rounded-xl p-1 shadow-inner gap-1 w-full sm:w-auto">
                   <button onClick={() => setResultadosFilter('7dias')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${resultadosFilter === '7dias' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-white'}`}>7 Dias</button>
                   <button onClick={() => setResultadosFilter('15dias')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${resultadosFilter === '15dias' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-white'}`}>15 Dias</button>
                   <button onClick={() => setResultadosFilter('30dias')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${resultadosFilter === '30dias' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-white'}`}>30 Dias</button>
                   <button onClick={() => alert('Abrirá calendário para Mês Específico')} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 text-slate-500 hover:text-white whitespace-nowrap`}><Search className="w-3 h-3"/> Personalizado</button>
+                  <div className="w-px h-6 bg-slate-700 mx-1 hidden sm:block"></div>
+                  <button onClick={() => alert('Exportar Excel')} className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 px-4 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap">
+                    <FileSpreadsheet className="w-3.5 h-3.5"/> Exportar
+                  </button>
                 </div>
-                <button onClick={() => alert('Este botão exportará a tabela abaixo para Excel.')} className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 px-4 py-2 rounded-xl text-sm font-bold transition flex items-center gap-2 w-full sm:w-auto justify-center">
-                  <FileSpreadsheet className="w-4 h-4"/> Baixar Excel
-                </button>
               </div>
             </div>
             
@@ -613,54 +607,6 @@ const EmpresaView = ({ setView }) => {
           )}
         </div>
       )}
-
-      {currentTab === 'tutorial' && (
-        <div className="max-w-4xl mx-auto space-y-6">
-          <div className="bg-[#0B192C] border border-slate-800 rounded-2xl p-8 shadow-sm">
-            <div className="flex items-center space-x-4 border-b border-slate-800 pb-6 mb-6">
-              <div className="bg-blue-500/10 p-3 rounded-xl border border-blue-500/20"><BookOpen className="w-8 h-8 text-blue-400"/></div>
-              <div>
-                <h2 className="text-2xl font-bold text-white">Central de Treinamento</h2>
-                <p className="text-slate-400 text-sm mt-1">Aprenda a tirar o máximo de proveito da plataforma de gestão e acelere as suas vendas.</p>
-              </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="bg-[#030811] rounded-xl p-6 border border-slate-800/50 hover:border-amber-500/30 transition group">
-                <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-3">
-                  <span className="bg-amber-500 text-slate-950 w-6 h-6 rounded flex items-center justify-center text-xs font-bold">1</span> Cadastrar Vendedores
-                </h3>
-                <p className="text-sm text-slate-400 leading-relaxed">Vá à aba <strong>"Meus Vendedores"</strong> e clique em "Cadastrar Novo Vendedor". O sistema gera uma senha provisória automaticamente. Entregue o e-mail de acesso e a senha ao seu consultor para ele aceder ao Simulador no telemóvel.</p>
-              </div>
-
-              <div className="bg-[#030811] rounded-xl p-6 border border-slate-800/50 hover:border-amber-500/30 transition group">
-                <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-3">
-                  <span className="bg-amber-500 text-slate-950 w-6 h-6 rounded flex items-center justify-center text-xs font-bold">2</span> Atualizar Tabela de Kits
-                </h3>
-                <p className="text-sm text-slate-400 leading-relaxed">Na aba <strong>"Gestão de Kits"</strong>, faça o upload da sua planilha Excel padrão. Isso atualiza instantaneamente os preços nos simuladores de todos os seus vendedores na rua, evitando vendas com preços antigos.</p>
-              </div>
-
-              <div className="bg-[#030811] rounded-xl p-6 border border-slate-800/50 hover:border-amber-500/30 transition group md:col-span-2">
-                <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-3">
-                  <span className="bg-amber-500 text-slate-950 w-6 h-6 rounded flex items-center justify-center text-xs font-bold">3</span> Acompanhar Resultados (CRM)
-                </h3>
-                <p className="text-sm text-slate-400 leading-relaxed">Toda simulação enviada pela sua equipa cai diretamente na aba <strong>"Resultados (CRM)"</strong> em tempo real. Utilize os filtros no topo para ver as vendas de um vendedor específico num determinado mês e baixe o relatório em Excel para o seu computador.</p>
-              </div>
-            </div>
-            
-            <div className="mt-8 pt-6 border-t border-slate-800 flex items-center justify-between bg-slate-800/30 p-4 rounded-xl">
-               <div className="flex items-center gap-3">
-                 <MessageCircle className="w-6 h-6 text-emerald-400" />
-                 <div>
-                    <h4 className="font-bold text-white text-sm">Ficou com dúvidas?</h4>
-                    <p className="text-xs text-slate-400">Nossa equipa está pronta para ajudar na configuração e gestão.</p>
-                 </div>
-               </div>
-               <button onClick={() => window.open('https://wa.me/5562999999999?text=Olá', '_blank')} className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold px-4 py-2 rounded-lg text-sm transition">Chamar no Suporte</button>
-            </div>
-          </div>
-        </div>
-      )}
     </DashboardLayout>
   );
 };
@@ -671,6 +617,7 @@ const EmpresaView = ({ setView }) => {
 // ==========================================
 const VendedorView = ({ setView }) => {
   const [formData, setFormData] = useState({ sellerName: '', kitString: '', kitMicro: '', roofStructure: '', clientName: '', clientWhatsapp: '', clientCity: '' });
+  const [timeFilter, setTimeFilter] = useState('hoje'); // Controle do filtro do Mini-Dashboard
   const [toast, setToast] = useState(null);
 
   const showToast = (message, type = 'error') => {
@@ -776,7 +723,7 @@ const VendedorView = ({ setView }) => {
         </div>
       )}
 
-      {/* Header Idêntico ao da Fase 1 */}
+      {/* Header Atualizado para Vendedor */}
       <header className="sticky top-0 z-50 backdrop-blur-md bg-[#0B192C]/80 border-b border-white/10 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
             <div className="flex items-center space-x-3">
@@ -784,7 +731,7 @@ const VendedorView = ({ setView }) => {
                     <Sun className="w-6 h-6 text-[#0B192C]" />
                 </div>
                 <div>
-                    <span className="text-xl font-extrabold tracking-tight text-white block">ENERGIA <span className="text-amber-400">SOLAR</span></span>
+                    <span className="text-xl font-extrabold tracking-tight text-white block">LD <span className="text-amber-400">SIMULADOR SOLAR</span></span>
                     <span className="text-[9px] uppercase tracking-widest text-slate-400 block -mt-1 font-semibold">Tecnologia Sustentável</span>
                 </div>
             </div>
@@ -795,15 +742,48 @@ const VendedorView = ({ setView }) => {
       </header>
 
       {/* Secção do Simulador (Fundo bg-mesh replicado) */}
-      <section className="py-12 sm:py-20 bg-[#0B192C] border-t border-b border-slate-800 relative min-h-[80vh] flex items-center" style={{ backgroundImage: 'radial-gradient(at 0% 0%, hsla(210,100%,12%,1) 0px, transparent 50%), radial-gradient(at 100% 100%, hsla(38,100%,50%,0.08) 0px, transparent 50%)' }}>
+      <section className="py-12 sm:py-20 bg-[#0B192C] border-t border-b border-slate-800 relative min-h-[80vh] flex items-center flex-col" style={{ backgroundImage: 'radial-gradient(at 0% 0%, hsla(210,100%,12%,1) 0px, transparent 50%), radial-gradient(at 100% 100%, hsla(38,100%,50%,0.08) 0px, transparent 50%)' }}>
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(245,166,35,0.04),transparent_50%)] pointer-events-none"></div>
         
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full">
             
-            <div className="text-center max-w-2xl mx-auto mb-8 sm:mb-12">
-                <span className="inline-block py-1 px-3 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-sm font-bold tracking-widest uppercase mb-4">SIMULADOR INTELIGENTE</span>
-                <h2 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white leading-tight">ENERGIA SOLAR</h2>
-                <p className="text-slate-300 mt-4 text-sm sm:text-base">Insira os dados do vendedor e do cliente, escolha o kit desejado e envie o orçamento de forma imediata e profissional.</p>
+            {/* MINI DASHBOARD DO VENDEDOR AQUI */}
+            <div className="bg-[#030811] rounded-3xl border border-slate-700/60 shadow-xl mb-12 p-5">
+              <div className="flex flex-col sm:flex-row justify-between items-center mb-5 gap-3 border-b border-slate-800/80 pb-4">
+                <h2 className="text-xs font-extrabold text-slate-300 uppercase tracking-widest flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4 text-amber-500"/> O Meu Desempenho
+                </h2>
+                <div className="bg-[#0B192C] rounded-xl p-1 flex text-xs font-bold border border-slate-700 shadow-inner">
+                  <button onClick={() => setTimeFilter('hoje')} className={`px-4 py-1.5 rounded-lg transition ${timeFilter === 'hoje' ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'}`}>Hoje</button>
+                  <button onClick={() => setTimeFilter('semana')} className={`px-4 py-1.5 rounded-lg transition ${timeFilter === 'semana' ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'}`}>Semana</button>
+                  <button onClick={() => setTimeFilter('quinzena')} className={`px-4 py-1.5 rounded-lg transition ${timeFilter === 'quinzena' ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'}`}>Quinzena</button>
+                  <button onClick={() => setTimeFilter('mes')} className={`px-4 py-1.5 rounded-lg transition ${timeFilter === 'mes' ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'}`}>Mês</button>
+                  <button onClick={() => alert('Abrirá calendário para Mês Específico')} className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1 text-slate-400 hover:text-white whitespace-nowrap`}><Search className="w-3 h-3"/> Personalizado</button>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                 <div className="bg-[#0B192C] p-4 rounded-2xl border border-slate-800/50 shadow-sm text-center sm:text-left">
+                    <p className="text-[10px] text-slate-500 uppercase font-extrabold tracking-wider mb-1">Propostas</p>
+                    <p className="text-2xl font-extrabold text-white">{timeFilter === 'hoje' ? '8' : timeFilter === 'semana' ? '34' : '142'}</p>
+                 </div>
+                 <div className="bg-[#0B192C] p-4 rounded-2xl border border-slate-800/50 shadow-sm text-center sm:text-left">
+                    <p className="text-[10px] text-slate-500 uppercase font-extrabold tracking-wider mb-1">Kits String</p>
+                    <p className="text-2xl font-extrabold text-blue-400">{timeFilter === 'hoje' ? '5' : timeFilter === 'semana' ? '20' : '90'}</p>
+                 </div>
+                 <div className="bg-[#0B192C] p-4 rounded-2xl border border-slate-800/50 shadow-sm text-center sm:text-left">
+                    <p className="text-[10px] text-slate-500 uppercase font-extrabold tracking-wider mb-1">Kits Micro</p>
+                    <p className="text-2xl font-extrabold text-emerald-400">{timeFilter === 'hoje' ? '3' : timeFilter === 'semana' ? '14' : '52'}</p>
+                 </div>
+                 <div className="bg-[#0B192C] p-4 rounded-2xl border border-slate-800/50 shadow-sm flex flex-col justify-center items-center sm:items-start">
+                    <p className="text-[10px] text-slate-500 uppercase font-extrabold tracking-wider mb-1">Status Meta</p>
+                    <span className="text-xs font-bold text-emerald-400 bg-emerald-400/10 px-2.5 py-1 rounded-md flex items-center gap-1 border border-emerald-400/20 mt-1"><CheckCircle className="w-3 h-3"/> No Ritmo</span>
+                 </div>
+              </div>
+            </div>
+
+            <div className="text-center max-w-2xl mx-auto mb-8">
+                <span className="inline-block py-1 px-3 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-sm font-bold tracking-widest uppercase mb-4">NOVO ORÇAMENTO</span>
+                <p className="text-slate-300 mt-2 text-sm sm:text-base">Insira os dados do cliente, escolha o kit desejado e envie a proposta de forma imediata.</p>
             </div>
 
             <div className="bg-[#030811] rounded-3xl border border-slate-700/60 shadow-[0_0_25px_rgba(245,166,35,0.1)] overflow-hidden">
@@ -818,7 +798,7 @@ const VendedorView = ({ setView }) => {
                         <div>
                             <div className="relative group">
                                 <span className="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400 group-focus-within:text-amber-400 transition-colors"><User className="w-5 h-5"/></span>
-                                <input type="text" id="sellerName" value={formData.sellerName} onChange={handleInputChange} placeholder="Digite o seu nome completo para ver as suas estatísticas acima" 
+                                <input type="text" id="sellerName" value={formData.sellerName} onChange={handleInputChange} placeholder="Digite o seu nome completo" 
                                        className="w-full bg-[#0B192C] border border-slate-700 focus:border-amber-500 rounded-xl py-3.5 pl-12 pr-4 text-sm text-white placeholder-slate-500 transition outline-none shadow-inner" />
                             </div>
                         </div>
@@ -832,8 +812,8 @@ const VendedorView = ({ setView }) => {
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                             <div className="relative group">
-                                <label className="block text-xs font-semibold text-slate-300 mb-2">1: Kits String *</label>
                                 <span className="absolute inset-y-0 left-0 flex items-center pl-4 mt-6 text-amber-400"><Zap className="w-4 h-4"/></span>
+                                <label className="block text-xs font-semibold text-slate-300 mb-2">1: Kits String *</label>
                                 <select id="kitString" value={formData.kitString} onChange={handleInputChange} className="w-full bg-[#0B192C] border border-slate-700 focus:border-amber-500 rounded-xl py-3.5 pl-11 pr-4 text-sm text-white transition outline-none appearance-none shadow-inner cursor-pointer">
                                     <option value="" disabled>-- Selecione Kit String --</option>
                                     {kitsString.map((k, i) => <option key={i} value={i}>{k.Kit} - R$ {k.Valor}</option>)}
@@ -841,8 +821,8 @@ const VendedorView = ({ setView }) => {
                                 <span className="absolute inset-y-0 right-0 flex items-center pr-4 mt-6 pointer-events-none text-slate-400"><ChevronDown className="w-4 h-4"/></span>
                             </div>
                             <div className="relative group">
-                                <label className="block text-xs font-semibold text-slate-300 mb-2">2: Kits Micro *</label>
                                 <span className="absolute inset-y-0 left-0 flex items-center pl-4 mt-6 text-amber-400"><Zap className="w-4 h-4"/></span>
+                                <label className="block text-xs font-semibold text-slate-300 mb-2">2: Kits Micro *</label>
                                 <select id="kitMicro" value={formData.kitMicro} onChange={handleInputChange} className="w-full bg-[#0B192C] border border-slate-700 focus:border-amber-500 rounded-xl py-3.5 pl-11 pr-4 text-sm text-white transition outline-none appearance-none shadow-inner cursor-pointer">
                                     <option value="" disabled>-- Selecione Kit Micro --</option>
                                     {kitsMicro.map((k, i) => <option key={i} value={i}>{k.Kit} - R$ {k.Valor}</option>)}
@@ -930,7 +910,7 @@ const VendedorView = ({ setView }) => {
                         </div>
                     </div>
 
-                    {/* CAIXA DE PREVIEW (A PEÇA QUE FALTAVA!) */}
+                    {/* CAIXA DE PREVIEW */}
                     <div className="bg-[#0B192C]/50 border border-slate-700/60 rounded-2xl p-5 sm:p-6 space-y-4 backdrop-blur-sm">
                         <div className="flex items-center space-x-2 text-xs font-bold text-slate-400 uppercase tracking-widest">
                             <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
@@ -941,7 +921,7 @@ const VendedorView = ({ setView }) => {
                         </div>
                     </div>
 
-                    {/* SUBMIT BUTTON - EXATAMENTE COMO NA FASE 1 */}
+                    {/* SUBMIT BUTTON */}
                     <div>
                         <button type="submit" className="w-full inline-flex items-center justify-center px-8 py-4 bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-slate-900 font-extrabold text-base sm:text-lg rounded-2xl transition-all duration-300 shadow-[0_0_20px_rgba(245,166,35,0.2)] hover:scale-[1.02] active:scale-[0.98]">
                             Enviar Proposta WhatsApp
