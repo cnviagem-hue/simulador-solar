@@ -241,13 +241,151 @@ const LoginView = ({ setView }) => (
 // ==========================================
 const MasterView = ({ setView }) => {
   const [currentTab, setCurrentTab] = useState('dashboard');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   return (
     <DashboardLayout title="Visão Master (LD Negócios)" setView={setView} role="master" currentTab={currentTab} setCurrentTab={setCurrentTab}>
-      <div className="bg-[#0B192C] border border-slate-800 rounded-2xl p-12 text-center shadow-sm">
-        <Building className="w-16 h-16 mx-auto mb-4 text-slate-700" />
-        <h3 className="text-xl font-bold text-white mb-2">Painel Master Ativo</h3>
-        <p className="text-slate-400 text-sm max-w-md mx-auto">Esta área permite a gestão central de todas as empresas clientes do SaaS.</p>
-      </div>
+      
+      {currentTab === 'dashboard' && (
+        <div className="space-y-6">
+           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-[#0B192C] border border-slate-800 rounded-2xl p-6 shadow-sm flex items-center justify-between">
+                <div>
+                  <p className="text-xs uppercase font-bold tracking-wider text-slate-500 mb-1">Empresas Ativas</p>
+                  <h3 className="text-3xl font-extrabold text-white">24</h3>
+                </div>
+                <div className="bg-emerald-500/10 p-3 rounded-xl border border-emerald-500/20"><Building className="w-6 h-6 text-emerald-400"/></div>
+              </div>
+              <div className="bg-[#0B192C] border border-slate-800 rounded-2xl p-6 shadow-sm flex items-center justify-between">
+                <div>
+                  <p className="text-xs uppercase font-bold tracking-wider text-slate-500 mb-1">Total de Vendedores</p>
+                  <h3 className="text-3xl font-extrabold text-white">156</h3>
+                </div>
+                <div className="bg-blue-500/10 p-3 rounded-xl border border-blue-500/20"><Users className="w-6 h-6 text-blue-400"/></div>
+              </div>
+              <div className="bg-[#0B192C] border border-slate-800 rounded-2xl p-6 shadow-sm flex items-center justify-between">
+                <div>
+                  <p className="text-xs uppercase font-bold tracking-wider text-slate-500 mb-1">Simulações Geradas</p>
+                  <h3 className="text-3xl font-extrabold text-white">8,432</h3>
+                </div>
+                <div className="bg-amber-500/10 p-3 rounded-xl border border-amber-500/20"><Zap className="w-6 h-6 text-amber-500"/></div>
+              </div>
+           </div>
+           <div className="bg-[#0B192C] border border-slate-800 rounded-2xl p-12 text-center shadow-sm">
+              <BarChart3 className="w-16 h-16 mx-auto mb-4 text-slate-700" />
+              <h3 className="text-xl font-bold text-white mb-2">Resumo de Crescimento</h3>
+              <p className="text-slate-400 text-sm max-w-md mx-auto">Vá para a aba "Gestão de Empresas" no menu lateral para visualizar, filtrar, adicionar ou bloquear clientes do sistema SaaS.</p>
+              <button onClick={() => setCurrentTab('empresas')} className="mt-6 bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 px-6 py-3 rounded-xl font-bold transition">Ir para Gestão de Empresas</button>
+           </div>
+        </div>
+      )}
+
+      {currentTab === 'empresas' && (
+        <div className="bg-[#0B192C] border border-slate-800 rounded-2xl overflow-hidden shadow-xl relative">
+          <div className="p-5 border-b border-slate-800 flex flex-col sm:flex-row justify-between items-center gap-4 bg-[#0B192C]/50">
+            <div className="flex-1 flex flex-col sm:flex-row gap-3 w-full max-w-2xl">
+              <div className="relative flex-1 group">
+                <Search className="w-4 h-4 absolute left-3.5 top-3 text-slate-500 group-focus-within:text-amber-500" />
+                <input 
+                  type="text" placeholder="Buscar empresa por nome ou email..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full bg-[#030811] border border-slate-700 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white focus:border-amber-500 outline-none shadow-inner transition"
+                />
+              </div>
+              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="bg-[#030811] border border-slate-700 rounded-xl py-2.5 px-4 text-sm text-white focus:border-amber-500 outline-none shadow-inner transition sm:w-40 cursor-pointer appearance-none">
+                  <option value="all">Todos os Status</option>
+                  <option value="active">Ativas</option>
+                  <option value="blocked">Bloqueadas</option>
+              </select>
+            </div>
+            <button onClick={() => setIsModalOpen(true)} className="flex items-center justify-center space-x-2 bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-slate-900 font-extrabold px-5 py-2.5 rounded-xl transition shadow-lg w-full sm:w-auto">
+              <Plus className="w-4 h-4" /> <span>Nova Empresa</span>
+            </button>
+          </div>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm text-slate-300 min-w-max">
+              <thead className="text-[10px] uppercase tracking-widest bg-[#030811] text-slate-500 font-bold border-b border-slate-800 sticky top-0">
+                <tr>
+                  <th className="px-6 py-4">Empresa / Contato</th>
+                  <th className="px-6 py-4 text-center">Plano</th>
+                  <th className="px-6 py-4 text-center">Equipa</th>
+                  <th className="px-6 py-4 text-center">Status</th>
+                  <th className="px-6 py-4 text-right">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/50">
+                {[1, 2, 3].map((item) => (
+                  <tr key={item} className="hover:bg-slate-800/40 transition">
+                    <td className="px-6 py-4">
+                      <div className="font-extrabold text-white text-base">SolarTech Brasil {item}</div>
+                      <div className="text-xs text-slate-500 mt-0.5">contato@solartech{item}.com</div>
+                    </td>
+                    <td className="px-6 py-4 text-center"><span className="bg-slate-800 px-3 py-1 rounded-md text-xs font-medium border border-slate-700">Pro 50</span></td>
+                    <td className="px-6 py-4 text-center"><span className="text-slate-300 font-bold">12</span> <span className="text-xs text-slate-500">ativos</span></td>
+                    <td className="px-6 py-4 text-center">
+                      <span className="inline-flex items-center space-x-1.5 text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider mx-auto">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <span>Ativa</span>
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right space-x-2">
+                      <button className="text-slate-400 hover:text-white transition p-1" title="Editar / Nova Senha"><Settings className="w-4 h-4" /></button>
+                      <button className="text-slate-400 hover:text-amber-500 transition p-1" title="Suspender / Bloquear Acesso"><AlertCircle className="w-4 h-4" /></button>
+                      <button className="text-slate-400 hover:text-red-400 transition p-1" title="Login como Empresa (Log as)"><LogOut className="w-4 h-4 rotate-180" /></button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* MODAL: NOVA EMPRESA */}
+          {isModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+               <div className="bg-[#0B192C] border border-slate-800 rounded-3xl p-6 w-full max-w-md shadow-2xl relative">
+                 <button onClick={() => setIsModalOpen(false)} className="absolute top-4 right-4 text-slate-500 hover:text-white transition"><LogOut className="w-5 h-5"/></button>
+                 <h3 className="text-xl font-extrabold text-white mb-1">Cadastrar Nova Empresa</h3>
+                 <p className="text-xs text-slate-400 mb-6">Esta ação criará um ambiente separado para o seu cliente.</p>
+                 
+                 <div className="space-y-4">
+                   <div>
+                     <label className="text-xs font-bold text-slate-400 mb-1 block">Nome Fantasia / Razão Social</label>
+                     <input type="text" placeholder="Ex: SolarTech Brasil" className="w-full bg-[#030811] border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-amber-500"/>
+                   </div>
+                   <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-xs font-bold text-slate-400 mb-1 block">Nome do Sócio</label>
+                        <input type="text" placeholder="João Silva" className="w-full bg-[#030811] border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-amber-500"/>
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold text-slate-400 mb-1 block">WhatsApp Responsável</label>
+                        <input type="text" placeholder="(00) 00000-0000" className="w-full bg-[#030811] border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-amber-500"/>
+                      </div>
+                   </div>
+                   <div>
+                     <label className="text-xs font-bold text-slate-400 mb-1 block">E-mail (Login Principal)</label>
+                     <input type="email" placeholder="contato@empresa.com" className="w-full bg-[#030811] border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-amber-500"/>
+                   </div>
+                   <div className="relative group">
+                     <label className="text-xs font-bold text-slate-400 mb-1 block">Plano Contratado</label>
+                     <select className="w-full bg-[#030811] border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-amber-500 appearance-none cursor-pointer">
+                        <option>Plano Free (Até 1 Vendedor)</option>
+                        <option>Plano Básico (Até 5 Vendedores)</option>
+                        <option>Plano Pro (Até 20 Vendedores)</option>
+                        <option>Plano Ilimitado</option>
+                     </select>
+                     <span className="absolute inset-y-0 right-0 flex items-center pr-4 pt-5 pointer-events-none text-slate-400"><ChevronDown className="w-4 h-4"/></span>
+                     <p className="text-[10px] text-slate-500 mt-2">Valores e configurações de cada plano devem ser geridos na aba <strong>"Planos"</strong> (Funcionalidade em desenvolvimento).</p>
+                   </div>
+                   <button onClick={() => setIsModalOpen(false)} className="w-full bg-gradient-to-r from-amber-400 to-orange-500 text-slate-900 font-extrabold py-3 rounded-xl mt-2 transition">Criar Conta e Enviar Senha</button>
+                 </div>
+               </div>
+            </div>
+          )}
+        </div>
+      )}
     </DashboardLayout>
   );
 };
@@ -257,54 +395,138 @@ const MasterView = ({ setView }) => {
 // ==========================================
 const EmpresaView = ({ setView }) => {
   const [currentTab, setCurrentTab] = useState('resultados');
+  const [dateFilter, setDateFilter] = useState('semana');
   const [resultadosFilter, setResultadosFilter] = useState('7dias');
+  const [vendedorFilter, setVendedorFilter] = useState('todos');
+  const [isVendedorModalOpen, setIsVendedorModalOpen] = useState(false);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   
   return (
     <DashboardLayout title="Painel da Empresa (SolarTech)" setView={setView} role="empresa" currentTab={currentTab} setCurrentTab={setCurrentTab}>
+      
+      {currentTab === 'dashboard' && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="bg-[#0B192C] border border-slate-800 rounded-2xl p-6 shadow-sm">
+              <p className="text-xs uppercase font-bold tracking-wider text-slate-500 mb-2">Simulações (Hoje)</p>
+              <h3 className="text-4xl font-extrabold text-white mb-1">42</h3>
+              <p className="text-xs font-medium text-emerald-400 bg-emerald-400/10 w-max px-2 py-0.5 rounded flex items-center gap-1">+12% vs ontem</p>
+            </div>
+            
+            <div className="bg-[#0B192C] border border-slate-800 rounded-2xl p-6 shadow-sm">
+              <p className="text-xs uppercase font-bold tracking-wider text-slate-500 mb-2">Simulações (Semana)</p>
+              <h3 className="text-4xl font-extrabold text-white mb-1">156</h3>
+              <p className="text-xs font-medium text-emerald-400 bg-emerald-400/10 w-max px-2 py-0.5 rounded flex items-center gap-1">+5% vs semana ant.</p>
+            </div>
+
+            <div className="bg-[#0B192C] border border-slate-800 rounded-2xl p-6 shadow-sm md:col-span-2 flex flex-col justify-center">
+              <div className="flex justify-between items-start mb-4">
+                 <div>
+                    <p className="text-xs uppercase font-bold tracking-wider text-slate-500 mb-1">Análise de Equipa</p>
+                    <h3 className="text-lg font-bold text-white">Desempenho por Vendedor</h3>
+                 </div>
+                 <div className="bg-slate-800/50 p-2 rounded-lg border border-slate-700/50">
+                   <Users className="w-5 h-5 text-blue-400" />
+                 </div>
+              </div>
+              <p className="text-sm text-slate-400">Vá para a aba <strong>Resultados (CRM)</strong> para filtrar orçamentos por vendedor específico e baixar relatórios completos em Excel.</p>
+            </div>
+          </div>
+
+          <div className="bg-[#0B192C] border border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col">
+             <div className="flex justify-between items-center mb-6">
+                <h3 className="font-bold text-white flex items-center gap-2">Desempenho Geral</h3>
+                <div className="bg-[#030811] border border-slate-700 rounded-xl p-1 inline-flex shadow-inner">
+                  <button onClick={() => setDateFilter('semana')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition ${dateFilter === 'semana' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-white'}`}>Últimos 7 dias</button>
+                  <button onClick={() => setDateFilter('mes')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition ${dateFilter === 'mes' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-white'}`}>Este Mês</button>
+                  <button onClick={() => alert('Abrirá calendário para Mês Específico')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 text-slate-500 hover:text-white`}><Search className="w-3 h-3"/> Personalizado</button>
+                </div>
+             </div>
+             
+             {/* Gráfico de Barras Nativo */}
+             <div className="h-64 w-full flex items-end justify-between gap-2 sm:gap-4 pt-6">
+               {chartData.map((data, index) => (
+                 <div key={index} className="flex flex-col items-center w-full group">
+                   <div className="w-full relative flex items-end justify-center h-48 bg-[#030811] rounded-t-md border border-slate-800 border-b-0">
+                     <div 
+                       className="w-full bg-gradient-to-t from-amber-500 to-orange-500 rounded-t-sm transition-all duration-500 group-hover:opacity-80 relative cursor-pointer"
+                       style={{ height: data.height }}
+                     >
+                       <div className="opacity-0 group-hover:opacity-100 absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs py-1.5 px-3 rounded-lg font-bold shadow-xl transition-all pointer-events-none whitespace-nowrap z-10 border border-slate-700">
+                         {data.propostas} Vendas
+                       </div>
+                     </div>
+                   </div>
+                   <span className="text-xs text-slate-400 mt-3 font-bold uppercase tracking-wider">{data.name}</span>
+                 </div>
+               ))}
+             </div>
+          </div>
+        </div>
+      )}
+
       {currentTab === 'resultados' && (
          <div className="bg-[#0B192C] border border-slate-800 rounded-2xl overflow-hidden shadow-xl flex flex-col h-full">
-            <div className="p-6 border-b border-slate-800 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+            <div className="p-6 border-b border-slate-800 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-[#0B192C]/80">
               <div>
                 <h3 className="text-xl font-bold text-white flex items-center gap-2"><ClipboardList className="w-6 h-6 text-amber-500"/> Histórico de Orçamentos</h3>
+                <p className="text-sm text-slate-400 mt-1">Acompanhe e gira todas as propostas enviadas pela sua equipa.</p>
               </div>
               <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
+                <div className="relative w-full sm:w-48 group">
+                  <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500"><User className="w-4 h-4" /></span>
+                  <select value={vendedorFilter} onChange={(e) => setVendedorFilter(e.target.value)} className="w-full bg-[#030811] border border-slate-700 rounded-xl py-2 pl-9 pr-8 text-sm text-white focus:border-amber-500 outline-none shadow-inner appearance-none cursor-pointer transition">
+                     <option value="todos">Todos Vendedores</option>
+                     <option value="carlos">Carlos Mendes</option>
+                     <option value="ana">Ana Paula</option>
+                     <option value="ricardo">Ricardo Alves</option>
+                  </select>
+                  <ChevronDown className="w-4 h-4 absolute right-3 top-2.5 text-slate-500 pointer-events-none" />
+                </div>
+
                 <div className="bg-[#030811] border border-slate-700 rounded-xl p-1 inline-flex shadow-inner overflow-x-auto w-full sm:w-auto">
-                  <button onClick={() => setResultadosFilter('7dias')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${resultadosFilter === '7dias' ? 'bg-slate-800 text-white' : 'text-slate-500 hover:text-white'}`}>7 Dias</button>
-                  <button onClick={() => setResultadosFilter('15dias')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${resultadosFilter === '15dias' ? 'bg-slate-800 text-white' : 'text-slate-500 hover:text-white'}`}>15 Dias</button>
-                  <button onClick={() => setResultadosFilter('30dias')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${resultadosFilter === '30dias' ? 'bg-slate-800 text-white' : 'text-slate-500 hover:text-white'}`}>30 Dias</button>
-                  
-                  {/* O FILTRO PERSONALIZADO ESTÁ DE VOLTA AQUI */}
+                  <button onClick={() => setResultadosFilter('7dias')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${resultadosFilter === '7dias' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-white'}`}>7 Dias</button>
+                  <button onClick={() => setResultadosFilter('15dias')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${resultadosFilter === '15dias' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-white'}`}>15 Dias</button>
+                  <button onClick={() => setResultadosFilter('30dias')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${resultadosFilter === '30dias' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-white'}`}>30 Dias</button>
                   <button onClick={() => alert('Abrirá calendário para Mês Específico')} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 text-slate-500 hover:text-white whitespace-nowrap`}><Search className="w-3 h-3"/> Personalizado</button>
                 </div>
-                <button className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 px-4 py-2 rounded-xl text-sm font-bold transition flex items-center gap-2 w-full sm:w-auto justify-center">
+                <button onClick={() => alert('Este botão exportará a tabela abaixo para Excel.')} className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 px-4 py-2 rounded-xl text-sm font-bold transition flex items-center gap-2 w-full sm:w-auto justify-center">
                   <FileSpreadsheet className="w-4 h-4"/> Baixar Excel
                 </button>
               </div>
             </div>
             
-            <div className="flex-1 overflow-x-auto p-4">
+            <div className="flex-1 overflow-x-auto p-4 max-h-[60vh]">
               <table className="w-full text-left text-sm text-slate-300 min-w-max">
                 <thead className="text-[10px] uppercase tracking-widest bg-[#030811] text-slate-500 font-bold border-b border-slate-800 sticky top-0 z-10">
                   <tr>
-                    <th className="px-4 py-3">Data</th>
+                    <th className="px-4 py-3 rounded-tl-lg">Data / Hora</th>
                     <th className="px-4 py-3">Vendedor</th>
                     <th className="px-4 py-3">Cliente</th>
                     <th className="px-4 py-3">WhatsApp</th>
                     <th className="px-4 py-3">Cidade</th>
+                    <th className="px-4 py-3">Estrutura</th>
+                    <th className="px-4 py-3">Tipo</th>
                     <th className="px-4 py-3">Kit Solar</th>
-                    <th className="px-4 py-3 text-right">Valor (R$)</th>
+                    <th className="px-4 py-3 rounded-tr-lg text-right">Valor (R$)</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/50">
                   {mockSimulacoes.map((sim) => (
                     <tr key={sim.id} className="hover:bg-slate-800/40 transition">
-                      <td className="px-4 py-3 text-xs text-slate-400">{sim.data}</td>
-                      <td className="px-4 py-3 font-medium text-white">{sim.vendedor}</td>
-                      <td className="px-4 py-3">{sim.cliente}</td>
-                      <td className="px-4 py-3 font-mono text-xs">{sim.whatsapp}</td>
-                      <td className="px-4 py-3 text-xs">{sim.cidade}</td>
-                      <td className="px-4 py-3 text-xs font-semibold">{sim.kit}</td>
-                      <td className="px-4 py-3 text-right font-bold text-amber-500">{sim.valor}</td>
+                      <td className="px-4 py-3 text-xs text-slate-400 whitespace-nowrap">{sim.data}</td>
+                      <td className="px-4 py-3 font-medium text-white whitespace-nowrap">{sim.vendedor}</td>
+                      <td className="px-4 py-3 whitespace-nowrap">{sim.cliente}</td>
+                      <td className="px-4 py-3 font-mono text-xs whitespace-nowrap">{sim.whatsapp}</td>
+                      <td className="px-4 py-3 text-xs whitespace-nowrap">{sim.cidade}</td>
+                      <td className="px-4 py-3 text-xs whitespace-nowrap">{sim.estrutura}</td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${sim.tipo === 'String' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'}`}>
+                          {sim.tipo}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-xs font-semibold whitespace-nowrap">{sim.kit}</td>
+                      <td className="px-4 py-3 text-right font-bold text-amber-500 whitespace-nowrap">{sim.valor}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -312,10 +534,117 @@ const EmpresaView = ({ setView }) => {
             </div>
          </div>
       )}
-      {currentTab !== 'resultados' && (
-        <div className="bg-[#0B192C] border border-slate-800 rounded-2xl p-12 text-center shadow-sm">
-           <h3 className="text-xl font-bold text-white mb-2">Aba {currentTab}</h3>
-           <p className="text-slate-400 text-sm">Navegue para Resultados (CRM) para ver as funcionalidades principais.</p>
+
+      {currentTab === 'vendedores' && (
+        <div className="bg-[#0B192C] border border-slate-800 rounded-2xl p-12 text-center shadow-sm relative">
+          <Users className="w-16 h-16 mx-auto mb-4 text-slate-700" />
+          <h3 className="text-xl font-bold text-white mb-2">Gestão de Equipa</h3>
+          <p className="text-slate-400 text-sm max-w-md mx-auto mb-6">Aqui você poderá cadastrar novos vendedores, editar senhas e bloquear acessos rapidamente.</p>
+          <button onClick={() => setIsVendedorModalOpen(true)} className="bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 px-6 py-3 rounded-xl font-bold transition">Cadastrar Novo Vendedor</button>
+          
+          {isVendedorModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm text-left">
+               <div className="bg-[#0B192C] border border-slate-800 rounded-3xl p-6 w-full max-w-sm shadow-2xl relative">
+                 <button onClick={() => setIsVendedorModalOpen(false)} className="absolute top-4 right-4 text-slate-500 hover:text-white transition"><LogOut className="w-5 h-5"/></button>
+                 <h3 className="text-xl font-extrabold text-white mb-1">Novo Vendedor</h3>
+                 <p className="text-xs text-slate-400 mb-6">Crie um acesso para a sua equipa comercial.</p>
+                 <div className="space-y-4">
+                   <div>
+                     <label className="text-xs font-bold text-slate-400 mb-1 block">Nome Completo do Consultor</label>
+                     <input type="text" placeholder="Ex: Carlos Mendes" className="w-full bg-[#030811] border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-amber-500"/>
+                   </div>
+                   <div>
+                     <label className="text-xs font-bold text-slate-400 mb-1 block">E-mail (Login de Acesso)</label>
+                     <input type="email" placeholder="carlos@suaempresa.com" className="w-full bg-[#030811] border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-amber-500"/>
+                   </div>
+                   <div>
+                     <label className="text-xs font-bold text-slate-400 mb-1 block">Senha Provisória Automática</label>
+                     <input type="text" readOnly value="Solar@2026" className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-amber-500 font-mono text-sm outline-none cursor-not-allowed"/>
+                   </div>
+                   <button onClick={() => setIsVendedorModalOpen(false)} className="w-full bg-gradient-to-r from-amber-400 to-orange-500 text-slate-900 font-extrabold py-3 rounded-xl mt-2 transition">Cadastrar Vendedor</button>
+                 </div>
+               </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {currentTab === 'kits' && (
+        <div className="bg-[#0B192C] border border-slate-800 rounded-2xl p-12 text-center shadow-sm relative">
+          <Zap className="w-16 h-16 mx-auto mb-4 text-slate-700" />
+          <h3 className="text-xl font-bold text-white mb-2">Tabela de Preços e Kits</h3>
+          <p className="text-slate-400 text-sm max-w-md mx-auto mb-6">Atualize os preços de todos os seus vendedores instantaneamente importando a sua planilha de Excel.</p>
+          <button onClick={() => setIsUploadModalOpen(true)} className="bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 px-6 py-3 rounded-xl font-bold transition">Fazer Upload de Planilha</button>
+
+          {isUploadModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm text-left">
+               <div className="bg-[#0B192C] border border-slate-800 rounded-3xl p-6 w-full max-w-md shadow-2xl relative">
+                 <button onClick={() => setIsUploadModalOpen(false)} className="absolute top-4 right-4 text-slate-500 hover:text-white transition"><LogOut className="w-5 h-5"/></button>
+                 <h3 className="text-xl font-extrabold text-white mb-1">Atualizar Kits (Excel)</h3>
+                 <div className="bg-[#030811] border border-slate-700 rounded-xl p-4 my-4">
+                    <p className="text-xs text-slate-300 font-bold mb-2">Instruções:</p>
+                    <ol className="text-xs text-slate-400 space-y-1 list-decimal pl-4">
+                      <li>Baixe o <a href="#" onClick={(e) => { e.preventDefault(); alert('Iniciaria o download do ficheiro Excel.'); }} className="text-amber-500 hover:underline">Modelo Excel Obrigatório (.xlsx)</a>.</li>
+                      <li>Preencha com os seus Kits, Potências e Preços.</li>
+                      <li>Não altere os nomes das colunas.</li>
+                    </ol>
+                 </div>
+                 <div className="border-2 border-dashed border-slate-700 rounded-2xl p-8 text-center hover:bg-slate-800/50 transition cursor-pointer group">
+                    <FileSpreadsheet className="w-10 h-10 mx-auto text-slate-500 group-hover:text-amber-500 mb-2 transition" />
+                    <p className="text-sm font-bold text-slate-300">Arraste a planilha aqui</p>
+                 </div>
+                 <button onClick={() => setIsUploadModalOpen(false)} className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-xl mt-4 border border-slate-700 transition">Cancelar</button>
+               </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {currentTab === 'tutorial' && (
+        <div className="max-w-4xl mx-auto space-y-6">
+          <div className="bg-[#0B192C] border border-slate-800 rounded-2xl p-8 shadow-sm">
+            <div className="flex items-center space-x-4 border-b border-slate-800 pb-6 mb-6">
+              <div className="bg-blue-500/10 p-3 rounded-xl border border-blue-500/20"><BookOpen className="w-8 h-8 text-blue-400"/></div>
+              <div>
+                <h2 className="text-2xl font-bold text-white">Central de Treinamento</h2>
+                <p className="text-slate-400 text-sm mt-1">Aprenda a tirar o máximo de proveito da plataforma de gestão e acelere as suas vendas.</p>
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="bg-[#030811] rounded-xl p-6 border border-slate-800/50 hover:border-amber-500/30 transition group">
+                <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-3">
+                  <span className="bg-amber-500 text-slate-950 w-6 h-6 rounded flex items-center justify-center text-xs font-bold">1</span> Cadastrar Vendedores
+                </h3>
+                <p className="text-sm text-slate-400 leading-relaxed">Vá à aba <strong>"Meus Vendedores"</strong> e clique em "Cadastrar Novo Vendedor". O sistema gera uma senha provisória automaticamente. Entregue o e-mail de acesso e a senha ao seu consultor para ele aceder ao Simulador no telemóvel.</p>
+              </div>
+
+              <div className="bg-[#030811] rounded-xl p-6 border border-slate-800/50 hover:border-amber-500/30 transition group">
+                <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-3">
+                  <span className="bg-amber-500 text-slate-950 w-6 h-6 rounded flex items-center justify-center text-xs font-bold">2</span> Atualizar Tabela de Kits
+                </h3>
+                <p className="text-sm text-slate-400 leading-relaxed">Na aba <strong>"Gestão de Kits"</strong>, faça o upload da sua planilha Excel padrão. Isso atualiza instantaneamente os preços nos simuladores de todos os seus vendedores na rua, evitando vendas com preços antigos.</p>
+              </div>
+
+              <div className="bg-[#030811] rounded-xl p-6 border border-slate-800/50 hover:border-amber-500/30 transition group md:col-span-2">
+                <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-3">
+                  <span className="bg-amber-500 text-slate-950 w-6 h-6 rounded flex items-center justify-center text-xs font-bold">3</span> Acompanhar Resultados (CRM)
+                </h3>
+                <p className="text-sm text-slate-400 leading-relaxed">Toda simulação enviada pela sua equipa cai diretamente na aba <strong>"Resultados (CRM)"</strong> em tempo real. Utilize os filtros no topo para ver as vendas de um vendedor específico num determinado mês e baixe o relatório em Excel para o seu computador.</p>
+              </div>
+            </div>
+            
+            <div className="mt-8 pt-6 border-t border-slate-800 flex items-center justify-between bg-slate-800/30 p-4 rounded-xl">
+               <div className="flex items-center gap-3">
+                 <MessageCircle className="w-6 h-6 text-emerald-400" />
+                 <div>
+                    <h4 className="font-bold text-white text-sm">Ficou com dúvidas?</h4>
+                    <p className="text-xs text-slate-400">Nossa equipa está pronta para ajudar na configuração e gestão.</p>
+                 </div>
+               </div>
+               <button onClick={() => window.open('https://wa.me/5562999999999?text=Olá', '_blank')} className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold px-4 py-2 rounded-lg text-sm transition">Chamar no Suporte</button>
+            </div>
+          </div>
         </div>
       )}
     </DashboardLayout>
