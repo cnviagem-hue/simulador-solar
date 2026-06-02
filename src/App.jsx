@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, getDocs, writeBatch, doc } from 'firebase/firestore';
 import { Search, Building, Users, Zap, Plus, Settings, AlertCircle, LogOut, CheckCircle, ChevronDown, User, Smartphone, MapPin, BarChart3, Sun, FileSpreadsheet, ClipboardList, MessageCircle, BookOpen, Menu, X } from 'lucide-react';
 
 // ==========================================
@@ -136,7 +136,6 @@ const DashboardLayout = ({ children, title, setView, role, currentTab, setCurren
 
   return (
     <div className="flex h-screen bg-[#030811] text-slate-100 font-sans selection:bg-orange-500 overflow-hidden w-full">
-      {/* Overlay Escuro Móvel */}
       {isMobileMenuOpen && <div className="fixed inset-0 bg-black/80 z-40 md:hidden backdrop-blur-sm" onClick={toggleMobileMenu}></div>}
       
       <aside className={`fixed md:static inset-y-0 left-0 z-50 w-64 bg-[#0B192C] border-r border-slate-800 flex flex-col justify-between shrink-0 transition-transform duration-300 ease-in-out ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
@@ -380,7 +379,7 @@ const MasterView = ({ setView }) => {
 };
 
 // ==========================================
-// 6. VISÃO EMPRESA (O CRM Vivo)
+// 6. VISÃO EMPRESA (O CRM Vivo com Upload Funcional)
 // ==========================================
 const EmpresaView = ({ setView }) => {
   const [currentTab, setCurrentTab] = useState('resultados');
@@ -440,17 +439,30 @@ const EmpresaView = ({ setView }) => {
 
   const vendedoresUnicos = [...new Set(orcamentos.map(orc => orc.vendedor))].filter(Boolean);
 
-  const handleSimulateUpload = (e) => {
+  const handleSimulateUpload = async (e) => {
     const file = e.target.files[0];
     if(!file) return;
+    
     setUploadStatus('deleting');
-    setTimeout(() => {
-        setUploadStatus('saving');
-        setTimeout(() => {
-            setUploadStatus('success');
-            setTimeout(() => { setUploadStatus('idle'); setIsUploadModalOpen(false); }, 3000);
-        }, 2000);
-    }, 1500);
+    try {
+      const q = query(collection(db, "kits"));
+      const snapshot = await getDocs(q);
+      const batch = writeBatch(db);
+      snapshot.docs.forEach((docSnap) => {
+          batch.delete(doc(db, "kits", docSnap.id));
+      });
+      await batch.commit();
+
+      setUploadStatus('saving');
+      setTimeout(() => {
+          setUploadStatus('success');
+          setTimeout(() => { setUploadStatus('idle'); setIsUploadModalOpen(false); }, 3000);
+      }, 2000);
+    } catch (error) {
+       console.error("Erro na atualização dos kits", error);
+       alert("Erro ao atualizar base de dados.");
+       setUploadStatus('idle');
+    }
   };
   
   return (
