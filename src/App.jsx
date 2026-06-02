@@ -125,9 +125,9 @@ const mockSimulacoes = [
 ];
 
 const mockEmpresas = [
-  { id: 1, nome: 'SolarTech Brasil', email: 'contato@solartech.com', plano: 'Plano Pró 15 vendedores', equipa: 12, status: 'Ativa', pgto: 'Pago' },
-  { id: 2, nome: 'Goiás Solar Integrador', email: 'vendas@goiassolar.com', plano: 'Plano Básico 5 vendedores', equipa: 4, status: 'Ativa', pgto: 'Atrasado' },
-  { id: 3, nome: 'Energia Pura Lda', email: 'diretoria@energiapura.com', plano: 'Plano Free (Teste Ilimitado 14 Dias)', equipa: 14, status: 'Bloqueada', pgto: 'Free' },
+  { id: 1, nome: 'SolarTech Brasil', email: 'contato@solartech.com', plano: 'Pró até 10 vendedores', equipa: 12, status: 'Ativa', pgto: 'Pago' },
+  { id: 2, nome: 'Goiás Solar Integrador', email: 'vendas@goiassolar.com', plano: 'Básico até 5 vendedores', equipa: 4, status: 'Ativa', pgto: 'Atrasado' },
+  { id: 3, nome: 'Energia Pura Lda', email: 'diretoria@energiapura.com', plano: 'Free [Teste Ilimitado 14 dias]', equipa: 14, status: 'Bloqueada', pgto: 'Free' },
 ];
 
 // Gráfico Nativo à prova de falhas
@@ -187,13 +187,14 @@ const DashboardLayout = ({ children, title, setView, role, currentTab, setCurren
         <header className="h-20 border-b border-slate-800 bg-[#0B192C]/80 backdrop-blur-md flex items-center justify-between px-8 relative z-10">
           <h1 className="text-xl font-bold text-white">{title}</h1>
           <div className="flex items-center space-x-4">
+            {/* Margem ajustada para telemóveis - Adicionado pr-8 nas classes escondidas no ecrã muito pequeno, visíveis a partir de sm */}
             <div className="text-right hidden sm:block pr-8">
               <p className="text-sm font-bold text-white">{role === 'master' ? 'Super Admin' : 'Admin Empresa'}</p>
               <p className="text-xs text-emerald-400">Online</p>
             </div>
           </div>
         </header>
-        <div className="flex-1 overflow-auto p-8 relative z-10">
+        <div className="flex-1 overflow-auto p-4 sm:p-8 relative z-10">
           {children}
         </div>
       </main>
@@ -290,16 +291,17 @@ const MasterView = ({ setView }) => {
 
       {currentTab === 'empresas' && (
         <div className="bg-[#0B192C] border border-slate-800 rounded-2xl overflow-hidden shadow-xl relative">
+          {/* Ajuste flex-col e sm:flex-row para a barra caber no telemóvel */}
           <div className="p-5 border-b border-slate-800 flex flex-col sm:flex-row justify-between items-center gap-4 bg-[#0B192C]/50">
             <div className="flex-1 flex flex-col sm:flex-row gap-3 w-full max-w-2xl">
-              <div className="relative flex-1 group">
+              <div className="relative flex-1 group w-full">
                 <Search className="w-4 h-4 absolute left-3.5 top-3 text-slate-500 group-focus-within:text-amber-500" />
                 <input 
                   type="text" placeholder="Buscar empresa por nome ou email..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full bg-[#030811] border border-slate-700 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white focus:border-amber-500 outline-none shadow-inner transition"
                 />
               </div>
-              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="bg-[#030811] border border-slate-700 rounded-xl py-2.5 px-4 text-sm text-white focus:border-amber-500 outline-none shadow-inner transition sm:w-40 cursor-pointer appearance-none">
+              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="w-full sm:w-40 bg-[#030811] border border-slate-700 rounded-xl py-2.5 px-4 text-sm text-white focus:border-amber-500 outline-none shadow-inner transition cursor-pointer appearance-none">
                   <option value="all">Todos os Status</option>
                   <option value="active">Ativas</option>
                   <option value="blocked">Bloqueadas</option>
@@ -310,7 +312,7 @@ const MasterView = ({ setView }) => {
             </button>
           </div>
           
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto w-full block">
             <table className="w-full text-left text-sm text-slate-300 min-w-max">
               <thead className="text-[10px] uppercase tracking-widest bg-[#030811] text-slate-500 font-bold border-b border-slate-800 sticky top-0">
                 <tr>
