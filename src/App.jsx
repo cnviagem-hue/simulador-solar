@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, getDocs, writeBatch, doc } from 'firebase/firestore';
+import { getAuth, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { Search, Building, Users, Zap, Plus, Settings, AlertCircle, LogOut, CheckCircle, ChevronDown, User, Smartphone, MapPin, BarChart3, Sun, FileSpreadsheet, ClipboardList, MessageCircle, BookOpen, Menu, X } from 'lucide-react';
 
 // ==========================================
@@ -17,6 +18,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app); // Inicialização da Autenticação
 
 // ==========================================
 // 2. DADOS DOS KITS (24 String + 66 Micro)
@@ -134,6 +136,10 @@ const DashboardLayout = ({ children, title, setView, role, currentTab, setCurren
   const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
   const handleTabChange = (tab) => { setCurrentTab(tab); setIsMobileMenuOpen(false); };
 
+  const handleLogout = () => {
+    signOut(auth).then(() => setView('login')).catch((error) => console.error("Erro ao sair", error));
+  };
+
   return (
     <div className="flex h-screen bg-[#030811] text-slate-100 font-sans selection:bg-orange-500 overflow-hidden w-full">
       {isMobileMenuOpen && <div className="fixed inset-0 bg-black/80 z-40 md:hidden backdrop-blur-sm" onClick={toggleMobileMenu}></div>}
@@ -180,7 +186,7 @@ const DashboardLayout = ({ children, title, setView, role, currentTab, setCurren
           </nav>
         </div>
         <div className="p-4 border-t border-slate-800 shrink-0">
-          <button onClick={() => setView('login')} className="flex items-center space-x-3 text-slate-500 hover:text-red-400 transition px-4 py-2 w-full text-left font-medium">
+          <button onClick={handleLogout} className="flex items-center space-x-3 text-slate-500 hover:text-red-400 transition px-4 py-2 w-full text-left font-medium">
             <LogOut className="w-5 h-5" /> <span>Sair com Segurança</span>
           </button>
         </div>
@@ -197,7 +203,7 @@ const DashboardLayout = ({ children, title, setView, role, currentTab, setCurren
               <p className="text-xs sm:text-sm font-bold text-white truncate max-w-[120px] sm:max-w-none">{role === 'master' ? 'Super Admin' : 'Admin Empresa'}</p>
               <p className="text-[10px] sm:text-xs text-emerald-400">Online</p>
             </div>
-            <button onClick={() => setView('login')} className="md:hidden p-2 text-slate-400 hover:text-red-400 transition-colors rounded-lg bg-slate-800/50 border border-slate-700/50" title="Sair"><LogOut className="w-5 h-5" /></button>
+            <button onClick={handleLogout} className="md:hidden p-2 text-slate-400 hover:text-red-400 transition-colors rounded-lg bg-slate-800/50 border border-slate-700/50" title="Sair"><LogOut className="w-5 h-5" /></button>
           </div>
         </header>
         <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-8 relative z-10 w-full">
@@ -209,39 +215,95 @@ const DashboardLayout = ({ children, title, setView, role, currentTab, setCurren
 };
 
 // ==========================================
-// 4. TELA DE LOGIN 
+// 4. TELA DE LOGIN (REAL COM FIREBASE AUTH)
 // ==========================================
-const LoginView = ({ setView }) => (
-  <div className="min-h-screen bg-[#030811] flex flex-col justify-center items-center p-4 relative overflow-hidden select-none">
-    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(245,166,35,0.08),transparent_70%)] pointer-events-none"></div>
-    <div className="relative z-10 w-full max-w-md bg-[#0B192C]/80 backdrop-blur-xl border border-slate-800 rounded-3xl p-8 shadow-2xl">
-      <div className="text-center mb-8">
-        <div className="inline-flex bg-gradient-to-br from-amber-400 to-orange-500 p-3 rounded-2xl mb-4 shadow-lg shadow-orange-500/20"><Sun className="w-8 h-8 text-[#0B192C]" /></div>
-        <h2 className="text-2xl font-extrabold text-white">LD <span className="text-amber-500">SIMULADOR SOLAR</span></h2>
-        <p className="text-slate-400 text-sm mt-1">Plataforma de Gestão e Vendas</p>
-      </div>
-      <div className="space-y-4">
-        <div>
-          <label className="text-xs font-semibold text-slate-400 mb-1 block">E-mail Corporativo</label>
-          <input type="email" placeholder="nome@empresa.com" className="w-full bg-[#030811] border border-slate-700 focus:border-amber-500 rounded-xl px-4 py-3 text-white text-sm outline-none" />
+const LoginView = ({ setView }) => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    if (!email || !password) {
+      setError('Por favor, preencha o seu e-mail e senha.');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      // Lógica de Redirecionamento (Reconhecimento do Master)
+      if (email.toLowerCase() === 'cnviagem@gmail.com') {
+        setView('master');
+      } else {
+        // Por padrão nesta fase, outras contas vão para a Empresa
+        setView('empresa'); 
+      }
+    } catch (err) {
+      console.error(err);
+      setError('Credenciais inválidas. Verifique o seu e-mail e senha.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#030811] flex flex-col justify-center items-center p-4 relative overflow-hidden select-none">
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(245,166,35,0.08),transparent_70%)] pointer-events-none"></div>
+      <div className="relative z-10 w-full max-w-md bg-[#0B192C]/80 backdrop-blur-xl border border-slate-800 rounded-3xl p-8 shadow-2xl">
+        <div className="text-center mb-8">
+          <div className="inline-flex bg-gradient-to-br from-amber-400 to-orange-500 p-3 rounded-2xl mb-4 shadow-lg shadow-orange-500/20"><Sun className="w-8 h-8 text-[#0B192C]" /></div>
+          <h2 className="text-2xl font-extrabold text-white">LD <span className="text-amber-500">SIMULADOR SOLAR</span></h2>
+          <p className="text-slate-400 text-sm mt-1">Acesso Restrito ao Sistema</p>
         </div>
-        <div>
-          <label className="text-xs font-semibold text-slate-400 mb-1 block">Senha Segura</label>
-          <input type="password" placeholder="••••••••" className="w-full bg-[#030811] border border-slate-700 focus:border-amber-500 rounded-xl px-4 py-3 text-white text-sm outline-none" />
-        </div>
-        <button onClick={() => alert("Nesta versão, utilize os atalhos abaixo.")} className="w-full bg-gradient-to-r from-amber-400 to-orange-500 text-slate-900 font-extrabold py-3.5 rounded-xl mt-4 transition cursor-pointer">Entrar no Sistema</button>
-      </div>
-      <div className="mt-8 pt-6 border-t border-slate-800/50">
-        <p className="text-[10px] text-center text-slate-500 font-bold uppercase tracking-widest mb-4">Botões de Teste (Navegação)</p>
-        <div className="space-y-3">
-          <button onClick={() => setView('master')} className="w-full flex items-center justify-center space-x-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20 py-2.5 rounded-xl transition text-sm font-medium"><Building className="w-4 h-4" /> <span>Visão MASTER (Dono)</span></button>
-          <button onClick={() => setView('empresa')} className="w-full flex items-center justify-center space-x-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 py-2.5 rounded-xl transition text-sm font-medium"><BarChart3 className="w-4 h-4" /> <span>Visão EMPRESA (Cliente)</span></button>
-          <button onClick={() => setView('vendedor')} className="w-full flex items-center justify-center space-x-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/20 py-2.5 rounded-xl transition text-sm font-medium"><User className="w-4 h-4" /> <span>Visão VENDEDOR (App)</span></button>
+        
+        <form onSubmit={handleLogin} className="space-y-4">
+          {error && (
+            <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm p-3 rounded-xl flex items-center gap-2 animate-pulse">
+              <AlertCircle className="w-5 h-5 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+          
+          <div>
+            <label className="text-xs font-semibold text-slate-400 mb-1 block">E-mail de Acesso</label>
+            <input 
+              type="email" 
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="seu@email.com" 
+              className="w-full bg-[#030811] border border-slate-700 focus:border-amber-500 rounded-xl px-4 py-3 text-white text-sm outline-none transition" 
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-slate-400 mb-1 block">Senha Segura</label>
+            <input 
+              type="password" 
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••" 
+              className="w-full bg-[#030811] border border-slate-700 focus:border-amber-500 rounded-xl px-4 py-3 text-white text-sm outline-none transition" 
+            />
+          </div>
+          <button 
+            type="submit" 
+            disabled={loading}
+            className={`w-full bg-gradient-to-r from-amber-400 to-orange-500 text-slate-900 font-extrabold py-3.5 rounded-xl mt-4 transition cursor-pointer flex justify-center items-center gap-2 ${loading ? 'opacity-70' : 'hover:scale-[1.02]'}`}>
+            {loading ? 'A autenticar...' : 'Entrar no Sistema'}
+          </button>
+        </form>
+
+        {/* NOTA: Botões de Teste removidos para trancar o sistema */}
+        <div className="mt-8 pt-6 border-t border-slate-800/50 text-center">
+           <p className="text-[10px] text-slate-600 uppercase tracking-widest font-bold">Ambiente Protegido por Firebase Auth</p>
         </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 // ==========================================
 // 5. VISÃO MASTER 
