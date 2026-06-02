@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, getDocs, writeBatch, doc, getDoc, setDoc } from 'firebase/firestore';
 import { getAuth, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from 'firebase/auth';
-import { Search, Building, Users, Zap, Plus, Settings, AlertCircle, LogOut, CheckCircle, ChevronDown, User, Smartphone, MapPin, BarChart3, Sun, FileSpreadsheet, ClipboardList, MessageCircle, BookOpen, Menu, X } from 'lucide-react';
+import { Search, Building, Users, Zap, Plus, Settings, AlertCircle, LogOut, CheckCircle, CheckCircle2, ChevronDown, User, Smartphone, MapPin, BarChart3, Sun, FileSpreadsheet, ClipboardList, MessageCircle, BookOpen, Menu, X } from 'lucide-react';
 
 // ==========================================
 // 1. CONFIGURAÇÃO DO FIREBASE
@@ -28,15 +28,15 @@ const secondaryAuth = getAuth(secondaryApp);
 // 2. KITS DE SEGURANÇA (Caso a nuvem esteja vazia)
 // ==========================================
 const fallbackKitsString = [
-  { Kit: 'KIT 370kWh', Placas: '5', Modulo: '590W', Inversor: 'AUXSOL 3K', Valor: '9.335,68' },
-  { Kit: 'KIT 590kWh', Placas: '8', Modulo: '590W', Inversor: 'AUXSOL 5K', Valor: '12.177,50' },
-  { Kit: 'KIT 1020kWh', Placas: '14', Modulo: '590W', Inversor: 'AUXSOL 6K', Valor: '17.758,83' }
+  { Kit: 'KIT 370kWh (Padrão)', Placas: '5', Modulo: '590W', Inversor: 'AUXSOL 3K', Valor: '9335.68' },
+  { Kit: 'KIT 590kWh (Padrão)', Placas: '8', Modulo: '590W', Inversor: 'AUXSOL 5K', Valor: '12177.50' },
+  { Kit: 'KIT 1020kWh (Padrão)', Placas: '14', Modulo: '590W', Inversor: 'AUXSOL 6K', Valor: '17758.83' }
 ];
 
 const fallbackKitsMicro = [
-  { Kit: 'KIT MICRO 230KWh', Placas: '3', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX2250', Valor: '7.725,81' },
-  { Kit: 'KIT MICRO 540KWh', Placas: '7', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '12.679,71' },
-  { Kit: 'KIT MICRO 1000KWh', Placas: '13', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '20.136,94' }
+  { Kit: 'KIT MICRO 230KWh (Padrão)', Placas: '3', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX2250', Valor: '7725.81' },
+  { Kit: 'KIT MICRO 540KWh (Padrão)', Placas: '7', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '12679.71' },
+  { Kit: 'KIT MICRO 1000KWh (Padrão)', Placas: '13', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '20136.94' }
 ];
 
 const chartData = [
@@ -237,7 +237,7 @@ const LoginView = ({ setView, setUserData }) => {
 };
 
 // ==========================================
-// 5. VISÃO MASTER (AGORA COM DADOS REAIS DA NUVEM)
+// 5. VISÃO MASTER 
 // ==========================================
 const MasterView = ({ setView }) => {
   const [currentTab, setCurrentTab] = useState('empresas');
@@ -255,7 +255,7 @@ const MasterView = ({ setView }) => {
   const [novaEmpresa, setNovaEmpresa] = useState({ nomeFantasia: '', socio: '', whatsapp: '', email: '', plano: 'Free [Teste Ilimitado 14 dias]', senha: '' });
   const [empresaLoading, setEmpresaLoading] = useState(false);
 
-  // 1. Carregar Empresas e Vendedores da Base de Dados
+  // Carregar Empresas e Vendedores
   useEffect(() => {
     const q = query(collection(db, "usuarios"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -291,7 +291,7 @@ const MasterView = ({ setView }) => {
     return () => unsubscribe();
   }, []);
 
-  // 2. Carregar o Total Global de Simulações
+  // Carregar o Total Global de Simulações
   useEffect(() => {
     const q = query(collection(db, "orcamentos"));
     const unsubscribe = onSnapshot(q, (snap) => {
@@ -300,14 +300,12 @@ const MasterView = ({ setView }) => {
     return () => unsubscribe();
   }, []);
 
-  // Filtros aplicados na Tabela
   const empresasFiltradas = empresas.filter(emp => {
       const matchesSearch = emp.nome?.toLowerCase().includes(searchTerm.toLowerCase()) || emp.email?.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = statusFilter === 'all' || emp.status?.toLowerCase() === statusFilter.toLowerCase();
       return matchesSearch && matchesStatus;
   });
 
-  // 3. Função para Registar Nova Empresa
   const handleCreateEmpresa = async () => {
     if(!novaEmpresa.nomeFantasia || !novaEmpresa.email || novaEmpresa.senha.length < 6) {
       return alert('Preencha todos os campos obrigatórios e use uma senha com pelo menos 6 caracteres.');
@@ -315,10 +313,7 @@ const MasterView = ({ setView }) => {
     
     setEmpresaLoading(true);
     try {
-      // Criar conta usando o app secundário (não desloga o Master)
       const cred = await createUserWithEmailAndPassword(secondaryAuth, novaEmpresa.email, novaEmpresa.senha);
-      
-      // Salvar os dados complementares no Firestore
       await setDoc(doc(db, 'usuarios', cred.user.uid), {
         nome: novaEmpresa.nomeFantasia,
         socio: novaEmpresa.socio,
@@ -330,13 +325,11 @@ const MasterView = ({ setView }) => {
         dataCriacao: serverTimestamp()
       });
       
-      await signOut(secondaryAuth); // Desconecta só o app secundário
+      await signOut(secondaryAuth); 
       alert(`Empresa "${novaEmpresa.nomeFantasia}" cadastrada com sucesso!`);
       
-      // Limpa os campos e fecha o modal
       setNovaEmpresa({ nomeFantasia: '', socio: '', whatsapp: '', email: '', plano: 'Free [Teste Ilimitado 14 dias]', senha: '' });
       setIsModalOpen(false);
-      
     } catch (err) {
       console.error(err);
       alert('Erro ao criar a empresa: ' + err.message);
@@ -434,7 +427,6 @@ const MasterView = ({ setView }) => {
             )}
           </div>
 
-          {/* MODAL: CRIAR NOVA EMPRESA REAL */}
           {isModalOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
                <div className="bg-[#0B192C] border border-slate-800 rounded-3xl p-6 w-full max-w-md shadow-2xl relative">
@@ -491,7 +483,7 @@ const MasterView = ({ setView }) => {
 };
 
 // ==========================================
-// 6. VISÃO EMPRESA (Upload Seguro e Invisível)
+// 6. VISÃO EMPRESA (O CRM Vivo com Upload e Exportação)
 // ==========================================
 const EmpresaView = ({ setView, userData }) => {
   const [currentTab, setCurrentTab] = useState('kits');
@@ -557,7 +549,53 @@ const EmpresaView = ({ setView, userData }) => {
 
   const vendedoresUnicos = [...new Set(orcamentos.map(orc => orc.vendedor))].filter(Boolean);
 
-  // A MÁGICA SEGURA: Carregar a biblioteca Excel injetando no HTML (Evita que o Canvas reclame)
+  // MÁGICA SEGURA: Exportar Excel Real
+  const handleExportExcel = async () => {
+    if (orcamentosFiltrados.length === 0) {
+      alert("Não há dados para exportar com os filtros atuais.");
+      return;
+    }
+
+    try {
+      // Carrega a biblioteca de forma segura sem travar o Canvas
+      if (typeof window.XLSX === 'undefined') {
+        await new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+          script.onload = resolve;
+          script.onerror = reject;
+          document.head.appendChild(script);
+        });
+      }
+      const XLSX = window.XLSX;
+
+      // Prepara os dados limpos para a planilha
+      const dadosExcel = orcamentosFiltrados.map(orc => ({
+        'Data da Simulação': orc.dataVisual,
+        'Consultor Comercial': orc.vendedor,
+        'Nome do Cliente': orc.cliente,
+        'WhatsApp Contato': orc.whatsapp,
+        'Cidade / UF': orc.cidade,
+        'Estrutura do Telhado': orc.estrutura,
+        'Categoria': orc.tipoKit,
+        'Kit Escolhido': orc.kit,
+        'Valor do Orçamento': orc.valor
+      }));
+
+      // Cria a folha de cálculo usando o motor XLSX
+      const folha = XLSX.utils.json_to_sheet(dadosExcel);
+      const livro = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(livro, folha, "Relatório de Vendas");
+
+      // Descarrega o ficheiro para o utilizador
+      const dataAtual = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
+      XLSX.writeFile(livro, `Relatorio_SaaS_${dataAtual}.xlsx`);
+    } catch (err) {
+      console.error("Erro ao exportar Excel", err);
+      alert("Erro ao gerar o ficheiro Excel.");
+    }
+  };
+
   const handleRealUpload = async (e) => {
     const file = e.target.files[0];
     if(!file) return;
@@ -725,7 +763,8 @@ const EmpresaView = ({ setView, userData }) => {
                       <button onClick={() => setResultadosFilter('30dias')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${resultadosFilter === '30dias' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-white'}`}>30 Dias</button>
                       <button onClick={() => alert('Abrirá calendário para Mês Específico')} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 text-slate-500 hover:text-white whitespace-nowrap`}><Search className="w-3 h-3"/> Personalizado</button>
                     </div>
-                    <button onClick={() => alert('Baixando dados...')} className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 whitespace-nowrap"><FileSpreadsheet className="w-3.5 h-3.5"/> Exportar Excel</button>
+                    {/* Botão de Exportação AGORA É REAL! */}
+                    <button onClick={handleExportExcel} className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 whitespace-nowrap"><FileSpreadsheet className="w-3.5 h-3.5"/> Exportar Excel</button>
                   </div>
                 </div>
               </div>
