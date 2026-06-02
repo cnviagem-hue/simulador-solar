@@ -186,12 +186,15 @@ const DashboardLayout = ({ children, title, setView, role, currentTab, setCurren
       <main className="flex-1 flex flex-col h-full relative bg-[#030811] overflow-hidden w-full">
         <header className="h-20 border-b border-slate-800 bg-[#0B192C]/80 backdrop-blur-md flex items-center justify-between px-4 sm:px-8 relative z-10 w-full shrink-0">
           <h1 className="text-lg sm:text-xl font-bold text-white truncate pr-2">{title}</h1>
-          <div className="flex items-center space-x-2 sm:space-x-4 shrink-0">
-            {/* CORREÇÃO DO PADDING E LIMITE DE TEXTO PARA NÃO CORTAR NO TELEMÓVEL */}
+          <div className="flex items-center space-x-3 sm:space-x-4 shrink-0">
             <div className="text-right">
               <p className="text-xs sm:text-sm font-bold text-white truncate max-w-[120px] sm:max-w-none">{role === 'master' ? 'Super Admin' : 'Admin Empresa'}</p>
               <p className="text-[10px] sm:text-xs text-emerald-400">Online</p>
             </div>
+            {/* NOVO BOTÃO SAIR NO TOPO (Apenas visível em telemóveis - MD:HIDDEN) */}
+            <button onClick={() => setView('login')} className="md:hidden p-2 text-slate-400 hover:text-red-400 transition-colors rounded-lg bg-slate-800/50 border border-slate-700/50" title="Sair">
+              <LogOut className="w-5 h-5" />
+            </button>
           </div>
         </header>
         <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-8 relative z-10 w-full">
