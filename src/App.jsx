@@ -20,7 +20,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app); 
 
-// MÁGICA: App secundário para cadastrar vendedores sem deslogar a Empresa
+// MÁGICA: App secundário para cadastrar acessos sem deslogar o Admin
 const secondaryApp = initializeApp(firebaseConfig, "Secondary");
 const secondaryAuth = getAuth(secondaryApp);
 
@@ -37,12 +37,6 @@ const fallbackKitsMicro = [
   { Kit: 'KIT MICRO 230KWh', Placas: '3', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX2250', Valor: '7.725,81' },
   { Kit: 'KIT MICRO 540KWh', Placas: '7', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '12.679,71' },
   { Kit: 'KIT MICRO 1000KWh', Placas: '13', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '20.136,94' }
-];
-
-const mockEmpresas = [
-  { id: 1, nome: 'SolarTech Brasil', email: 'contato@solartech.com', plano: 'Pró até 10 vendedores', equipa: 12, status: 'Ativa', pgto: 'Pago' },
-  { id: 2, nome: 'Goiás Solar Integrador', email: 'vendas@goiassolar.com', plano: 'Básico até 5 vendedores', equipa: 4, status: 'Ativa', pgto: 'Atrasado' },
-  { id: 3, nome: 'Energia Pura Lda', email: 'diretoria@energiapura.com', plano: 'Free [Teste Ilimitado 14 dias]', equipa: 14, status: 'Bloqueada', pgto: 'Free' },
 ];
 
 const chartData = [
@@ -175,7 +169,7 @@ const LoginView = ({ setView, setUserData }) => {
             setView('empresa');
           }
         } else {
-          // Fallback para as contas de teste antigas
+          // Fallback para contas sem role definida
           setUserData({ role: 'empresa', uid: user.uid, email: user.email });
           setView('empresa'); 
         }
@@ -243,13 +237,113 @@ const LoginView = ({ setView, setUserData }) => {
 };
 
 // ==========================================
-// 5. VISÃO MASTER 
+// 5. VISÃO MASTER (AGORA COM DADOS REAIS DA NUVEM)
 // ==========================================
 const MasterView = ({ setView }) => {
   const [currentTab, setCurrentTab] = useState('empresas');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  
+  // Estados Dinâmicos do Sistema Master
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [empresas, setEmpresas] = useState([]);
+  const [loadingEmpresas, setLoadingEmpresas] = useState(true);
+  const [estatisticas, setEstatisticas] = useState({ empresas: 0, vendedores: 0 });
+  const [totalSimulacoes, setTotalSimulacoes] = useState(0);
+
+  // Estados Formulário Nova Empresa
+  const [novaEmpresa, setNovaEmpresa] = useState({ nomeFantasia: '', socio: '', whatsapp: '', email: '', plano: 'Free [Teste Ilimitado 14 dias]', senha: '' });
+  const [empresaLoading, setEmpresaLoading] = useState(false);
+
+  // 1. Carregar Empresas e Vendedores da Base de Dados
+  useEffect(() => {
+    const q = query(collection(db, "usuarios"));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const allDocs = [];
+      querySnapshot.forEach((docSnap) => {
+        allDocs.push({ id: docSnap.id, ...docSnap.data() });
+      });
+
+      const empresasArray = allDocs.filter(u => u.role === 'empresa');
+      const vendedoresArray = allDocs.filter(u => u.role === 'vendedor');
+
+      let countEmpresas = 0;
+      
+      const empresasComEquipa = empresasArray.map(emp => {
+         if (emp.status === 'Ativa') countEmpresas++;
+         const qtdVendedores = vendedoresArray.filter(v => v.empresaId === emp.id).length;
+         return { ...emp, equipa: qtdVendedores };
+      });
+
+      empresasComEquipa.sort((a, b) => {
+        const timeA = a.dataCriacao?.toMillis() || 0;
+        const timeB = b.dataCriacao?.toMillis() || 0;
+        return timeB - timeA;
+      });
+
+      setEmpresas(empresasComEquipa);
+      setEstatisticas({ empresas: countEmpresas, vendedores: vendedoresArray.length });
+      setLoadingEmpresas(false);
+    }, (error) => {
+      console.error("Erro ao carregar usuários:", error);
+      setLoadingEmpresas(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // 2. Carregar o Total Global de Simulações
+  useEffect(() => {
+    const q = query(collection(db, "orcamentos"));
+    const unsubscribe = onSnapshot(q, (snap) => {
+       setTotalSimulacoes(snap.size);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Filtros aplicados na Tabela
+  const empresasFiltradas = empresas.filter(emp => {
+      const matchesSearch = emp.nome?.toLowerCase().includes(searchTerm.toLowerCase()) || emp.email?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus = statusFilter === 'all' || emp.status?.toLowerCase() === statusFilter.toLowerCase();
+      return matchesSearch && matchesStatus;
+  });
+
+  // 3. Função para Registar Nova Empresa
+  const handleCreateEmpresa = async () => {
+    if(!novaEmpresa.nomeFantasia || !novaEmpresa.email || novaEmpresa.senha.length < 6) {
+      return alert('Preencha todos os campos obrigatórios e use uma senha com pelo menos 6 caracteres.');
+    }
+    
+    setEmpresaLoading(true);
+    try {
+      // Criar conta usando o app secundário (não desloga o Master)
+      const cred = await createUserWithEmailAndPassword(secondaryAuth, novaEmpresa.email, novaEmpresa.senha);
+      
+      // Salvar os dados complementares no Firestore
+      await setDoc(doc(db, 'usuarios', cred.user.uid), {
+        nome: novaEmpresa.nomeFantasia,
+        socio: novaEmpresa.socio,
+        whatsapp: novaEmpresa.whatsapp,
+        email: novaEmpresa.email,
+        plano: novaEmpresa.plano,
+        role: 'empresa',
+        status: 'Ativa',
+        dataCriacao: serverTimestamp()
+      });
+      
+      await signOut(secondaryAuth); // Desconecta só o app secundário
+      alert(`Empresa "${novaEmpresa.nomeFantasia}" cadastrada com sucesso!`);
+      
+      // Limpa os campos e fecha o modal
+      setNovaEmpresa({ nomeFantasia: '', socio: '', whatsapp: '', email: '', plano: 'Free [Teste Ilimitado 14 dias]', senha: '' });
+      setIsModalOpen(false);
+      
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao criar a empresa: ' + err.message);
+    } finally {
+      setEmpresaLoading(false);
+    }
+  };
 
   return (
     <DashboardLayout title="Visão Master (LD Negócios)" setView={setView} role="master" currentTab={currentTab} setCurrentTab={setCurrentTab}>
@@ -259,21 +353,21 @@ const MasterView = ({ setView }) => {
               <div className="bg-[#0B192C] border border-slate-800 rounded-2xl p-6 shadow-sm flex items-center justify-between">
                 <div>
                   <p className="text-xs uppercase font-bold tracking-wider text-slate-500 mb-1">Empresas Ativas</p>
-                  <h3 className="text-3xl font-extrabold text-white">3</h3>
+                  <h3 className="text-3xl font-extrabold text-white">{estatisticas.empresas}</h3>
                 </div>
                 <div className="bg-emerald-500/10 p-3 rounded-xl border border-emerald-500/20"><Building className="w-6 h-6 text-emerald-400"/></div>
               </div>
               <div className="bg-[#0B192C] border border-slate-800 rounded-2xl p-6 shadow-sm flex items-center justify-between">
                 <div>
                   <p className="text-xs uppercase font-bold tracking-wider text-slate-500 mb-1">Total de Vendedores</p>
-                  <h3 className="text-3xl font-extrabold text-white">17</h3>
+                  <h3 className="text-3xl font-extrabold text-white">{estatisticas.vendedores}</h3>
                 </div>
                 <div className="bg-blue-500/10 p-3 rounded-xl border border-blue-500/20"><Users className="w-6 h-6 text-blue-400"/></div>
               </div>
               <div className="bg-[#0B192C] border border-slate-800 rounded-2xl p-6 shadow-sm flex items-center justify-between">
                 <div>
                   <p className="text-xs uppercase font-bold tracking-wider text-slate-500 mb-1">Simulações Geradas</p>
-                  <h3 className="text-3xl font-extrabold text-white">8,432</h3>
+                  <h3 className="text-3xl font-extrabold text-white">{totalSimulacoes}</h3>
                 </div>
                 <div className="bg-amber-500/10 p-3 rounded-xl border border-amber-500/20"><Zap className="w-6 h-6 text-amber-500"/></div>
               </div>
@@ -297,76 +391,95 @@ const MasterView = ({ setView }) => {
               </div>
               <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="w-full sm:w-48 bg-[#030811] border border-slate-700 rounded-xl py-2.5 px-4 text-sm text-white focus:border-amber-500 outline-none shadow-inner transition cursor-pointer appearance-none">
                   <option value="all">Todos os Status</option>
-                  <option value="active">Ativas</option>
-                  <option value="blocked">Bloqueadas</option>
+                  <option value="Ativa">Ativas</option>
+                  <option value="Bloqueada">Bloqueadas</option>
               </select>
             </div>
             <button onClick={() => setIsModalOpen(true)} className="flex items-center justify-center space-x-2 bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-slate-900 font-extrabold px-5 py-2.5 rounded-xl transition shadow-lg w-full lg:w-auto shrink-0"><Plus className="w-4 h-4" /> <span>Nova Empresa</span></button>
           </div>
           
           <div className="overflow-x-auto w-full block">
-            <table className="w-full text-left text-sm text-slate-300 min-w-max">
-              <thead className="text-[10px] uppercase tracking-widest bg-[#030811] text-slate-500 font-bold border-b border-slate-800 sticky top-0">
-                <tr><th className="px-6 py-4">Empresa / Contato</th><th className="px-6 py-4 text-center">Plano</th><th className="px-6 py-4 text-center">Status</th><th className="px-6 py-4 text-right">Ações</th></tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/50">
-                {mockEmpresas.map((item) => (
-                  <tr key={item.id} className="hover:bg-slate-800/40 transition">
-                    <td className="px-6 py-4"><div className="font-extrabold text-white text-base">{item.nome}</div><div className="text-xs text-slate-500 mt-0.5">{item.email}</div></td>
-                    <td className="px-6 py-4 text-center"><span className="bg-slate-800 px-3 py-1 rounded-md text-xs font-medium border border-slate-700">{item.plano}</span><div className="text-xs text-slate-500 mt-1">{item.equipa} ativos</div></td>
-                    <td className="px-6 py-4 text-center">
-                      <span className={`inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider mx-auto ${item.status === 'Ativa' ? 'text-emerald-400 bg-emerald-400/10 border border-emerald-400/20' : 'text-red-400 bg-red-400/10 border border-red-400/20'}`}>
-                        {item.status === 'Ativa' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>}
-                        <span>{item.status}</span>
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right space-x-2">
-                      <button className="text-slate-400 hover:text-white transition p-1" title="Editar / Nova Senha" onClick={() => alert('Abrirá pop-up de edição')}><Settings className="w-4 h-4" /></button>
-                      <button className="text-slate-400 hover:text-amber-500 transition p-1" title="Suspender / Bloquear Acesso" onClick={() => alert('Deseja realmente bloquear esta empresa?')}><AlertCircle className="w-4 h-4" /></button>
-                      <button className="text-slate-400 hover:text-red-400 transition p-1" title="Login como Empresa (Log as)" onClick={() => setView('empresa')}><LogOut className="w-4 h-4 rotate-180" /></button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            {loadingEmpresas ? (
+               <div className="flex justify-center items-center h-32">
+                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500"></div>
+               </div>
+            ) : (
+              <table className="w-full text-left text-sm text-slate-300 min-w-max">
+                <thead className="text-[10px] uppercase tracking-widest bg-[#030811] text-slate-500 font-bold border-b border-slate-800 sticky top-0">
+                  <tr><th className="px-6 py-4">Empresa / Contato</th><th className="px-6 py-4 text-center">Plano</th><th className="px-6 py-4 text-center">Status</th><th className="px-6 py-4 text-right">Ações</th></tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/50">
+                  {empresasFiltradas.length === 0 ? (
+                    <tr><td colSpan="4" className="text-center py-8 text-slate-500 font-bold">Nenhuma empresa encontrada com estes filtros.</td></tr>
+                  ) : (
+                    empresasFiltradas.map((item) => (
+                      <tr key={item.id} className="hover:bg-slate-800/40 transition">
+                        <td className="px-6 py-4"><div className="font-extrabold text-white text-base">{item.nome}</div><div className="text-xs text-slate-500 mt-0.5">{item.email}</div></td>
+                        <td className="px-6 py-4 text-center"><span className="bg-slate-800 px-3 py-1 rounded-md text-xs font-medium border border-slate-700">{item.plano}</span><div className="text-xs text-slate-500 mt-1">{item.equipa} vendedores ativos</div></td>
+                        <td className="px-6 py-4 text-center">
+                          <span className={`inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider mx-auto ${item.status === 'Ativa' ? 'text-emerald-400 bg-emerald-400/10 border border-emerald-400/20' : 'text-red-400 bg-red-400/10 border border-red-400/20'}`}>
+                            {item.status === 'Ativa' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>}
+                            <span>{item.status || 'Ativa'}</span>
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right space-x-2">
+                          <button className="text-slate-400 hover:text-white transition p-1" title="Editar Empresa" onClick={() => alert('Em desenvolvimento na Fase 5: Edição de Clientes')}><Settings className="w-4 h-4" /></button>
+                          <button className="text-slate-400 hover:text-amber-500 transition p-1" title="Suspender Acesso" onClick={() => alert('Deseja realmente bloquear esta empresa?')}><AlertCircle className="w-4 h-4" /></button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            )}
           </div>
 
+          {/* MODAL: CRIAR NOVA EMPRESA REAL */}
           {isModalOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
                <div className="bg-[#0B192C] border border-slate-800 rounded-3xl p-6 w-full max-w-md shadow-2xl relative">
                  <button onClick={() => setIsModalOpen(false)} className="absolute top-4 right-4 text-slate-500 hover:text-white transition"><LogOut className="w-5 h-5"/></button>
                  <h3 className="text-xl font-extrabold text-white mb-1">Cadastrar Nova Empresa</h3>
-                 <p className="text-xs text-slate-400 mb-6">Esta ação criará um ambiente separado para o seu cliente.</p>
+                 <p className="text-xs text-slate-400 mb-6">Esta ação criará um ambiente seguro na nuvem para o seu cliente.</p>
                  <div className="space-y-4">
                    <div>
-                     <label className="text-xs font-bold text-slate-400 mb-1 block">Nome Fantasia / Razão Social</label>
-                     <input type="text" placeholder="Ex: SolarTech Brasil" className="w-full bg-[#030811] border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-amber-500"/>
+                     <label className="text-xs font-bold text-slate-400 mb-1 block">Nome Fantasia / Razão Social *</label>
+                     <input type="text" value={novaEmpresa.nomeFantasia} onChange={(e) => setNovaEmpresa({...novaEmpresa, nomeFantasia: e.target.value})} placeholder="Ex: SolarTech Brasil" className="w-full bg-[#030811] border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-amber-500"/>
                    </div>
                    <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="text-xs font-bold text-slate-400 mb-1 block">Nome do Sócio</label>
-                        <input type="text" placeholder="João Silva" className="w-full bg-[#030811] border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-amber-500"/>
+                        <input type="text" value={novaEmpresa.socio} onChange={(e) => setNovaEmpresa({...novaEmpresa, socio: e.target.value})} placeholder="João Silva" className="w-full bg-[#030811] border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-amber-500"/>
                       </div>
                       <div>
-                        <label className="text-xs font-bold text-slate-400 mb-1 block">WhatsApp Responsável</label>
-                        <input type="text" placeholder="(00) 00000-0000" className="w-full bg-[#030811] border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-amber-500"/>
+                        <label className="text-xs font-bold text-slate-400 mb-1 block">WhatsApp</label>
+                        <input type="text" value={novaEmpresa.whatsapp} onChange={(e) => setNovaEmpresa({...novaEmpresa, whatsapp: e.target.value})} placeholder="(00) 00000-0000" className="w-full bg-[#030811] border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-amber-500"/>
                       </div>
                    </div>
                    <div>
-                     <label className="text-xs font-bold text-slate-400 mb-1 block">E-mail (Login Principal)</label>
-                     <input type="email" placeholder="contato@empresa.com" className="w-full bg-[#030811] border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-amber-500"/>
+                     <label className="text-xs font-bold text-slate-400 mb-1 block">E-mail (Login Principal) *</label>
+                     <input type="email" value={novaEmpresa.email} onChange={(e) => setNovaEmpresa({...novaEmpresa, email: e.target.value})} placeholder="contato@empresa.com" className="w-full bg-[#030811] border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-amber-500"/>
+                   </div>
+                   <div>
+                     <label className="text-xs font-bold text-slate-400 mb-1 block">Senha Segura Inicial *</label>
+                     <input type="text" value={novaEmpresa.senha} onChange={(e) => setNovaEmpresa({...novaEmpresa, senha: e.target.value})} placeholder="Mínimo 6 caracteres" className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-amber-500 font-mono text-sm outline-none focus:border-amber-500"/>
                    </div>
                    <div className="relative group">
-                     <label className="text-xs font-bold text-slate-400 mb-1 block">Plano Contratado</label>
-                     <select className="w-full bg-[#030811] border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-amber-500 appearance-none cursor-pointer">
-                        <option>Free [Teste Ilimitado 14 dias]</option>
-                        <option>Básico até 5 vendedores [R$ 100,00]</option>
-                        <option>Pró até 10 vendedores [R$ 125,00]</option>
-                        <option>Master Ilimitado [R$ 150,00]</option>
+                     <label className="text-xs font-bold text-slate-400 mb-1 block">Plano Contratado *</label>
+                     <select value={novaEmpresa.plano} onChange={(e) => setNovaEmpresa({...novaEmpresa, plano: e.target.value})} className="w-full bg-[#030811] border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-amber-500 appearance-none cursor-pointer">
+                        <option value="Free [Teste Ilimitado 14 dias]">Free [Teste Ilimitado 14 dias]</option>
+                        <option value="Básico até 5 vendedores [R$ 100,00]">Básico até 5 vendedores [R$ 100,00]</option>
+                        <option value="Pró até 10 vendedores [R$ 125,00]">Pró até 10 vendedores [R$ 125,00]</option>
+                        <option value="Master Ilimitado [R$ 150,00]">Master Ilimitado [R$ 150,00]</option>
                      </select>
                      <span className="absolute inset-y-0 right-0 flex items-center pr-4 pt-5 pointer-events-none text-slate-400"><ChevronDown className="w-4 h-4"/></span>
                    </div>
-                   <button onClick={() => setIsModalOpen(false)} className="w-full bg-gradient-to-r from-amber-400 to-orange-500 text-slate-900 font-extrabold py-3 rounded-xl mt-2 transition">Criar Conta e Enviar Senha</button>
+                   <button 
+                      onClick={handleCreateEmpresa} 
+                      disabled={empresaLoading}
+                      className="w-full bg-gradient-to-r from-amber-400 to-orange-500 text-slate-900 font-extrabold py-3 rounded-xl mt-2 transition disabled:opacity-50">
+                      {empresaLoading ? 'A Registar Nuvem...' : 'Criar Conta e Enviar Senha'}
+                   </button>
                  </div>
                </div>
             </div>
