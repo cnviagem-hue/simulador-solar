@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { Search, Building, Users, Zap, Plus, Settings, AlertCircle, LogOut, CheckCircle, ChevronDown, User, Smartphone, MapPin, BarChart, Sun, FileText, Clipboard, MessageCircle, BookOpen, Menu, X } from 'lucide-react';
+import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { Search, Building, Users, Zap, Plus, Settings, AlertCircle, LogOut, CheckCircle, ChevronDown, User, Smartphone, MapPin, BarChart3, Sun, FileSpreadsheet, ClipboardList, MessageCircle, BookOpen, Menu, X } from 'lucide-react';
 
+// ==========================================
+// 1. CONFIGURAÇÃO DO FIREBASE
+// ==========================================
 const firebaseConfig = {
   apiKey: "AIzaSyD4GqSo-4EjCQ-nJa-gX3S5knTCVcjuYOY",
   authDomain: "ld-simulador-solar.firebaseapp.com",
@@ -15,6 +18,9 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+// ==========================================
+// 2. DADOS DOS KITS (24 String + 66 Micro)
+// ==========================================
 const kitsString = [
   { Kit: 'KIT 370kWh', Placas: '5', Modulo: '590W', Inversor: 'AUXSOL 3K', Valor: '9.335,68' },
   { Kit: 'KIT 440kWh', Placas: '6', Modulo: '590W', Inversor: 'AUXSOL 3K', Valor: '9.924,54' },
@@ -109,14 +115,6 @@ const kitsMicro = [
   { Kit: 'KIT MICRO 5040KWh', Placas: '66', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '88.228,95' }
 ];
 
-const mockSimulacoes = [
-  { id: 1, data: '01/06/2026 14:30', vendedor: 'Carlos Mendes', cliente: 'João Silva', whatsapp: '(62) 99999-1111', cidade: 'Goiânia - GO', estrutura: 'Madeira', tipo: 'String', kit: 'KIT 590kWh', valor: '12.177,50' },
-  { id: 2, data: '01/06/2026 15:45', vendedor: 'Ana Paula', cliente: 'Maria Oliveira', whatsapp: '(62) 98888-2222', cidade: 'Aparecida de Goiânia - GO', estrutura: 'Ferro', tipo: 'Micro', kit: 'KIT MICRO 540KWh', valor: '12.679,71' },
-  { id: 3, data: '31/05/2026 09:15', vendedor: 'Carlos Mendes', cliente: 'Pedro Santos', whatsapp: '(64) 97777-3333', cidade: 'Caldas Novas - GO', estrutura: 'Madeira', tipo: 'String', kit: 'KIT 1020kWh', valor: '17.758,83' },
-  { id: 4, data: '30/05/2026 11:20', vendedor: 'Ricardo Alves', cliente: 'Lucas Fernandes', whatsapp: '(61) 96666-4444', cidade: 'Brasília - DF', estrutura: 'Ferro', tipo: 'Micro', kit: 'KIT MICRO 230KWh', valor: '7.725,81' },
-  { id: 5, data: '28/05/2026 16:50', vendedor: 'Ana Paula', cliente: 'Fernanda Lima', whatsapp: '(62) 95555-5555', cidade: 'Anápolis - GO', estrutura: 'Madeira', tipo: 'String', kit: 'KIT 370kWh', valor: '9.335,68' },
-];
-
 const mockEmpresas = [
   { id: 1, nome: 'SolarTech Brasil', email: 'contato@solartech.com', plano: 'Pró até 10 vendedores', equipa: 12, status: 'Ativa', pgto: 'Pago' },
   { id: 2, nome: 'Goiás Solar Integrador', email: 'vendas@goiassolar.com', plano: 'Básico até 5 vendedores', equipa: 4, status: 'Ativa', pgto: 'Atrasado' },
@@ -128,6 +126,9 @@ const chartData = [
   { name: 'Qui', propostas: 22, height: '80%' }, { name: 'Sex', propostas: 28, height: '100%' }, { name: 'Sáb', propostas: 9, height: '30%' }, { name: 'Dom', propostas: 4, height: '15%' }
 ];
 
+// ==========================================
+// 3. LAYOUT BASE DO SAAS 
+// ==========================================
 const DashboardLayout = ({ children, title, setView, role, currentTab, setCurrentTab }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -135,7 +136,9 @@ const DashboardLayout = ({ children, title, setView, role, currentTab, setCurren
 
   return (
     <div className="flex h-screen bg-[#030811] text-slate-100 font-sans selection:bg-orange-500 overflow-hidden w-full">
+      {/* Overlay Escuro Móvel */}
       {isMobileMenuOpen && <div className="fixed inset-0 bg-black/80 z-40 md:hidden backdrop-blur-sm" onClick={toggleMobileMenu}></div>}
+      
       <aside className={`fixed md:static inset-y-0 left-0 z-50 w-64 bg-[#0B192C] border-r border-slate-800 flex flex-col justify-between shrink-0 transition-transform duration-300 ease-in-out ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
         <div>
           <div className="h-20 flex items-center justify-between px-6 border-b border-slate-800">
@@ -147,7 +150,7 @@ const DashboardLayout = ({ children, title, setView, role, currentTab, setCurren
           </div>
           <nav className="p-4 space-y-2 overflow-y-auto">
             <button onClick={() => handleTabChange('dashboard')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition font-medium ${currentTab === 'dashboard' ? 'bg-slate-800 text-white border-l-2 border-amber-500' : 'text-slate-400 hover:bg-slate-900/50 hover:text-white'}`}>
-              <BarChart className={`w-5 h-5 ${currentTab === 'dashboard' ? 'text-amber-500' : ''}`} /> <span>Dashboard Central</span>
+              <BarChart3 className={`w-5 h-5 ${currentTab === 'dashboard' ? 'text-amber-500' : ''}`} /> <span>Dashboard Central</span>
             </button>
             {role === 'master' && (
               <button onClick={() => handleTabChange('empresas')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition font-medium ${currentTab === 'empresas' ? 'bg-slate-800 text-white border-l-2 border-amber-500' : 'text-slate-400 hover:bg-slate-900/50 hover:text-white'}`}>
@@ -157,7 +160,7 @@ const DashboardLayout = ({ children, title, setView, role, currentTab, setCurren
             {role === 'empresa' && (
               <>
                 <button onClick={() => handleTabChange('resultados')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition font-medium ${currentTab === 'resultados' ? 'bg-slate-800 text-white border-l-2 border-amber-500' : 'text-slate-400 hover:bg-slate-900/50 hover:text-white'}`}>
-                  <Clipboard className={`w-5 h-5 ${currentTab === 'resultados' ? 'text-amber-500' : ''}`} /> <span>Resultados (CRM)</span>
+                  <ClipboardList className={`w-5 h-5 ${currentTab === 'resultados' ? 'text-amber-500' : ''}`} /> <span>Resultados (CRM)</span>
                 </button>
                 <button onClick={() => handleTabChange('vendedores')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition font-medium ${currentTab === 'vendedores' ? 'bg-slate-800 text-white border-l-2 border-amber-500' : 'text-slate-400 hover:bg-slate-900/50 hover:text-white'}`}>
                   <Users className={`w-5 h-5 ${currentTab === 'vendedores' ? 'text-amber-500' : ''}`} /> <span>Meus Vendedores</span>
@@ -187,9 +190,7 @@ const DashboardLayout = ({ children, title, setView, role, currentTab, setCurren
       <main className="flex-1 flex flex-col h-full relative bg-[#030811] overflow-hidden w-full">
         <header className="h-20 border-b border-slate-800 bg-[#0B192C]/80 backdrop-blur-md flex items-center justify-between px-4 sm:px-8 relative z-10 w-full shrink-0">
           <div className="flex items-center gap-3">
-            <button onClick={toggleMobileMenu} className="md:hidden p-2 -ml-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800/50 transition-colors">
-              <Menu className="w-6 h-6" />
-            </button>
+            <button onClick={toggleMobileMenu} className="md:hidden p-2 -ml-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800/50 transition-colors"><Menu className="w-6 h-6" /></button>
             <h1 className="text-lg sm:text-xl font-bold text-white truncate pr-2">{title}</h1>
           </div>
           <div className="flex items-center space-x-3 sm:space-x-4 shrink-0">
@@ -197,9 +198,7 @@ const DashboardLayout = ({ children, title, setView, role, currentTab, setCurren
               <p className="text-xs sm:text-sm font-bold text-white truncate max-w-[120px] sm:max-w-none">{role === 'master' ? 'Super Admin' : 'Admin Empresa'}</p>
               <p className="text-[10px] sm:text-xs text-emerald-400">Online</p>
             </div>
-            <button onClick={() => setView('login')} className="md:hidden p-2 text-slate-400 hover:text-red-400 transition-colors rounded-lg bg-slate-800/50 border border-slate-700/50" title="Sair">
-              <LogOut className="w-5 h-5" />
-            </button>
+            <button onClick={() => setView('login')} className="md:hidden p-2 text-slate-400 hover:text-red-400 transition-colors rounded-lg bg-slate-800/50 border border-slate-700/50" title="Sair"><LogOut className="w-5 h-5" /></button>
           </div>
         </header>
         <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-8 relative z-10 w-full">
@@ -210,6 +209,9 @@ const DashboardLayout = ({ children, title, setView, role, currentTab, setCurren
   );
 };
 
+// ==========================================
+// 4. TELA DE LOGIN 
+// ==========================================
 const LoginView = ({ setView }) => (
   <div className="min-h-screen bg-[#030811] flex flex-col justify-center items-center p-4 relative overflow-hidden select-none">
     <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(245,166,35,0.08),transparent_70%)] pointer-events-none"></div>
@@ -234,7 +236,7 @@ const LoginView = ({ setView }) => (
         <p className="text-[10px] text-center text-slate-500 font-bold uppercase tracking-widest mb-4">Botões de Teste (Navegação)</p>
         <div className="space-y-3">
           <button onClick={() => setView('master')} className="w-full flex items-center justify-center space-x-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20 py-2.5 rounded-xl transition text-sm font-medium"><Building className="w-4 h-4" /> <span>Visão MASTER (Dono)</span></button>
-          <button onClick={() => setView('empresa')} className="w-full flex items-center justify-center space-x-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 py-2.5 rounded-xl transition text-sm font-medium"><BarChart className="w-4 h-4" /> <span>Visão EMPRESA (Cliente)</span></button>
+          <button onClick={() => setView('empresa')} className="w-full flex items-center justify-center space-x-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 py-2.5 rounded-xl transition text-sm font-medium"><BarChart3 className="w-4 h-4" /> <span>Visão EMPRESA (Cliente)</span></button>
           <button onClick={() => setView('vendedor')} className="w-full flex items-center justify-center space-x-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/20 py-2.5 rounded-xl transition text-sm font-medium"><User className="w-4 h-4" /> <span>Visão VENDEDOR (App)</span></button>
         </div>
       </div>
@@ -242,6 +244,9 @@ const LoginView = ({ setView }) => (
   </div>
 );
 
+// ==========================================
+// 5. VISÃO MASTER 
+// ==========================================
 const MasterView = ({ setView }) => {
   const [currentTab, setCurrentTab] = useState('empresas');
   const [searchTerm, setSearchTerm] = useState('');
@@ -276,7 +281,7 @@ const MasterView = ({ setView }) => {
               </div>
            </div>
            <div className="bg-[#0B192C] border border-slate-800 rounded-2xl p-12 text-center shadow-sm">
-              <BarChart className="w-16 h-16 mx-auto mb-4 text-slate-700" />
+              <BarChart3 className="w-16 h-16 mx-auto mb-4 text-slate-700" />
               <h3 className="text-xl font-bold text-white mb-2">Resumo de Crescimento</h3>
               <p className="text-slate-400 text-sm max-w-md mx-auto">Vá para a aba "Gestão de Empresas" no menu lateral para visualizar, filtrar, adicionar ou bloquear clientes do sistema SaaS.</p>
               <button onClick={() => setCurrentTab('empresas')} className="mt-6 bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 px-6 py-3 rounded-xl font-bold transition">Ir para Gestão de Empresas</button>
@@ -374,6 +379,9 @@ const MasterView = ({ setView }) => {
   );
 };
 
+// ==========================================
+// 6. VISÃO EMPRESA (O CRM Vivo)
+// ==========================================
 const EmpresaView = ({ setView }) => {
   const [currentTab, setCurrentTab] = useState('resultados');
   const [dateFilter, setDateFilter] = useState('semana');
@@ -383,6 +391,55 @@ const EmpresaView = ({ setView }) => {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [uploadStatus, setUploadStatus] = useState('idle');
   
+  // Base de Dados Viva
+  const [orcamentos, setOrcamentos] = useState([]);
+  const [loadingCRM, setLoadingCRM] = useState(true);
+
+  useEffect(() => {
+    const q = query(collection(db, "orcamentos"), orderBy("timestamp", "desc"));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const docs = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        let dataFormatada = 'Sem Data';
+        let msTimestamp = 0;
+        if (data.timestamp) {
+           const date = data.timestamp.toDate();
+           msTimestamp = date.getTime();
+           dataFormatada = date.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+        } else if (data.data) {
+           dataFormatada = data.data;
+           const [dataPart, timePart] = data.data.split(' ');
+           if(dataPart && timePart) {
+               const [day, month, year] = dataPart.split('/');
+               const [hour, min] = timePart.split(':');
+               msTimestamp = new Date(year, month - 1, day, hour, min).getTime();
+           }
+        }
+        docs.push({ id: doc.id, ...data, dataVisual: dataFormatada, msTimestamp });
+      });
+      setOrcamentos(docs);
+      setLoadingCRM(false);
+    }, (error) => {
+      setLoadingCRM(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const orcamentosFiltrados = orcamentos.filter(orc => {
+      if (vendedorFilter !== 'todos' && orc.vendedor !== vendedorFilter) return false;
+      const hojeMs = new Date().getTime();
+      const umDiaMs = 24 * 60 * 60 * 1000;
+      let limiteMs = 0;
+      if (resultadosFilter === '7dias') limiteMs = hojeMs - (7 * umDiaMs);
+      else if (resultadosFilter === '15dias') limiteMs = hojeMs - (15 * umDiaMs);
+      else if (resultadosFilter === '30dias') limiteMs = hojeMs - (30 * umDiaMs);
+      if (limiteMs > 0 && orc.msTimestamp && orc.msTimestamp < limiteMs) return false;
+      return true;
+  });
+
+  const vendedoresUnicos = [...new Set(orcamentos.map(orc => orc.vendedor))].filter(Boolean);
+
   const handleSimulateUpload = (e) => {
     const file = e.target.files[0];
     if(!file) return;
@@ -451,7 +508,7 @@ const EmpresaView = ({ setView }) => {
          <div className="bg-[#0B192C] border border-slate-800 rounded-2xl overflow-hidden shadow-xl flex flex-col h-full w-full">
             <div className="p-4 sm:p-6 border-b border-slate-800 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-[#0B192C]/80 w-full">
               <div>
-                <h3 className="text-xl font-bold text-white flex items-center gap-2"><Clipboard className="w-6 h-6 text-amber-500"/> Histórico de Orçamentos</h3>
+                <h3 className="text-xl font-bold text-white flex items-center gap-2"><ClipboardList className="w-6 h-6 text-amber-500"/> Histórico de Orçamentos</h3>
                 <p className="text-sm text-slate-400 mt-1">Acompanhe e gira todas as propostas enviadas pela sua equipa.</p>
               </div>
               <div className="flex flex-col w-full lg:w-auto gap-3">
@@ -459,9 +516,9 @@ const EmpresaView = ({ setView }) => {
                   <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500"><User className="w-4 h-4" /></span>
                   <select value={vendedorFilter} onChange={(e) => setVendedorFilter(e.target.value)} className="w-full bg-[#030811] border border-slate-700 rounded-xl py-2 pl-9 pr-8 text-sm text-white focus:border-amber-500 outline-none shadow-inner appearance-none cursor-pointer transition">
                      <option value="todos">Todos Vendedores</option>
-                     <option value="carlos">Carlos Mendes</option>
-                     <option value="ana">Ana Paula</option>
-                     <option value="ricardo">Ricardo Alves</option>
+                     {vendedoresUnicos.map((vend, idx) => (
+                        <option key={idx} value={vend}>{vend}</option>
+                     ))}
                   </select>
                   <ChevronDown className="w-4 h-4 absolute right-3 top-2.5 text-slate-500 pointer-events-none" />
                 </div>
@@ -473,32 +530,42 @@ const EmpresaView = ({ setView }) => {
                       <button onClick={() => setResultadosFilter('30dias')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${resultadosFilter === '30dias' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-white'}`}>30 Dias</button>
                       <button onClick={() => alert('Abrirá calendário para Mês Específico')} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 text-slate-500 hover:text-white whitespace-nowrap`}><Search className="w-3 h-3"/> Personalizado</button>
                     </div>
-                    <button onClick={() => alert('Exportar Excel')} className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 whitespace-nowrap"><FileText className="w-3.5 h-3.5"/> Exportar Excel</button>
+                    <button onClick={() => alert('Baixando dados...')} className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 whitespace-nowrap"><FileSpreadsheet className="w-3.5 h-3.5"/> Exportar Excel</button>
                   </div>
                 </div>
               </div>
             </div>
             <div className="flex-1 overflow-x-auto p-4 max-h-[60vh]">
-              <table className="w-full text-left text-sm text-slate-300 min-w-max">
-                <thead className="text-[10px] uppercase tracking-widest bg-[#030811] text-slate-500 font-bold border-b border-slate-800 sticky top-0 z-10">
-                  <tr><th className="px-4 py-3 rounded-tl-lg">Data / Hora</th><th className="px-4 py-3">Vendedor</th><th className="px-4 py-3">Cliente</th><th className="px-4 py-3">WhatsApp</th><th className="px-4 py-3">Cidade</th><th className="px-4 py-3">Estrutura</th><th className="px-4 py-3">Tipo</th><th className="px-4 py-3">Kit Solar</th><th className="px-4 py-3 rounded-tr-lg text-right">Valor (R$)</th></tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/50">
-                  {mockSimulacoes.map((sim) => (
-                    <tr key={sim.id} className="hover:bg-slate-800/40 transition">
-                      <td className="px-4 py-3 text-xs text-slate-400 whitespace-nowrap">{sim.data}</td>
-                      <td className="px-4 py-3 font-medium text-white whitespace-nowrap">{sim.vendedor}</td>
-                      <td className="px-4 py-3 whitespace-nowrap">{sim.cliente}</td>
-                      <td className="px-4 py-3 font-mono text-xs whitespace-nowrap">{sim.whatsapp}</td>
-                      <td className="px-4 py-3 text-xs whitespace-nowrap">{sim.cidade}</td>
-                      <td className="px-4 py-3 text-xs whitespace-nowrap">{sim.estrutura}</td>
-                      <td className="px-4 py-3 whitespace-nowrap"><span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${sim.tipo === 'String' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'}`}>{sim.tipo}</span></td>
-                      <td className="px-4 py-3 text-xs font-semibold whitespace-nowrap">{sim.kit}</td>
-                      <td className="px-4 py-3 text-right font-bold text-amber-500 whitespace-nowrap">{sim.valor}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              {loadingCRM ? (
+                 <div className="flex justify-center items-center h-32">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500"></div>
+                 </div>
+              ) : (
+                <table className="w-full text-left text-sm text-slate-300 min-w-max">
+                  <thead className="text-[10px] uppercase tracking-widest bg-[#030811] text-slate-500 font-bold border-b border-slate-800 sticky top-0 z-10">
+                    <tr><th className="px-4 py-3 rounded-tl-lg">Data / Hora</th><th className="px-4 py-3">Vendedor</th><th className="px-4 py-3">Cliente</th><th className="px-4 py-3">WhatsApp</th><th className="px-4 py-3">Cidade</th><th className="px-4 py-3">Estrutura</th><th className="px-4 py-3">Tipo</th><th className="px-4 py-3">Kit Solar</th><th className="px-4 py-3 rounded-tr-lg text-right">Valor (R$)</th></tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/50">
+                    {orcamentosFiltrados.length === 0 ? (
+                      <tr><td colSpan="9" className="text-center py-8 text-slate-500 font-bold">Nenhum orçamento encontrado com estes filtros.</td></tr>
+                    ) : (
+                      orcamentosFiltrados.map((sim) => (
+                        <tr key={sim.id} className="hover:bg-slate-800/40 transition">
+                          <td className="px-4 py-3 text-xs text-slate-400 whitespace-nowrap">{sim.dataVisual}</td>
+                          <td className="px-4 py-3 font-medium text-white whitespace-nowrap">{sim.vendedor}</td>
+                          <td className="px-4 py-3 whitespace-nowrap">{sim.cliente}</td>
+                          <td className="px-4 py-3 font-mono text-xs whitespace-nowrap">{sim.whatsapp}</td>
+                          <td className="px-4 py-3 text-xs whitespace-nowrap">{sim.cidade}</td>
+                          <td className="px-4 py-3 text-xs whitespace-nowrap">{sim.estrutura}</td>
+                          <td className="px-4 py-3 whitespace-nowrap"><span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${sim.tipoKit === 'String' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'}`}>{sim.tipoKit}</span></td>
+                          <td className="px-4 py-3 text-xs font-semibold whitespace-nowrap">{sim.kit}</td>
+                          <td className="px-4 py-3 text-right font-bold text-amber-500 whitespace-nowrap">{sim.valor}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              )}
             </div>
          </div>
       )}
@@ -558,7 +625,7 @@ const EmpresaView = ({ setView }) => {
                         </div>
                         <label className="border-2 border-dashed border-slate-700 rounded-2xl p-8 flex flex-col items-center justify-center hover:bg-slate-800/50 transition cursor-pointer group">
                             <input type="file" className="hidden" accept=".xlsx, .csv" onChange={handleSimulateUpload} />
-                            <FileText className="w-10 h-10 text-slate-500 group-hover:text-amber-500 mb-2 transition" />
+                            <FileSpreadsheet className="w-10 h-10 text-slate-500 group-hover:text-amber-500 mb-2 transition" />
                             <p className="text-sm font-bold text-slate-300">Clique para selecionar a planilha</p>
                         </label>
                         <button onClick={() => setIsUploadModalOpen(false)} className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-xl mt-4 border border-slate-700 transition">Cancelar</button>
@@ -592,6 +659,9 @@ const EmpresaView = ({ setView }) => {
   );
 };
 
+// ==========================================
+// 7. VISÃO VENDEDOR
+// ==========================================
 const VendedorView = ({ setView }) => {
   const [formData, setFormData] = useState({ sellerName: '', kitString: '', kitMicro: '', roofStructure: '', clientName: '', clientWhatsapp: '', clientCity: '' });
   const [timeFilter, setTimeFilter] = useState('hoje');
@@ -680,7 +750,7 @@ const VendedorView = ({ setView }) => {
             
             <div className="bg-[#030811] rounded-3xl border border-slate-700/60 shadow-xl mb-12 p-4 sm:p-5 w-full">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-5 gap-3 border-b border-slate-800/80 pb-4 w-full overflow-hidden">
-                <h2 className="text-xs font-extrabold text-slate-300 uppercase tracking-widest flex items-center gap-2 shrink-0"><BarChart className="w-4 h-4 text-amber-500"/> O Meu Desempenho</h2>
+                <h2 className="text-xs font-extrabold text-slate-300 uppercase tracking-widest flex items-center gap-2 shrink-0"><BarChart3 className="w-4 h-4 text-amber-500"/> O Meu Desempenho</h2>
                 <div className="w-full overflow-x-auto pb-2 sm:pb-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
                   <div className="bg-[#0B192C] rounded-xl p-1 flex text-xs font-bold border border-slate-700 shadow-inner w-max">
                     <button onClick={() => setTimeFilter('hoje')} className={`px-4 py-1.5 rounded-lg transition ${timeFilter === 'hoje' ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'}`}>Hoje</button>
