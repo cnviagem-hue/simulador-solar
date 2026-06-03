@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, getDocs, writeBatch, doc, getDoc, setDoc } from 'firebase/firestore';
 import { getAuth, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from 'firebase/auth';
-import { Search, Building, Users, Zap, Plus, Settings, AlertCircle, LogOut, CheckCircle, CheckCircle2, ChevronDown, User, Smartphone, MapPin, BarChart3, Sun, FileSpreadsheet, ClipboardList, MessageCircle, BookOpen, Menu, X } from 'lucide-react';
+import { Search, Building, Users, Zap, Plus, Settings, AlertCircle, LogOut, CheckCircle, ChevronDown, User, Smartphone, MapPin, BarChart3, Sun, FileSpreadsheet, ClipboardList, MessageCircle, BookOpen, Menu, X } from 'lucide-react';
 
 // ==========================================
-// 1. CONFIGURAÇÃO DO FIREBASE
+// 1. CONFIGURAÇÃO DO FIREBASE (COM TRAVA DE SEGURANÇA PARA HOT-RELOAD)
 // ==========================================
 const firebaseConfig = {
   apiKey: "AIzaSyD4GqSo-4EjCQ-nJa-gX3S5knTCVcjuYOY",
@@ -16,12 +16,13 @@ const firebaseConfig = {
   appId: "1:9543973605:web:721bdd9895198418f6b20c"
 };
 
-const app = initializeApp(firebaseConfig);
+// Evita o "Firebase App already exists" que causava tela branca no Canvas
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 const db = getFirestore(app);
 const auth = getAuth(app); 
 
 // MÁGICA: App secundário para cadastrar acessos sem deslogar o Admin
-const secondaryApp = initializeApp(firebaseConfig, "Secondary");
+const secondaryApp = getApps().find(a => a.name === "Secondary") || initializeApp(firebaseConfig, "Secondary");
 const secondaryAuth = getAuth(secondaryApp);
 
 // ==========================================
@@ -834,9 +835,7 @@ const EmpresaView = ({ setView, userData }) => {
                         if(!novoVendedor.nome || !novoVendedor.email || novoVendedor.senha.length < 6) return alert('Preencha os dados e use uma senha com no mínimo 6 caracteres.');
                         setVendedorLoading(true);
                         try {
-                          // Criar usuário no Auth silenciosamente
                           const cred = await createUserWithEmailAndPassword(secondaryAuth, novoVendedor.email, novoVendedor.senha);
-                          // Salvar perfil no banco de dados, vinculando à Empresa
                           await setDoc(doc(db, 'usuarios', cred.user.uid), {
                             nome: novoVendedor.nome,
                             email: novoVendedor.email,
@@ -1161,13 +1160,11 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
 // ==========================================
 export default function App() {
   const [currentView, setCurrentView] = useState('login'); 
-  const [userData, setUserData] = useState(null); // Memória Global do Usuário Logado
+  const [userData, setUserData] = useState(null); 
   
-  // Estados Globais para os Kits que vêm do Firebase
   const [kitsString, setKitsString] = useState(fallbackKitsString);
   const [kitsMicro, setKitsMicro] = useState(fallbackKitsMicro);
 
-  // Efeito 1: Segurança (Bloquear comandos)
   useEffect(() => {
     const blockContextMenu = (e) => e.preventDefault();
     const blockKeyboardShortcuts = (e) => {
@@ -1183,7 +1180,6 @@ export default function App() {
     };
   }, []);
 
-  // Efeito 2: Escutar a Nuvem (Firebase) e Atualizar Preços dos Vendedores
   useEffect(() => {
     const q = query(collection(db, "kits"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -1191,13 +1187,10 @@ export default function App() {
         const strings = [];
         const micros = [];
         
-        // O Vendedor usa o ID da Empresa dele. A Empresa usa o seu próprio ID.
         const targetEmpresaId = userData?.role === 'vendedor' ? userData?.empresaId : userData?.uid;
         
         querySnapshot.forEach((doc) => {
           const kit = doc.data();
-
-          // ISOLAMENTO DE DADOS: Ignorar kits que não pertençam à empresa atual
           if (targetEmpresaId && kit.empresaId && kit.empresaId !== targetEmpresaId) return;
 
           if (kit.Tipo === 'Micro' || (kit.Kit && String(kit.Kit).toUpperCase().includes('MICRO'))) {
@@ -1207,7 +1200,6 @@ export default function App() {
           }
         });
         
-        // Se após filtrar a lista ficar vazia, usar os de fallback para não quebrar a tela
         if(strings.length === 0 && micros.length === 0) {
             setKitsString(fallbackKitsString);
             setKitsMicro(fallbackKitsMicro);
