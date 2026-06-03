@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, getDocs, writeBatch, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { getAuth, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from 'firebase/auth';
-import { Activity, AlertCircle, BookOpen, Building, CheckCircle, ChevronDown, Download, Eye, EyeOff, FileText, List, LogOut, MapPin, Menu, MessageCircle, Plus, Search, Settings, Smartphone, Sun, User, Users, X, Zap } from 'lucide-react';
+import { Search, Building, Users, Zap, Plus, Settings, AlertCircle, LogOut, CheckCircle, ChevronDown, User, Smartphone, MapPin, Activity, Sun, Download, List, MessageCircle, BookOpen, Menu, X, Eye, EyeOff, MessageSquare } from 'lucide-react';
 
 // ==========================================
 // 1. CONFIGURAÇÃO DO FIREBASE (LIMPA E SEGURA)
@@ -132,7 +132,7 @@ const DashboardLayout = ({ children, title, setView, role, currentTab, setCurren
 };
 
 // ==========================================
-// 4. TELA DE LOGIN (Autenticação Real Firebase)
+// 4. TELA DE LOGIN 
 // ==========================================
 const LoginView = ({ setView, setUserData }) => {
   const [email, setEmail] = useState('');
@@ -458,7 +458,7 @@ const MasterView = ({ setView }) => {
                 </thead>
                 <tbody className="divide-y divide-slate-800/50">
                   {empresasFiltradas.length === 0 ? (
-                    <tr><td colSpan="4" className="text-center py-8 text-slate-500 font-bold">Nenhuma empresa encontrada com estes filtros.</td></tr>
+                    <tr><td colSpan="5" className="text-center py-8 text-slate-500 font-bold">Nenhuma empresa encontrada com estes filtros.</td></tr>
                   ) : (
                     empresasFiltradas.map((item) => (
                       <tr key={item.id} className="hover:bg-slate-800/40 transition">
@@ -466,15 +466,14 @@ const MasterView = ({ setView }) => {
                         <td className="px-6 py-4">
                           {item.whatsapp ? (
                             <button 
-                              onClick={(e) => {
-                                e.preventDefault();
-                                let cleanPhone = String(item.whatsapp).replace(/\D/g, '');
-                                if (cleanPhone.length >= 10 && !cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
-                                window.open(`https://wa.me/${cleanPhone}`, '_blank');
+                              onClick={() => {
+                                const cleanPhone = String(item.whatsapp).replace(/\D/g, '');
+                                const phoneWithCountryCode = cleanPhone.length >= 10 && !cleanPhone.startsWith('55') ? '55' + cleanPhone : cleanPhone;
+                                window.open(`https://wa.me/${phoneWithCountryCode}`, '_blank');
                               }}
                               className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400 hover:text-emerald-300 transition bg-emerald-400/10 hover:bg-emerald-400/20 px-3 py-1.5 rounded-lg border border-emerald-400/20 cursor-pointer"
                             >
-                              <MessageCircle className="w-4 h-4" />
+                              <MessageSquare className="w-4 h-4" />
                               {item.whatsapp}
                             </button>
                           ) : (
@@ -810,7 +809,7 @@ const EmpresaView = ({ setView, userData }) => {
         'Nome do Cliente': orc.cliente,
         'WhatsApp Contato': orc.whatsapp,
         'Cidade / UF': orc.cidade,
-        'Estrutura do Telhado': orc.Categoria || orc.tipoKit,
+        'Estrutura do Telhado': orc.estrutura,
         'Categoria': orc.tipoKit,
         'Kit Escolhido': orc.kit,
         'Valor do Orçamento': orc.valor
@@ -842,14 +841,12 @@ const EmpresaView = ({ setView, userData }) => {
 
   const toggleVendedorStatus = async (vendedor) => {
     const novoStatus = vendedor.status === 'Bloqueado' ? 'Ativo' : 'Bloqueado';
-    if (window.confirm(`Deseja realmente ${novoStatus === 'Bloqueado' ? 'bloquear' : 'desbloquear'} o acesso de ${vendedor.nome}?`)) {
-        try {
-            await updateDoc(doc(db, 'usuarios', vendedor.id), { status: novoStatus });
-            showToast(`Status de ${vendedor.nome} alterado para ${novoStatus}.`, 'success');
-        } catch (err) {
-            console.error("Erro ao alterar status:", err);
-            showToast("Erro ao alterar o status do vendedor.", "error");
-        }
+    try {
+        await updateDoc(doc(db, 'usuarios', vendedor.id), { status: novoStatus });
+        showToast(`Acesso de ${vendedor.nome} foi ${novoStatus === 'Bloqueado' ? 'bloqueado' : 'desbloqueado'}.`, 'success');
+    } catch (err) {
+        console.error("Erro ao alterar status:", err);
+        showToast("Erro ao alterar o status do vendedor.", "error");
     }
   };
   
@@ -950,11 +947,11 @@ const EmpresaView = ({ setView, userData }) => {
               ) : (
                 <table className="w-full text-left text-sm text-slate-300 min-w-max">
                   <thead className="text-[10px] uppercase tracking-widest bg-[#030811] text-slate-500 font-bold border-b border-slate-800 sticky top-0 z-10">
-                    <tr><th className="px-4 py-3 rounded-tl-lg">Data / Hora</th><th className="px-4 py-3">Vendedor</th><th className="px-4 py-3">Cliente</th><th className="px-4 py-3">WhatsApp</th><th className="px-4 py-3">Cidade</th><th className="px-4 py-3">Estrutura</th><th className="px-4 py-3">Tipo</th><th className="px-4 py-3">Kit Solar</th><th className="px-4 py-3 rounded-tr-lg text-right">Valor (R$)</th></tr>
+                    <tr><th className="px-4 py-3 rounded-tl-lg">Data / Hora</th><th className="px-4 py-3">Vendedor</th><th className="px-4 py-3">Cliente</th><th className="px-4 py-3">WhatsApp</th><th className="px-4 py-3">Cidade</th><th className="px-4 py-3">Estrutura</th><th className="px-4 py-3">Inversor</th><th className="px-4 py-3">Placas</th><th className="px-4 py-3">Tipo</th><th className="px-4 py-3">Kit Solar</th><th className="px-4 py-3 rounded-tr-lg text-right">Valor (R$)</th></tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/50">
                     {orcamentosFiltrados.length === 0 ? (
-                      <tr><td colSpan="9" className="text-center py-8 text-slate-500 font-bold">Nenhum orçamento encontrado com estes filtros.</td></tr>
+                      <tr><td colSpan="11" className="text-center py-8 text-slate-500 font-bold">Nenhum orçamento encontrado com estes filtros.</td></tr>
                     ) : (
                       orcamentosFiltrados.map((sim) => (
                         <tr key={sim.id} className="hover:bg-slate-800/40 transition">
@@ -964,6 +961,8 @@ const EmpresaView = ({ setView, userData }) => {
                           <td className="px-4 py-3 font-mono text-xs whitespace-nowrap">{sim.whatsapp}</td>
                           <td className="px-4 py-3 text-xs whitespace-nowrap">{sim.cidade}</td>
                           <td className="px-4 py-3 text-xs whitespace-nowrap">{sim.estrutura}</td>
+                          <td className="px-4 py-3 text-xs whitespace-nowrap text-amber-400/80">{sim.inversor || '--'}</td>
+                          <td className="px-4 py-3 font-bold text-slate-300 whitespace-nowrap">{sim.placas || '--'}</td>
                           <td className="px-4 py-3 whitespace-nowrap"><span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${sim.tipoKit === 'String' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'}`}>{sim.tipoKit}</span></td>
                           <td className="px-4 py-3 text-xs font-semibold whitespace-nowrap">{sim.kit}</td>
                           <td className="px-4 py-3 text-right font-bold text-amber-500 whitespace-nowrap">{sim.valor}</td>
@@ -1018,15 +1017,14 @@ const EmpresaView = ({ setView, userData }) => {
                         <td className="px-6 py-4">
                           {vend.whatsapp ? (
                             <button 
-                              onClick={(e) => {
-                                e.preventDefault();
-                                let cleanPhone = String(vend.whatsapp).replace(/\D/g, '');
-                                if (cleanPhone.length >= 10 && !cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
-                                window.open(`https://wa.me/${cleanPhone}`, '_blank');
+                              onClick={() => {
+                                const cleanPhone = String(vend.whatsapp).replace(/\D/g, '');
+                                const phoneWithCountryCode = cleanPhone.length >= 10 && !cleanPhone.startsWith('55') ? '55' + cleanPhone : cleanPhone;
+                                window.open(`https://wa.me/${phoneWithCountryCode}`, '_blank');
                               }}
                               className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400 hover:text-emerald-300 transition bg-emerald-400/10 hover:bg-emerald-400/20 px-3 py-1.5 rounded-lg border border-emerald-400/20 cursor-pointer"
                             >
-                              <MessageCircle className="w-4 h-4" />
+                              <MessageSquare className="w-4 h-4" />
                               {vend.whatsapp}
                             </button>
                           ) : (
@@ -1125,7 +1123,7 @@ const EmpresaView = ({ setView, userData }) => {
                         if(!novoVendedor.nome || !novoVendedor.email || novoVendedor.senha.length < 6) return showToast('Preencha os dados e use uma senha com no mínimo 6 caracteres.', 'error');
                         setVendedorLoading(true);
                         try {
-                          const cred = await createUserWithEmailAndPassword(auth, novoVendedor.email, novoVendedor.senha);
+                          const cred = await createUserWithEmailAndPassword(secondaryAuth, novoVendedor.email, novoVendedor.senha);
                           await setDoc(doc(db, 'usuarios', cred.user.uid), {
                             nome: novoVendedor.nome,
                             whatsapp: novoVendedor.whatsapp,
@@ -1135,11 +1133,10 @@ const EmpresaView = ({ setView, userData }) => {
                             status: 'Ativo',
                             dataCriacao: serverTimestamp()
                           });
-                          await signOut(auth);
-                          showToast('Vendedor cadastrado com sucesso! A sua sessão foi encerrada por segurança. Faça o Login novamente.', 'success');
+                          await signOut(secondaryAuth);
+                          showToast('Vendedor cadastrado com sucesso e já pode fazer login!', 'success');
                           setNovoVendedor({ nome: '', whatsapp: '', email: '', senha: '' });
                           setIsVendedorModalOpen(false);
-                          setView('login');
                         } catch (err) {
                           console.error(err);
                           showToast('Erro ao criar vendedor: ' + err.message, 'error');
@@ -1277,6 +1274,8 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
         tipoKit: formData.kitString !== '' ? 'String' : 'Micro', 
         kit: activeKit.Kit, 
         valor: activeKit.Valor, 
+        placas: activeKit.Placas, // NOVA COLUNA
+        inversor: activeKit.Inversor, // NOVA COLUNA
         timestamp: serverTimestamp(),
         empresaId: userData?.empresaId || 'padrao', // Liga o orçamento à empresa dona
         vendedorUid: userData?.uid || 'padrao'
@@ -1391,8 +1390,8 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
                         <div className="bg-gradient-to-br from-[#0B192C] to-slate-900 border border-slate-700/80 rounded-2xl p-5 sm:p-6 mt-2 grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 relative overflow-hidden shadow-lg">
                             <div className="absolute -right-8 -bottom-8 text-slate-800/40 pointer-events-none transform rotate-12"><Sun className="w-48 h-48"/></div>
                             <div className="space-y-1.5 relative z-10"><span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block flex items-center gap-1.5">Qtd. Placas</span><span className="text-base sm:text-lg font-extrabold text-white block truncate">{activeKit ? activeKit.Placas : '--'}</span></div>
-                            <div className="space-y-1.5 relative z-10"><span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block flex items-center gap-1.5">Potência</span><span className="text-base sm:text-lg font-extrabold text-white block truncate">{activeKit ? activeKit.Modulo.replace(/Módulo\s*/gi, '').trim() : '--'}</span></div>
                             <div className="space-y-1.5 relative z-10"><span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block flex items-center gap-1.5">Inversor</span><span className="text-base sm:text-lg font-extrabold text-white block truncate">{activeKit ? activeKit.Inversor : '--'}</span></div>
+                            <div className="space-y-1.5 relative z-10"><span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block flex items-center gap-1.5">Estrutura</span><span className="text-base sm:text-lg font-extrabold text-white block truncate">{formData.roofStructure || '--'}</span></div>
                             <div className="space-y-1.5 relative z-10"><span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block flex items-center gap-1.5"><span className="text-emerald-600">Valor do Kit</span></span><span className="text-base sm:text-lg font-extrabold text-emerald-400 block truncate">{activeKit ? `R$ ${activeKit.Valor}` : '--'}</span></div>
                         </div>
                     </div>
