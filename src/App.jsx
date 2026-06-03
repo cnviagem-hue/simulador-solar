@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, getDocs, writeBatch, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { getAuth, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from 'firebase/auth';
-import { Search, Building, Users, Zap, Plus, Settings, AlertCircle, LogOut, CheckCircle, ChevronDown, User, Smartphone, MapPin, BarChart, Sun, FileText, Clipboard, MessageCircle, BookOpen, Menu, X, Eye, EyeOff } from 'lucide-react';
+import { Search, Building, Users, Zap, Plus, Settings, AlertCircle, LogOut, CheckCircle, ChevronDown, User, Smartphone, MapPin, BarChart, Sun, FileText, Clipboard, MessageCircle, BookOpen, Menu, X, Eye, EyeOff, Download } from 'lucide-react';
 
 // ==========================================
 // 1. CONFIGURAÇÃO DO FIREBASE (LIMPA E SEGURA)
@@ -20,10 +20,6 @@ const firebaseConfig = {
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 const db = getFirestore(app);
 const auth = getAuth(app); 
-
-// MÁGICA: App secundário para cadastrar acessos sem deslogar o Admin
-const secondaryApp = getApps().find(a => a.name === "Secondary") || initializeApp(firebaseConfig, "Secondary");
-const secondaryAuth = getAuth(secondaryApp);
 
 // ==========================================
 // 2. KITS DE SEGURANÇA (Caso a nuvem esteja vazia)
@@ -349,7 +345,7 @@ const MasterView = ({ setView }) => {
     
     setEmpresaLoading(true);
     try {
-      const cred = await createUserWithEmailAndPassword(secondaryAuth, novaEmpresa.email, novaEmpresa.senha);
+      const cred = await createUserWithEmailAndPassword(auth, novaEmpresa.email, novaEmpresa.senha);
       await setDoc(doc(db, 'usuarios', cred.user.uid), {
         nome: novaEmpresa.nomeFantasia,
         socio: novaEmpresa.socio,
@@ -361,10 +357,11 @@ const MasterView = ({ setView }) => {
         dataCriacao: serverTimestamp()
       });
       
-      await signOut(secondaryAuth); 
+      await signOut(auth); 
       showToast(`Empresa "${novaEmpresa.nomeFantasia}" cadastrada com sucesso!`, 'success');
       setNovaEmpresa({ nomeFantasia: '', socio: '', whatsapp: '', email: '', plano: 'Free [Teste Ilimitado 14 dias]', senha: '' });
       setIsModalOpen(false);
+      setView('login');
     } catch (err) {
       console.error(err);
       showToast('Erro ao criar a empresa: ' + err.message, 'error');
@@ -1013,7 +1010,7 @@ const EmpresaView = ({ setView, userData }) => {
                         if(!novoVendedor.nome || !novoVendedor.email || novoVendedor.senha.length < 6) return showToast('Preencha os dados e use uma senha com no mínimo 6 caracteres.', 'error');
                         setVendedorLoading(true);
                         try {
-                          const cred = await createUserWithEmailAndPassword(secondaryAuth, novoVendedor.email, novoVendedor.senha);
+                          const cred = await createUserWithEmailAndPassword(auth, novoVendedor.email, novoVendedor.senha);
                           await setDoc(doc(db, 'usuarios', cred.user.uid), {
                             nome: novoVendedor.nome,
                             whatsapp: novoVendedor.whatsapp,
@@ -1023,7 +1020,7 @@ const EmpresaView = ({ setView, userData }) => {
                             status: 'Ativo',
                             dataCriacao: serverTimestamp()
                           });
-                          await signOut(secondaryAuth);
+                          await signOut(auth);
                           showToast('Vendedor cadastrado com sucesso e já pode fazer login!', 'success');
                           setNovoVendedor({ nome: '', whatsapp: '', email: '', senha: '' });
                           setIsVendedorModalOpen(false);
@@ -1210,7 +1207,7 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
                     <button onClick={() => setTimeFilter('semana')} className={`px-4 py-1.5 rounded-lg transition ${timeFilter === 'semana' ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'}`}>Semana</button>
                     <button onClick={() => setTimeFilter('quinzena')} className={`px-4 py-1.5 rounded-lg transition ${timeFilter === 'quinzena' ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'}`}>Quinzena</button>
                     <button onClick={() => setTimeFilter('mes')} className={`px-4 py-1.5 rounded-lg transition ${timeFilter === 'mes' ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'}`}>Mês</button>
-                    <button onClick={() => showToast('Abrirá calendário para Mês Específico', 'error')} className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1 text-slate-400 hover:text-white whitespace-nowrap`}><Search className="w-3 h-3"/> Personalizado</button>
+                    <button onClick={() => alert('Abrirá calendário para Mês Específico')} className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1 text-slate-400 hover:text-white whitespace-nowrap`}><Search className="w-3 h-3"/> Personalizado</button>
                   </div>
                 </div>
               </div>
