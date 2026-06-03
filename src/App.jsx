@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, getDocs, writeBatch, doc, getDoc, setDoc } from 'firebase/firestore';
 import { getAuth, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from 'firebase/auth';
-import { Search, Building, Users, Zap, Plus, Settings, AlertCircle, LogOut, CheckCircle, ChevronDown, User, Smartphone, MapPin, BarChart3, Sun, FileSpreadsheet, ClipboardList, MessageCircle, BookOpen, Menu, X } from 'lucide-react';
+import { Search, Building, Users, Zap, Plus, Settings, AlertCircle, LogOut, CheckCircle, ChevronDown, User, Smartphone, MapPin, BarChart3, Sun, FileSpreadsheet, ClipboardList, MessageCircle, BookOpen, Menu, X, Eye, EyeOff } from 'lucide-react';
 
 // ==========================================
 // 1. CONFIGURAÇÃO DO FIREBASE (COM TRAVA DE SEGURANÇA PARA HOT-RELOAD)
@@ -20,10 +20,6 @@ const firebaseConfig = {
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 const db = getFirestore(app);
 const auth = getAuth(app); 
-
-// MÁGICA: App secundário para cadastrar acessos sem deslogar o Admin
-const secondaryApp = getApps().find(a => a.name === "Secondary") || initializeApp(firebaseConfig, "Secondary");
-const secondaryAuth = getAuth(secondaryApp);
 
 // ==========================================
 // 2. KITS DE SEGURANÇA (Caso a nuvem esteja vazia)
@@ -137,6 +133,7 @@ const DashboardLayout = ({ children, title, setView, role, currentTab, setCurren
 const LoginView = ({ setView, setUserData }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -154,12 +151,10 @@ const LoginView = ({ setView, setUserData }) => {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       
-      // Lógica de Redirecionamento Inteligente
       if (email.toLowerCase() === 'cnviagem@gmail.com') {
         setUserData({ role: 'master', uid: user.uid, email: user.email });
         setView('master');
       } else {
-        // Verifica no banco de dados se é Vendedor ou Empresa
         const userDoc = await getDoc(doc(db, 'usuarios', user.uid));
         if (userDoc.exists()) {
           const data = userDoc.data();
@@ -170,7 +165,6 @@ const LoginView = ({ setView, setUserData }) => {
             setView('empresa');
           }
         } else {
-          // Fallback para contas sem role definida
           setUserData({ role: 'empresa', uid: user.uid, email: user.email });
           setView('empresa'); 
         }
@@ -212,14 +206,25 @@ const LoginView = ({ setView, setUserData }) => {
             />
           </div>
           <div>
-            <label className="text-xs font-semibold text-slate-400 mb-1 block">Senha Segura</label>
-            <input 
-              type="password" 
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••" 
-              className="w-full bg-[#030811] border border-slate-700 focus:border-amber-500 rounded-xl px-4 py-3 text-white text-sm outline-none transition" 
-            />
+            <div className="flex justify-between items-center mb-1">
+              <label className="text-xs font-semibold text-slate-400 block">Senha Segura</label>
+            </div>
+            <div className="relative group">
+              <input 
+                type={showPassword ? "text" : "password"} 
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••" 
+                className="w-full bg-[#030811] border border-slate-700 focus:border-amber-500 rounded-xl py-3 pl-4 pr-12 text-white text-sm outline-none transition" 
+              />
+              <button 
+                type="button" 
+                onClick={() => setShowPassword(!showPassword)} 
+                className="absolute inset-y-0 right-0 flex items-center pr-4 text-slate-500 hover:text-amber-500 focus:outline-none transition-colors"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
           <button 
             type="submit" 
@@ -229,8 +234,20 @@ const LoginView = ({ setView, setUserData }) => {
           </button>
         </form>
 
-        <div className="mt-8 pt-6 border-t border-slate-800/50 text-center">
-           <p className="text-[10px] text-slate-600 uppercase tracking-widest font-bold">Ambiente Protegido por Firebase Auth</p>
+        <div className="mt-4 text-center">
+            <button 
+                onClick={(e) => {
+                    e.preventDefault();
+                    if (!email) {
+                        alert("Por favor, preencha o seu e-mail acima e clique novamente em 'Esqueci a minha senha'.");
+                        return;
+                    }
+                    alert(`Um e-mail de recuperação será enviado para: ${email} (Funcionalidade de e-mail na Fase 5)`);
+                }} 
+                className="text-xs font-semibold text-slate-400 hover:text-amber-400 transition-colors"
+            >
+                Esqueci a minha senha
+            </button>
         </div>
       </div>
     </div>
@@ -245,18 +262,15 @@ const MasterView = ({ setView }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   
-  // Estados Dinâmicos do Sistema Master
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [empresas, setEmpresas] = useState([]);
   const [loadingEmpresas, setLoadingEmpresas] = useState(true);
   const [estatisticas, setEstatisticas] = useState({ empresas: 0, vendedores: 0 });
   const [totalSimulacoes, setTotalSimulacoes] = useState(0);
 
-  // Estados Formulário Nova Empresa
   const [novaEmpresa, setNovaEmpresa] = useState({ nomeFantasia: '', socio: '', whatsapp: '', email: '', plano: 'Free [Teste Ilimitado 14 dias]', senha: '' });
   const [empresaLoading, setEmpresaLoading] = useState(false);
 
-  // Carregar Empresas e Vendedores
   useEffect(() => {
     const q = query(collection(db, "usuarios"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -292,7 +306,6 @@ const MasterView = ({ setView }) => {
     return () => unsubscribe();
   }, []);
 
-  // Carregar o Total Global de Simulações
   useEffect(() => {
     const q = query(collection(db, "orcamentos"));
     const unsubscribe = onSnapshot(q, (snap) => {
@@ -314,7 +327,7 @@ const MasterView = ({ setView }) => {
     
     setEmpresaLoading(true);
     try {
-      const cred = await createUserWithEmailAndPassword(secondaryAuth, novaEmpresa.email, novaEmpresa.senha);
+      const cred = await createUserWithEmailAndPassword(auth, novaEmpresa.email, novaEmpresa.senha);
       await setDoc(doc(db, 'usuarios', cred.user.uid), {
         nome: novaEmpresa.nomeFantasia,
         socio: novaEmpresa.socio,
@@ -326,11 +339,11 @@ const MasterView = ({ setView }) => {
         dataCriacao: serverTimestamp()
       });
       
-      await signOut(secondaryAuth); 
-      alert(`Empresa "${novaEmpresa.nomeFantasia}" cadastrada com sucesso!`);
-      
+      await signOut(auth); 
+      alert(`Empresa "${novaEmpresa.nomeFantasia}" cadastrada com sucesso! A sua sessão foi encerrada por segurança. Faça o Login novamente.`);
       setNovaEmpresa({ nomeFantasia: '', socio: '', whatsapp: '', email: '', plano: 'Free [Teste Ilimitado 14 dias]', senha: '' });
       setIsModalOpen(false);
+      setView('login');
     } catch (err) {
       console.error(err);
       alert('Erro ao criar a empresa: ' + err.message);
@@ -495,7 +508,6 @@ const EmpresaView = ({ setView, userData }) => {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [uploadStatus, setUploadStatus] = useState('idle');
   
-  // Novos estados para criar vendedor
   const [novoVendedor, setNovoVendedor] = useState({ nome: '', email: '', senha: '' });
   const [vendedorLoading, setVendedorLoading] = useState(false);
 
@@ -534,7 +546,6 @@ const EmpresaView = ({ setView, userData }) => {
   }, []);
 
   const orcamentosFiltrados = orcamentos.filter(orc => {
-      // Isolamento: A Empresa só vê os orçamentos ligados ao seu ID
       if (userData && userData.uid && orc.empresaId && orc.empresaId !== userData.uid) return false;
 
       if (vendedorFilter !== 'todos' && orc.vendedor !== vendedorFilter) return false;
@@ -550,7 +561,6 @@ const EmpresaView = ({ setView, userData }) => {
 
   const vendedoresUnicos = [...new Set(orcamentos.map(orc => orc.vendedor))].filter(Boolean);
 
-  // MÁGICA SEGURA: Exportar Excel Real
   const handleExportExcel = async () => {
     if (orcamentosFiltrados.length === 0) {
       alert("Não há dados para exportar com os filtros atuais.");
@@ -558,7 +568,6 @@ const EmpresaView = ({ setView, userData }) => {
     }
 
     try {
-      // Carrega a biblioteca de forma segura sem travar o Canvas
       if (typeof window.XLSX === 'undefined') {
         await new Promise((resolve, reject) => {
           const script = document.createElement('script');
@@ -570,7 +579,6 @@ const EmpresaView = ({ setView, userData }) => {
       }
       const XLSX = window.XLSX;
 
-      // Prepara os dados limpos para a planilha
       const dadosExcel = orcamentosFiltrados.map(orc => ({
         'Data da Simulação': orc.dataVisual,
         'Consultor Comercial': orc.vendedor,
@@ -583,12 +591,10 @@ const EmpresaView = ({ setView, userData }) => {
         'Valor do Orçamento': orc.valor
       }));
 
-      // Cria a folha de cálculo usando o motor XLSX
       const folha = XLSX.utils.json_to_sheet(dadosExcel);
       const livro = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(livro, folha, "Relatório de Vendas");
 
-      // Descarrega o ficheiro para o utilizador
       const dataAtual = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
       XLSX.writeFile(livro, `Relatorio_SaaS_${dataAtual}.xlsx`);
     } catch (err) {
@@ -652,7 +658,7 @@ const EmpresaView = ({ setView, userData }) => {
                Inversor: String(kit.Inversor || kit.inversor || kit.INVERSOR || ''),
                Valor: String(kit.Valor || kit.valor || kit.VALOR || '').replace('R$', '').trim(),
                Tipo: String(kit.Tipo || kit.tipo || kit.TIPO || tipoInferido),
-               empresaId: userData?.uid || 'padrao' // Associa o Kit à Empresa
+               empresaId: userData?.uid || 'padrao' 
              });
           });
 
@@ -764,7 +770,6 @@ const EmpresaView = ({ setView, userData }) => {
                       <button onClick={() => setResultadosFilter('30dias')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${resultadosFilter === '30dias' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-white'}`}>30 Dias</button>
                       <button onClick={() => alert('Abrirá calendário para Mês Específico')} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 text-slate-500 hover:text-white whitespace-nowrap`}><Search className="w-3 h-3"/> Personalizado</button>
                     </div>
-                    {/* Botão de Exportação AGORA É REAL! */}
                     <button onClick={handleExportExcel} className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 whitespace-nowrap"><FileSpreadsheet className="w-3.5 h-3.5"/> Exportar Excel</button>
                   </div>
                 </div>
@@ -835,7 +840,7 @@ const EmpresaView = ({ setView, userData }) => {
                         if(!novoVendedor.nome || !novoVendedor.email || novoVendedor.senha.length < 6) return alert('Preencha os dados e use uma senha com no mínimo 6 caracteres.');
                         setVendedorLoading(true);
                         try {
-                          const cred = await createUserWithEmailAndPassword(secondaryAuth, novoVendedor.email, novoVendedor.senha);
+                          const cred = await createUserWithEmailAndPassword(auth, novoVendedor.email, novoVendedor.senha);
                           await setDoc(doc(db, 'usuarios', cred.user.uid), {
                             nome: novoVendedor.nome,
                             email: novoVendedor.email,
@@ -843,10 +848,11 @@ const EmpresaView = ({ setView, userData }) => {
                             empresaId: userData?.uid || 'padrao',
                             dataCriacao: serverTimestamp()
                           });
-                          await signOut(secondaryAuth);
-                          alert('Vendedor cadastrado com sucesso e já pode fazer login!');
+                          await signOut(auth);
+                          alert('Vendedor cadastrado com sucesso! A sua sessão foi encerrada por segurança. Faça o Login novamente.');
                           setNovoVendedor({ nome: '', email: '', senha: '' });
                           setIsVendedorModalOpen(false);
+                          setView('login');
                         } catch (err) {
                           console.error(err);
                           alert('Erro ao criar vendedor: ' + err.message);
