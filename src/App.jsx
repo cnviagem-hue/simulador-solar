@@ -459,7 +459,7 @@ const MasterView = ({ setView }) => {
                         </td>
                         <td className="px-6 py-4 text-right space-x-2">
                           <button className="text-slate-400 hover:text-white transition p-1" title="Editar Empresa" onClick={() => showToast('Em desenvolvimento na Fase 5: Edição de Clientes', 'error')}><Settings className="w-4 h-4" /></button>
-                          <button className="text-slate-400 hover:text-amber-500 transition p-1" title="Suspender Acesso" onClick={() => showToast('Para bloquear acessos utilize a edição (Fase 5).', 'error')}><AlertCircle className="w-4 h-4" /></button>
+                          <button className="text-slate-400 hover:text-amber-500 transition p-1" title="Suspender Acesso" onClick={() => showToast('Para suspender o acesso, utilize as definições na Fase 5.', 'error')}><AlertCircle className="w-4 h-4" /></button>
                         </td>
                       </tr>
                     ))
@@ -542,10 +542,12 @@ const EmpresaView = ({ setView, userData }) => {
   const [orcamentos, setOrcamentos] = useState([]);
   const [loadingCRM, setLoadingCRM] = useState(true);
 
+  // NOVOS ESTADOS: Lista de Vendedores
   const [vendedoresLista, setVendedoresLista] = useState([]);
   const [loadingVendedores, setLoadingVendedores] = useState(true);
   const [editVendedorModal, setEditVendedorModal] = useState(null);
 
+  // NOVO: Sistema de Toast para a Visão Empresa
   const [toast, setToast] = useState(null);
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
@@ -583,6 +585,7 @@ const EmpresaView = ({ setView, userData }) => {
     return () => unsubscribe();
   }, []);
 
+  // NOVO EFEITO: Buscar vendedores da empresa em tempo real
   useEffect(() => {
     if (!userData || !userData.uid) return;
     const q = query(collection(db, "usuarios"));
@@ -752,14 +755,12 @@ const EmpresaView = ({ setView, userData }) => {
 
   const toggleVendedorStatus = async (vendedor) => {
     const novoStatus = vendedor.status === 'Bloqueado' ? 'Ativo' : 'Bloqueado';
-    if (window.confirm(`Deseja realmente ${novoStatus === 'Bloqueado' ? 'bloquear' : 'desbloquear'} o acesso de ${vendedor.nome}?`)) {
-        try {
-            await updateDoc(doc(db, 'usuarios', vendedor.id), { status: novoStatus });
-            showToast(`Status de ${vendedor.nome} alterado para ${novoStatus}.`, 'success');
-        } catch (err) {
-            console.error("Erro ao alterar status:", err);
-            showToast("Erro ao alterar o status do vendedor.", "error");
-        }
+    try {
+        await updateDoc(doc(db, 'usuarios', vendedor.id), { status: novoStatus });
+        showToast(`Acesso de ${vendedor.nome} foi ${novoStatus === 'Bloqueado' ? 'bloqueado' : 'desbloqueado'}.`, 'success');
+    } catch (err) {
+        console.error("Erro ao alterar status:", err);
+        showToast("Erro ao alterar o status do vendedor.", "error");
     }
   };
   
@@ -847,7 +848,7 @@ const EmpresaView = ({ setView, userData }) => {
                       <button onClick={() => setResultadosFilter('30dias')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${resultadosFilter === '30dias' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-white'}`}>30 Dias</button>
                       <button onClick={() => showToast('Abrirá calendário para Mês Específico', 'error')} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 text-slate-500 hover:text-white whitespace-nowrap`}><Search className="w-3 h-3"/> Personalizado</button>
                     </div>
-                    <button onClick={handleExportExcel} className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 whitespace-nowrap"><FileText className="w-3.5 h-3.5"/> Exportar Excel</button>
+                    <button onClick={handleExportExcel} className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 whitespace-nowrap"><Download className="w-3.5 h-3.5"/> Exportar Excel</button>
                   </div>
                 </div>
               </div>
@@ -1209,7 +1210,7 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
                     <button onClick={() => setTimeFilter('semana')} className={`px-4 py-1.5 rounded-lg transition ${timeFilter === 'semana' ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'}`}>Semana</button>
                     <button onClick={() => setTimeFilter('quinzena')} className={`px-4 py-1.5 rounded-lg transition ${timeFilter === 'quinzena' ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'}`}>Quinzena</button>
                     <button onClick={() => setTimeFilter('mes')} className={`px-4 py-1.5 rounded-lg transition ${timeFilter === 'mes' ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'}`}>Mês</button>
-                    <button onClick={() => alert('Abrirá calendário para Mês Específico')} className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1 text-slate-400 hover:text-white whitespace-nowrap`}><Search className="w-3 h-3"/> Personalizado</button>
+                    <button onClick={() => showToast('Abrirá calendário para Mês Específico', 'error')} className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1 text-slate-400 hover:text-white whitespace-nowrap`}><Search className="w-3 h-3"/> Personalizado</button>
                   </div>
                 </div>
               </div>
