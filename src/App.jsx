@@ -458,22 +458,25 @@ const MasterView = ({ setView }) => {
                 </thead>
                 <tbody className="divide-y divide-slate-800/50">
                   {empresasFiltradas.length === 0 ? (
-                    <tr><td colSpan="5" className="text-center py-8 text-slate-500 font-bold">Nenhuma empresa encontrada com estes filtros.</td></tr>
+                    <tr><td colSpan="4" className="text-center py-8 text-slate-500 font-bold">Nenhuma empresa encontrada com estes filtros.</td></tr>
                   ) : (
                     empresasFiltradas.map((item) => (
                       <tr key={item.id} className="hover:bg-slate-800/40 transition">
                         <td className="px-6 py-4"><div className="font-extrabold text-white text-base">{item.nome}</div><div className="text-xs text-slate-500 mt-0.5">{item.email}</div></td>
                         <td className="px-6 py-4">
                           {item.whatsapp ? (
-                            <a 
-                              href={`https://wa.me/${String(item.whatsapp).replace(/\D/g, '').length >= 10 && !String(item.whatsapp).replace(/\D/g, '').startsWith('55') ? '55' + String(item.whatsapp).replace(/\D/g, '') : String(item.whatsapp).replace(/\D/g, '')}`} 
-                              target="_blank" 
-                              rel="noopener noreferrer" 
-                              className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400 hover:text-emerald-300 transition bg-emerald-400/10 hover:bg-emerald-400/20 px-3 py-1.5 rounded-lg border border-emerald-400/20"
+                            <button 
+                              onClick={(e) => {
+                                e.preventDefault();
+                                let cleanPhone = String(item.whatsapp).replace(/\D/g, '');
+                                if (cleanPhone.length >= 10 && !cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
+                                window.open(`https://wa.me/${cleanPhone}`, '_blank');
+                              }}
+                              className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400 hover:text-emerald-300 transition bg-emerald-400/10 hover:bg-emerald-400/20 px-3 py-1.5 rounded-lg border border-emerald-400/20 cursor-pointer"
                             >
                               <MessageCircle className="w-4 h-4" />
                               {item.whatsapp}
-                            </a>
+                            </button>
                           ) : (
                             <span className="text-xs text-slate-600 italic">Sem número</span>
                           )}
@@ -1014,15 +1017,18 @@ const EmpresaView = ({ setView, userData }) => {
                         <td className="px-6 py-4"><div className="font-extrabold text-white text-base">{vend.nome}</div><div className="text-xs text-slate-500 mt-0.5">{vend.email}</div></td>
                         <td className="px-6 py-4">
                           {vend.whatsapp ? (
-                            <a 
-                              href={`https://wa.me/${String(vend.whatsapp).replace(/\D/g, '').length >= 10 && !String(vend.whatsapp).replace(/\D/g, '').startsWith('55') ? '55' + String(vend.whatsapp).replace(/\D/g, '') : String(vend.whatsapp).replace(/\D/g, '')}`} 
-                              target="_blank" 
-                              rel="noopener noreferrer" 
-                              className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400 hover:text-emerald-300 transition bg-emerald-400/10 hover:bg-emerald-400/20 px-3 py-1.5 rounded-lg border border-emerald-400/20"
+                            <button 
+                              onClick={(e) => {
+                                e.preventDefault();
+                                let cleanPhone = String(vend.whatsapp).replace(/\D/g, '');
+                                if (cleanPhone.length >= 10 && !cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
+                                window.open(`https://wa.me/${cleanPhone}`, '_blank');
+                              }}
+                              className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400 hover:text-emerald-300 transition bg-emerald-400/10 hover:bg-emerald-400/20 px-3 py-1.5 rounded-lg border border-emerald-400/20 cursor-pointer"
                             >
                               <MessageCircle className="w-4 h-4" />
                               {vend.whatsapp}
-                            </a>
+                            </button>
                           ) : (
                             <span className="text-xs text-slate-600 italic">Sem número</span>
                           )}
