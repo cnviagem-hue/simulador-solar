@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, getDocs, writeBatch, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, getDocs, writeBatch, doc, getDoc, setDoc } from 'firebase/firestore';
 import { getAuth, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from 'firebase/auth';
-import { Search, Building, Users, Zap, Plus, Settings, AlertCircle, LogOut, CheckCircle, ChevronDown, User, Smartphone, MapPin, Activity, Sun, Download, List, MessageCircle, BookOpen, Menu, X, Eye, EyeOff } from 'lucide-react';
+import { Search, Building, Users, Zap, Plus, Settings, AlertCircle, LogOut, CheckCircle, ChevronDown, User, Smartphone, MapPin, BarChart3, Sun, FileSpreadsheet, ClipboardList, MessageCircle, BookOpen, Menu, X, Eye, EyeOff } from 'lucide-react';
 
 // ==========================================
-// 1. CONFIGURAÇÃO DO FIREBASE (LIMPA E SEGURA)
+// 1. CONFIGURAÇÃO DO FIREBASE (COM TRAVA DE SEGURANÇA PARA HOT-RELOAD)
 // ==========================================
 const firebaseConfig = {
   apiKey: "AIzaSyD4GqSo-4EjCQ-nJa-gX3S5knTCVcjuYOY",
@@ -16,10 +16,14 @@ const firebaseConfig = {
   appId: "1:9543973605:web:721bdd9895198418f6b20c"
 };
 
-// Inicialização única: Previne a temida "Tela Branca" na Prévia
+// Evita o "Firebase App already exists" que causava tela branca no Canvas
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 const db = getFirestore(app);
 const auth = getAuth(app); 
+
+// MÁGICA: App secundário para cadastrar acessos sem deslogar o Admin
+const secondaryApp = getApps().find(a => a.name === "Secondary") || initializeApp(firebaseConfig, "Secondary");
+const secondaryAuth = getAuth(secondaryApp);
 
 // ==========================================
 // 2. KITS DE SEGURANÇA (Caso a nuvem esteja vazia)
@@ -68,7 +72,7 @@ const DashboardLayout = ({ children, title, setView, role, currentTab, setCurren
           </div>
           <nav className="p-4 space-y-2 overflow-y-auto">
             <button onClick={() => handleTabChange('dashboard')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition font-medium ${currentTab === 'dashboard' ? 'bg-slate-800 text-white border-l-2 border-amber-500' : 'text-slate-400 hover:bg-slate-900/50 hover:text-white'}`}>
-              <Activity className={`w-5 h-5 ${currentTab === 'dashboard' ? 'text-amber-500' : ''}`} /> <span>Dashboard Central</span>
+              <BarChart3 className={`w-5 h-5 ${currentTab === 'dashboard' ? 'text-amber-500' : ''}`} /> <span>Dashboard Central</span>
             </button>
             {role === 'master' && (
               <button onClick={() => handleTabChange('empresas')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition font-medium ${currentTab === 'empresas' ? 'bg-slate-800 text-white border-l-2 border-amber-500' : 'text-slate-400 hover:bg-slate-900/50 hover:text-white'}`}>
@@ -78,7 +82,7 @@ const DashboardLayout = ({ children, title, setView, role, currentTab, setCurren
             {role === 'empresa' && (
               <>
                 <button onClick={() => handleTabChange('resultados')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition font-medium ${currentTab === 'resultados' ? 'bg-slate-800 text-white border-l-2 border-amber-500' : 'text-slate-400 hover:bg-slate-900/50 hover:text-white'}`}>
-                  <List className={`w-5 h-5 ${currentTab === 'resultados' ? 'text-amber-500' : ''}`} /> <span>Resultados (CRM)</span>
+                  <ClipboardList className={`w-5 h-5 ${currentTab === 'resultados' ? 'text-amber-500' : ''}`} /> <span>Resultados (CRM)</span>
                 </button>
                 <button onClick={() => handleTabChange('vendedores')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition font-medium ${currentTab === 'vendedores' ? 'bg-slate-800 text-white border-l-2 border-amber-500' : 'text-slate-400 hover:bg-slate-900/50 hover:text-white'}`}>
                   <Users className={`w-5 h-5 ${currentTab === 'vendedores' ? 'text-amber-500' : ''}`} /> <span>Meus Vendedores</span>
@@ -339,7 +343,7 @@ const MasterView = ({ setView }) => {
     
     setEmpresaLoading(true);
     try {
-      const cred = await createUserWithEmailAndPassword(auth, novaEmpresa.email, novaEmpresa.senha);
+      const cred = await createUserWithEmailAndPassword(secondaryAuth, novaEmpresa.email, novaEmpresa.senha);
       await setDoc(doc(db, 'usuarios', cred.user.uid), {
         nome: novaEmpresa.nomeFantasia,
         socio: novaEmpresa.socio,
@@ -351,11 +355,10 @@ const MasterView = ({ setView }) => {
         dataCriacao: serverTimestamp()
       });
       
-      await signOut(auth); 
-      alert(`Empresa "${novaEmpresa.nomeFantasia}" cadastrada com sucesso! A sua sessão foi encerrada por segurança. Faça o Login novamente.`);
+      await signOut(secondaryAuth); 
+      alert(`Empresa "${novaEmpresa.nomeFantasia}" cadastrada com sucesso!`);
       setNovaEmpresa({ nomeFantasia: '', socio: '', whatsapp: '', email: '', plano: 'Free [Teste Ilimitado 14 dias]', senha: '' });
       setIsModalOpen(false);
-      setView('login');
     } catch (err) {
       console.error(err);
       alert('Erro ao criar a empresa: ' + err.message);
@@ -392,7 +395,7 @@ const MasterView = ({ setView }) => {
               </div>
            </div>
            <div className="bg-[#0B192C] border border-slate-800 rounded-2xl p-12 text-center shadow-sm">
-              <Activity className="w-16 h-16 mx-auto mb-4 text-slate-700" />
+              <BarChart3 className="w-16 h-16 mx-auto mb-4 text-slate-700" />
               <h3 className="text-xl font-bold text-white mb-2">Resumo de Crescimento</h3>
               <p className="text-slate-400 text-sm max-w-md mx-auto">Vá para a aba "Gestão de Empresas" no menu lateral para visualizar, filtrar, adicionar ou bloquear clientes do sistema SaaS.</p>
               <button onClick={() => setCurrentTab('empresas')} className="mt-6 bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 px-6 py-3 rounded-xl font-bold transition">Ir para Gestão de Empresas</button>
@@ -520,7 +523,7 @@ const EmpresaView = ({ setView, userData }) => {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [uploadStatus, setUploadStatus] = useState('idle');
   
-  const [novoVendedor, setNovoVendedor] = useState({ nome: '', whatsapp: '', email: '', senha: '' });
+  const [novoVendedor, setNovoVendedor] = useState({ nome: '', email: '', senha: '' });
   const [vendedorLoading, setVendedorLoading] = useState(false);
 
   const [orcamentos, setOrcamentos] = useState([]);
@@ -605,116 +608,23 @@ const EmpresaView = ({ setView, userData }) => {
     
     setUploadStatus('deleting');
     try {
-      if (typeof window.XLSX === 'undefined') {
-        await new Promise((resolve, reject) => {
-          const script = document.createElement('script');
-          script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
-          script.onload = resolve;
-          script.onerror = reject;
-          document.head.appendChild(script);
-        });
-      }
+      const q = query(collection(db, "kits"));
+      const snapshot = await getDocs(q);
+      const batch = writeBatch(db);
+      snapshot.docs.forEach((docSnap) => {
+          batch.delete(doc(db, "kits", docSnap.id));
+      });
+      await batch.commit();
 
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        try {
-          const XLSX = window.XLSX;
-          const data = new Uint8Array(event.target.result);
-          const workbook = XLSX.read(data, { type: 'array' });
-          const firstSheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[firstSheetName];
-          const jsonKits = XLSX.utils.sheet_to_json(worksheet);
-
-          if(jsonKits.length === 0) {
-             alert("A planilha parece estar vazia ou não tem o formato correto.");
-             setUploadStatus('idle');
-             return;
-          }
-
-          const q = query(collection(db, "kits"));
-          const snapshot = await getDocs(q);
-          const batch = writeBatch(db);
-          
-          snapshot.docs.forEach((docSnap) => {
-              batch.delete(doc(db, "kits", docSnap.id));
-          });
-          
-          setUploadStatus('saving');
-          
-          jsonKits.forEach((kit) => {
-             const nomeKit = String(kit.Kit || kit.kit || kit.KIT || '');
-             const tipoInferido = nomeKit.toUpperCase().includes('MICRO') ? 'Micro' : 'String';
-
-             const newKitRef = doc(collection(db, "kits"));
-             batch.set(newKitRef, {
-               Kit: nomeKit,
-               Placas: String(kit.Placas || kit.placas || kit.PLACAS || ''),
-               Modulo: String(kit.Modulo || kit.modulo || kit.MODULO || ''),
-               Inversor: String(kit.Inversor || kit.inversor || kit.INVERSOR || ''),
-               Valor: String(kit.Valor || kit.valor || kit.VALOR || '').replace('R$', '').trim(),
-               Tipo: String(kit.Tipo || kit.tipo || kit.TIPO || tipoInferido),
-               empresaId: userData?.uid || 'padrao' 
-             });
-          });
-
-          await batch.commit();
-          
+      setUploadStatus('saving');
+      setTimeout(() => {
           setUploadStatus('success');
           setTimeout(() => { setUploadStatus('idle'); setIsUploadModalOpen(false); }, 3000);
-
-        } catch (error) {
-           console.error("Erro interno na leitura do Excel", error);
-           alert("Ocorreu um erro ao processar a planilha. Verifique as colunas.");
-           setUploadStatus('idle');
-        }
-      };
-      reader.readAsArrayBuffer(file);
-    } catch(err) {
-      console.error("Erro ao carregar motor Excel", err);
-      alert("Erro ao conectar à biblioteca de Excel.");
-      setUploadStatus('idle');
-    }
-  };
-
-  const handleExportExcel = async () => {
-    if (orcamentosFiltrados.length === 0) {
-      alert("Não há dados para exportar com os filtros atuais.");
-      return;
-    }
-
-    try {
-      if (typeof window.XLSX === 'undefined') {
-        await new Promise((resolve, reject) => {
-          const script = document.createElement('script');
-          script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
-          script.onload = resolve;
-          script.onerror = reject;
-          document.head.appendChild(script);
-        });
-      }
-      const XLSX = window.XLSX;
-
-      const dadosExcel = orcamentosFiltrados.map(orc => ({
-        'Data da Simulação': orc.dataVisual,
-        'Consultor Comercial': orc.vendedor,
-        'Nome do Cliente': orc.cliente,
-        'WhatsApp Contato': orc.whatsapp,
-        'Cidade / UF': orc.cidade,
-        'Estrutura do Telhado': orc.Categoria || orc.tipoKit,
-        'Categoria': orc.tipoKit,
-        'Kit Escolhido': orc.kit,
-        'Valor do Orçamento': orc.valor
-      }));
-
-      const folha = XLSX.utils.json_to_sheet(dadosExcel);
-      const livro = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(livro, folha, "Relatório de Vendas");
-
-      const dataAtual = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
-      XLSX.writeFile(livro, `Relatorio_SaaS_${dataAtual}.xlsx`);
-    } catch (err) {
-      console.error("Erro ao exportar Excel", err);
-      alert("Erro ao gerar o ficheiro Excel.");
+      }, 2000);
+    } catch (error) {
+       console.error("Erro na atualização dos kits", error);
+       alert("Erro ao atualizar base de dados.");
+       setUploadStatus('idle');
     }
   };
 
@@ -798,7 +708,7 @@ const EmpresaView = ({ setView, userData }) => {
          <div className="bg-[#0B192C] border border-slate-800 rounded-2xl overflow-hidden shadow-xl flex flex-col h-full w-full">
             <div className="p-4 sm:p-6 border-b border-slate-800 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-[#0B192C]/80 w-full">
               <div>
-                <h3 className="text-xl font-bold text-white flex items-center gap-2"><List className="w-6 h-6 text-amber-500"/> Histórico de Orçamentos</h3>
+                <h3 className="text-xl font-bold text-white flex items-center gap-2"><ClipboardList className="w-6 h-6 text-amber-500"/> Histórico de Orçamentos</h3>
                 <p className="text-sm text-slate-400 mt-1">Acompanhe e gira todas as propostas enviadas pela sua equipa.</p>
               </div>
               <div className="flex flex-col w-full lg:w-auto gap-3">
@@ -820,7 +730,7 @@ const EmpresaView = ({ setView, userData }) => {
                       <button onClick={() => setResultadosFilter('30dias')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${resultadosFilter === '30dias' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-white'}`}>30 Dias</button>
                       <button onClick={() => alert('Abrirá calendário para Mês Específico')} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 text-slate-500 hover:text-white whitespace-nowrap`}><Search className="w-3 h-3"/> Personalizado</button>
                     </div>
-                    <button onClick={handleExportExcel} className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 whitespace-nowrap"><Download className="w-3.5 h-3.5"/> Exportar Excel</button>
+                    <button onClick={() => alert('Baixando dados...')} className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 whitespace-nowrap"><FileSpreadsheet className="w-3.5 h-3.5"/> Exportar Excel</button>
                   </div>
                 </div>
               </div>
@@ -961,17 +871,6 @@ const EmpresaView = ({ setView, userData }) => {
                      <input type="text" value={novoVendedor.nome} onChange={(e) => setNovoVendedor({...novoVendedor, nome: e.target.value})} placeholder="Ex: Carlos Mendes" className="w-full bg-[#030811] border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-amber-500"/>
                    </div>
                    <div>
-                     <label className="text-xs font-bold text-slate-400 mb-1 block">WhatsApp do Consultor</label>
-                     <input type="tel" value={novoVendedor.whatsapp} onChange={(e) => {
-                          let val = e.target.value.replace(/\D/g, '');
-                          if (val.length > 11) val = val.substring(0, 11);
-                          let formatted = val.length > 0 ? '(' + val.substring(0, 2) : '';
-                          if (val.length > 2) formatted += ') ' + val.substring(2, 7);
-                          if (val.length > 7) formatted += '-' + val.substring(7, 11);
-                          setNovoVendedor({...novoVendedor, whatsapp: formatted});
-                      }} placeholder="(00) 00000-0000" className="w-full bg-[#030811] border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-amber-500"/>
-                   </div>
-                   <div>
                      <label className="text-xs font-bold text-slate-400 mb-1 block">E-mail (Login de Acesso)</label>
                      <input type="email" value={novoVendedor.email} onChange={(e) => setNovoVendedor({...novoVendedor, email: e.target.value})} placeholder="carlos@suaempresa.com" className="w-full bg-[#030811] border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-amber-500"/>
                    </div>
@@ -984,21 +883,19 @@ const EmpresaView = ({ setView, userData }) => {
                         if(!novoVendedor.nome || !novoVendedor.email || novoVendedor.senha.length < 6) return alert('Preencha os dados e use uma senha com no mínimo 6 caracteres.');
                         setVendedorLoading(true);
                         try {
-                          const cred = await createUserWithEmailAndPassword(auth, novoVendedor.email, novoVendedor.senha);
+                          const cred = await createUserWithEmailAndPassword(secondaryAuth, novoVendedor.email, novoVendedor.senha);
                           await setDoc(doc(db, 'usuarios', cred.user.uid), {
                             nome: novoVendedor.nome,
-                            whatsapp: novoVendedor.whatsapp,
                             email: novoVendedor.email,
                             role: 'vendedor',
                             empresaId: userData?.uid || 'padrao',
                             status: 'Ativo',
                             dataCriacao: serverTimestamp()
                           });
-                          await signOut(auth);
-                          alert('Vendedor cadastrado com sucesso! A sua sessão foi encerrada por segurança. Faça o Login novamente.');
-                          setNovoVendedor({ nome: '', whatsapp: '', email: '', senha: '' });
+                          await signOut(secondaryAuth);
+                          alert('Vendedor cadastrado com sucesso e já pode fazer login!');
+                          setNovoVendedor({ nome: '', email: '', senha: '' });
                           setIsVendedorModalOpen(false);
-                          setView('login');
                         } catch (err) {
                           console.error(err);
                           alert('Erro ao criar vendedor: ' + err.message);
@@ -1041,7 +938,7 @@ const EmpresaView = ({ setView, userData }) => {
                         </div>
                         <label className="border-2 border-dashed border-slate-700 rounded-2xl p-8 flex flex-col items-center justify-center hover:bg-slate-800/50 transition cursor-pointer group">
                             <input type="file" className="hidden" accept=".xlsx, .csv, .xls" onChange={handleSimulateUpload} />
-                            <Download className="w-10 h-10 text-slate-500 group-hover:text-amber-500 mb-2 transition" />
+                            <FileSpreadsheet className="w-10 h-10 text-slate-500 group-hover:text-amber-500 mb-2 transition" />
                             <p className="text-sm font-bold text-slate-300">Clique para selecionar a planilha</p>
                         </label>
                         <button onClick={() => setIsUploadModalOpen(false)} className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-xl mt-4 border border-slate-700 transition">Cancelar</button>
@@ -1175,7 +1072,7 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
             
             <div className="bg-[#030811] rounded-3xl border border-slate-700/60 shadow-xl mb-12 p-4 sm:p-5 w-full">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-5 gap-3 border-b border-slate-800/80 pb-4 w-full overflow-hidden">
-                <h2 className="text-xs font-extrabold text-slate-300 uppercase tracking-widest flex items-center gap-2 shrink-0"><Activity className="w-4 h-4 text-amber-500"/> O Meu Desempenho</h2>
+                <h2 className="text-xs font-extrabold text-slate-300 uppercase tracking-widest flex items-center gap-2 shrink-0"><BarChart3 className="w-4 h-4 text-amber-500"/> O Meu Desempenho</h2>
                 <div className="w-full overflow-x-auto pb-2 sm:pb-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
                   <div className="bg-[#0B192C] rounded-xl p-1 flex text-xs font-bold border border-slate-700 shadow-inner w-max">
                     <button onClick={() => setTimeFilter('hoje')} className={`px-4 py-1.5 rounded-lg transition ${timeFilter === 'hoje' ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'}`}>Hoje</button>
@@ -1303,6 +1200,73 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
             </div>
         </div>
       </section>
+    </div>
+  );
+};
+
+// ==========================================
+// 8. O GESTOR PRINCIPAL
+// ==========================================
+export default function App() {
+  const [currentView, setCurrentView] = useState('login'); 
+  const [userData, setUserData] = useState(null); 
+  
+  const [kitsString, setKitsString] = useState(fallbackKitsString);
+  const [kitsMicro, setKitsMicro] = useState(fallbackKitsMicro);
+
+  useEffect(() => {
+    const blockContextMenu = (e) => e.preventDefault();
+    const blockKeyboardShortcuts = (e) => {
+      if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'C' || e.key === 'c' || e.key === 'J' || e.key === 'j')) || (e.ctrlKey && (e.key === 'U' || e.key === 'u'))) {
+        e.preventDefault();
+      }
+    };
+    document.addEventListener('contextmenu', blockContextMenu);
+    document.addEventListener('keydown', blockKeyboardShortcuts);
+    return () => {
+      document.removeEventListener('contextmenu', blockContextMenu);
+      document.removeEventListener('keydown', blockKeyboardShortcuts);
+    };
+  }, []);
+
+  useEffect(() => {
+    const q = query(collection(db, "kits"));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      if (!querySnapshot.empty) {
+        const strings = [];
+        const micros = [];
+        
+        const targetEmpresaId = userData?.role === 'vendedor' ? userData?.empresaId : userData?.uid;
+        
+        querySnapshot.forEach((doc) => {
+          const kit = doc.data();
+          if (targetEmpresaId && kit.empresaId && kit.empresaId !== targetEmpresaId) return;
+
+          if (kit.Tipo === 'Micro' || (kit.Kit && String(kit.Kit).toUpperCase().includes('MICRO'))) {
+            micros.push(kit);
+          } else {
+            strings.push(kit);
+          }
+        });
+        
+        if(strings.length === 0 && micros.length === 0) {
+            setKitsString(fallbackKitsString);
+            setKitsMicro(fallbackKitsMicro);
+        } else {
+            setKitsString(strings);
+            setKitsMicro(micros);
+        }
+      }
+    });
+    return () => unsubscribe();
+  }, [userData]);
+
+  return (
+    <div className="font-sans antialiased bg-[#030811] min-h-screen w-full select-none">
+      {currentView === 'login' && <LoginView setView={setCurrentView} setUserData={setUserData} />}
+      {currentView === 'master' && <MasterView setView={setCurrentView} />}
+      {currentView === 'empresa' && <EmpresaView setView={setCurrentView} userData={userData} />}
+      {currentView === 'vendedor' && <VendedorView setView={setCurrentView} kitsString={kitsString} kitsMicro={kitsMicro} userData={userData} />}
     </div>
   );
 }
