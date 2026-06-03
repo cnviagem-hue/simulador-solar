@@ -1282,8 +1282,13 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
       });
       const textMessage = buildMessage();
       const encodedText = encodeURIComponent(textMessage);
-      const waUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodedText}`;
-      setTimeout(() => { window.open(waUrl, '_blank'); }, 800);
+      const waUrl = `https://wa.me/${cleanPhone}?text=${encodedText}`;
+      
+      // Tenta abrir em nova aba. Se o telemóvel bloquear devido à espera do banco de dados, força o redirecionamento.
+      const newWindow = window.open(waUrl, '_blank');
+      if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+          window.location.href = waUrl;
+      }
     } catch (error) { showToast('Erro ao gravar na nuvem.'); }
   };
 
