@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, getDocs, writeBatch, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { getAuth, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from 'firebase/auth';
-import { Search, Building, Users, Zap, Plus, Settings, AlertCircle, LogOut, CheckCircle, ChevronDown, User, Smartphone, MapPin, BarChart, Sun, FileText, Clipboard, MessageCircle, BookOpen, Menu, X, Eye, EyeOff, Download } from 'lucide-react';
+import { Activity, AlertCircle, BookOpen, Building, CheckCircle, ChevronDown, Download, Eye, EyeOff, FileText, List, LogOut, MapPin, Menu, MessageCircle, Plus, Search, Settings, Smartphone, Sun, User, Users, X, Zap } from 'lucide-react';
 
 // ==========================================
 // 1. CONFIGURAÇÃO DO FIREBASE (LIMPA E SEGURA)
@@ -72,7 +72,7 @@ const DashboardLayout = ({ children, title, setView, role, currentTab, setCurren
           </div>
           <nav className="p-4 space-y-2 overflow-y-auto">
             <button onClick={() => handleTabChange('dashboard')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition font-medium ${currentTab === 'dashboard' ? 'bg-slate-800 text-white border-l-2 border-amber-500' : 'text-slate-400 hover:bg-slate-900/50 hover:text-white'}`}>
-              <BarChart className={`w-5 h-5 ${currentTab === 'dashboard' ? 'text-amber-500' : ''}`} /> <span>Dashboard Central</span>
+              <Activity className={`w-5 h-5 ${currentTab === 'dashboard' ? 'text-amber-500' : ''}`} /> <span>Dashboard Central</span>
             </button>
             {role === 'master' && (
               <button onClick={() => handleTabChange('empresas')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition font-medium ${currentTab === 'empresas' ? 'bg-slate-800 text-white border-l-2 border-amber-500' : 'text-slate-400 hover:bg-slate-900/50 hover:text-white'}`}>
@@ -82,7 +82,7 @@ const DashboardLayout = ({ children, title, setView, role, currentTab, setCurren
             {role === 'empresa' && (
               <>
                 <button onClick={() => handleTabChange('resultados')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition font-medium ${currentTab === 'resultados' ? 'bg-slate-800 text-white border-l-2 border-amber-500' : 'text-slate-400 hover:bg-slate-900/50 hover:text-white'}`}>
-                  <Clipboard className={`w-5 h-5 ${currentTab === 'resultados' ? 'text-amber-500' : ''}`} /> <span>Resultados (CRM)</span>
+                  <List className={`w-5 h-5 ${currentTab === 'resultados' ? 'text-amber-500' : ''}`} /> <span>Resultados (CRM)</span>
                 </button>
                 <button onClick={() => handleTabChange('vendedores')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition font-medium ${currentTab === 'vendedores' ? 'bg-slate-800 text-white border-l-2 border-amber-500' : 'text-slate-400 hover:bg-slate-900/50 hover:text-white'}`}>
                   <Users className={`w-5 h-5 ${currentTab === 'vendedores' ? 'text-amber-500' : ''}`} /> <span>Meus Vendedores</span>
@@ -132,7 +132,7 @@ const DashboardLayout = ({ children, title, setView, role, currentTab, setCurren
 };
 
 // ==========================================
-// 4. TELA DE LOGIN 
+// 4. TELA DE LOGIN (Autenticação Real Firebase)
 // ==========================================
 const LoginView = ({ setView, setUserData }) => {
   const [email, setEmail] = useState('');
@@ -279,6 +279,8 @@ const MasterView = ({ setView }) => {
   const [statusFilter, setStatusFilter] = useState('all');
   
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editEmpresaModal, setEditEmpresaModal] = useState(null);
+  
   const [empresas, setEmpresas] = useState([]);
   const [loadingEmpresas, setLoadingEmpresas] = useState(true);
   const [estatisticas, setEstatisticas] = useState({ empresas: 0, vendedores: 0 });
@@ -373,6 +375,17 @@ const MasterView = ({ setView }) => {
     }
   };
 
+  const toggleEmpresaStatus = async (empresa) => {
+    const novoStatus = empresa.status === 'Bloqueada' ? 'Ativa' : 'Bloqueada';
+    try {
+        await updateDoc(doc(db, 'usuarios', empresa.id), { status: novoStatus });
+        showToast(`Acesso de ${empresa.nome} foi ${novoStatus === 'Bloqueada' ? 'bloqueado' : 'desbloqueado'}.`, 'success');
+    } catch (err) {
+        console.error("Erro ao alterar status:", err);
+        showToast("Erro ao alterar o status da empresa.", "error");
+    }
+  };
+
   return (
     <DashboardLayout title="Visão Master (LD Negócios)" setView={setView} role="master" currentTab={currentTab} setCurrentTab={setCurrentTab}>
       {toast && (
@@ -408,7 +421,7 @@ const MasterView = ({ setView }) => {
               </div>
            </div>
            <div className="bg-[#0B192C] border border-slate-800 rounded-2xl p-12 text-center shadow-sm">
-              <BarChart className="w-16 h-16 mx-auto mb-4 text-slate-700" />
+              <Activity className="w-16 h-16 mx-auto mb-4 text-slate-700" />
               <h3 className="text-xl font-bold text-white mb-2">Resumo de Crescimento</h3>
               <p className="text-slate-400 text-sm max-w-md mx-auto">Vá para a aba "Gestão de Empresas" no menu lateral para visualizar, filtrar, adicionar ou bloquear clientes do sistema SaaS.</p>
               <button onClick={() => setCurrentTab('empresas')} className="mt-6 bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 px-6 py-3 rounded-xl font-bold transition">Ir para Gestão de Empresas</button>
@@ -473,8 +486,10 @@ const MasterView = ({ setView }) => {
                           </span>
                         </td>
                         <td className="px-6 py-4 text-right space-x-2">
-                          <button className="text-slate-400 hover:text-white transition p-1" title="Editar Empresa" onClick={() => showToast('Em desenvolvimento na Fase 5: Edição de Clientes', 'error')}><Settings className="w-4 h-4" /></button>
-                          <button className="text-slate-400 hover:text-amber-500 transition p-1" title="Suspender Acesso" onClick={() => showToast('Para suspender o acesso, utilize as definições na Fase 5.', 'error')}><AlertCircle className="w-4 h-4" /></button>
+                          <button className="text-slate-400 hover:text-white transition p-1" title="Editar Empresa" onClick={() => setEditEmpresaModal(item)}><Settings className="w-4 h-4" /></button>
+                          <button className="text-slate-400 hover:text-amber-500 transition p-1" title={item.status === 'Bloqueada' ? 'Desbloquear Acesso' : 'Suspender Acesso'} onClick={() => toggleEmpresaStatus(item)}>
+                              {item.status === 'Bloqueada' ? <CheckCircle className="w-4 h-4 text-emerald-500" /> : <AlertCircle className="w-4 h-4 text-red-500" />}
+                          </button>
                         </td>
                       </tr>
                     ))
@@ -483,6 +498,53 @@ const MasterView = ({ setView }) => {
               </table>
             )}
           </div>
+
+          {/* Modal de Edição de Empresa */}
+          {editEmpresaModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm text-left">
+               <div className="bg-[#0B192C] border border-slate-800 rounded-3xl p-6 w-full max-w-sm shadow-2xl relative">
+                 <button onClick={() => setEditEmpresaModal(null)} className="absolute top-4 right-4 text-slate-500 hover:text-white transition"><LogOut className="w-5 h-5"/></button>
+                 <h3 className="text-xl font-extrabold text-white mb-1">Editar Empresa</h3>
+                 <p className="text-xs text-slate-400 mb-6">Altere os dados de perfil da empresa cliente.</p>
+                 <div className="space-y-4">
+                   <div>
+                     <label className="text-xs font-bold text-slate-400 mb-1 block">Nome Fantasia / Razão Social</label>
+                     <input type="text" value={editEmpresaModal.nome} onChange={(e) => setEditEmpresaModal({...editEmpresaModal, nome: e.target.value})} className="w-full bg-[#030811] border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-amber-500"/>
+                   </div>
+                   <div className="relative group">
+                     <label className="text-xs font-bold text-slate-400 mb-1 block">Plano Contratado</label>
+                     <select value={editEmpresaModal.plano || 'Free [Teste Ilimitado 14 dias]'} onChange={(e) => setEditEmpresaModal({...editEmpresaModal, plano: e.target.value})} className="w-full bg-[#030811] border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-amber-500 appearance-none cursor-pointer">
+                        <option value="Free [Teste Ilimitado 14 dias]">Free [Teste Ilimitado 14 dias]</option>
+                        <option value="Básico até 5 vendedores [R$ 100,00]">Básico até 5 vendedores [R$ 100,00]</option>
+                        <option value="Pró até 10 vendedores [R$ 125,00]">Pró até 10 vendedores [R$ 125,00]</option>
+                        <option value="Master Ilimitado [R$ 150,00]">Master Ilimitado [R$ 150,00]</option>
+                     </select>
+                     <span className="absolute inset-y-0 right-0 flex items-center pr-4 pt-5 pointer-events-none text-slate-400"><ChevronDown className="w-4 h-4"/></span>
+                   </div>
+                   <div>
+                     <label className="text-xs font-bold text-slate-400 mb-1 block">E-mail (Login de Acesso)</label>
+                     <input type="email" value={editEmpresaModal.email} disabled className="w-full bg-slate-800/50 border border-slate-700/50 rounded-xl px-4 py-2.5 text-slate-500 text-sm outline-none cursor-not-allowed"/>
+                     <p className="text-[10px] text-slate-500 mt-1">O e-mail de acesso não pode ser alterado por motivos de segurança.</p>
+                   </div>
+                   <button 
+                     onClick={async () => {
+                        if(!editEmpresaModal.nome) return showToast('O nome é obrigatório.', 'error');
+                        try {
+                            await updateDoc(doc(db, 'usuarios', editEmpresaModal.id), { nome: editEmpresaModal.nome, plano: editEmpresaModal.plano });
+                            setEditEmpresaModal(null);
+                            showToast('Empresa atualizada com sucesso!', 'success');
+                        } catch (err) {
+                            console.error(err);
+                            showToast('Erro ao atualizar empresa.', 'error');
+                        }
+                     }} 
+                     className="w-full bg-gradient-to-r from-amber-400 to-orange-500 text-slate-900 font-extrabold py-3 rounded-xl mt-2 transition hover:scale-[1.02]">
+                     Salvar Alterações
+                   </button>
+                 </div>
+               </div>
+            </div>
+          )}
 
           {isModalOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
@@ -777,12 +839,14 @@ const EmpresaView = ({ setView, userData }) => {
 
   const toggleVendedorStatus = async (vendedor) => {
     const novoStatus = vendedor.status === 'Bloqueado' ? 'Ativo' : 'Bloqueado';
-    try {
-        await updateDoc(doc(db, 'usuarios', vendedor.id), { status: novoStatus });
-        showToast(`Acesso de ${vendedor.nome} foi ${novoStatus === 'Bloqueado' ? 'bloqueado' : 'desbloqueado'}.`, 'success');
-    } catch (err) {
-        console.error("Erro ao alterar status:", err);
-        showToast("Erro ao alterar o status do vendedor.", "error");
+    if (window.confirm(`Deseja realmente ${novoStatus === 'Bloqueado' ? 'bloquear' : 'desbloquear'} o acesso de ${vendedor.nome}?`)) {
+        try {
+            await updateDoc(doc(db, 'usuarios', vendedor.id), { status: novoStatus });
+            showToast(`Status de ${vendedor.nome} alterado para ${novoStatus}.`, 'success');
+        } catch (err) {
+            console.error("Erro ao alterar status:", err);
+            showToast("Erro ao alterar o status do vendedor.", "error");
+        }
     }
   };
   
@@ -848,7 +912,7 @@ const EmpresaView = ({ setView, userData }) => {
          <div className="bg-[#0B192C] border border-slate-800 rounded-2xl overflow-hidden shadow-xl flex flex-col h-full w-full">
             <div className="p-4 sm:p-6 border-b border-slate-800 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-[#0B192C]/80 w-full">
               <div>
-                <h3 className="text-xl font-bold text-white flex items-center gap-2"><Clipboard className="w-6 h-6 text-amber-500"/> Histórico de Orçamentos</h3>
+                <h3 className="text-xl font-bold text-white flex items-center gap-2"><List className="w-6 h-6 text-amber-500"/> Histórico de Orçamentos</h3>
                 <p className="text-sm text-slate-400 mt-1">Acompanhe e gira todas as propostas enviadas pela sua equipa.</p>
               </div>
               <div className="flex flex-col w-full lg:w-auto gap-3">
@@ -1055,7 +1119,7 @@ const EmpresaView = ({ setView, userData }) => {
                         if(!novoVendedor.nome || !novoVendedor.email || novoVendedor.senha.length < 6) return showToast('Preencha os dados e use uma senha com no mínimo 6 caracteres.', 'error');
                         setVendedorLoading(true);
                         try {
-                          const cred = await createUserWithEmailAndPassword(secondaryAuth, novoVendedor.email, novoVendedor.senha);
+                          const cred = await createUserWithEmailAndPassword(auth, novoVendedor.email, novoVendedor.senha);
                           await setDoc(doc(db, 'usuarios', cred.user.uid), {
                             nome: novoVendedor.nome,
                             whatsapp: novoVendedor.whatsapp,
@@ -1065,10 +1129,11 @@ const EmpresaView = ({ setView, userData }) => {
                             status: 'Ativo',
                             dataCriacao: serverTimestamp()
                           });
-                          await signOut(secondaryAuth);
-                          showToast('Vendedor cadastrado com sucesso e já pode fazer login!', 'success');
+                          await signOut(auth);
+                          showToast('Vendedor cadastrado com sucesso! A sua sessão foi encerrada por segurança. Faça o Login novamente.', 'success');
                           setNovoVendedor({ nome: '', whatsapp: '', email: '', senha: '' });
                           setIsVendedorModalOpen(false);
+                          setView('login');
                         } catch (err) {
                           console.error(err);
                           showToast('Erro ao criar vendedor: ' + err.message, 'error');
@@ -1142,6 +1207,238 @@ const EmpresaView = ({ setView, userData }) => {
         </div>
       )}
     </DashboardLayout>
+  );
+};
+
+// ==========================================
+// 7. VISÃO VENDEDOR (Agora com dados da Nuvem)
+// ==========================================
+const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
+  const [formData, setFormData] = useState({ sellerName: userData?.nome || '', kitString: '', kitMicro: '', roofStructure: '', clientName: '', clientWhatsapp: '', clientCity: '' });
+  const [timeFilter, setTimeFilter] = useState('hoje');
+  const [toast, setToast] = useState(null);
+
+  const showToast = (message, type = 'error') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
+
+  const handleInputChange = (e) => {
+    const { id, value } = e.target;
+    let newFormData = { ...formData, [id]: value };
+    if (id === 'kitString' && value !== '') { newFormData.kitMicro = ''; newFormData.roofStructure = ''; } 
+    else if (id === 'kitMicro' && value !== '') { newFormData.kitString = ''; newFormData.roofStructure = ''; }
+    setFormData(newFormData);
+  };
+
+  const activeKit = formData.kitString !== '' ? kitsString[formData.kitString] : formData.kitMicro !== '' ? kitsMicro[formData.kitMicro] : null;
+
+  const buildMessage = () => {
+    const clientName = formData.clientName.trim() || '[Nome do Cliente]';
+    const clientCity = formData.clientCity.trim() || '[Cidade]';
+    const clientWhatsapp = formData.clientWhatsapp.trim() || '[WhatsApp Cliente]';
+    const sellerName = formData.sellerName.trim() || '[Nome do Vendedor]';
+    const roofStructure = formData.roofStructure || '[Estrutura do Telhado]';
+    let kitName = '[Kit Selecionado]', placas = '--', modulo = '--', inversor = '--', valor = '--';
+
+    if (activeKit) {
+        kitName = activeKit.Kit; placas = activeKit.Placas; modulo = activeKit.Modulo; inversor = activeKit.Inversor; valor = `R$ ${activeKit.Valor}`;
+    }
+    const cleanPotencia = modulo.replace(/Módulo\s*/gi, '').trim();
+
+    return `Empresa: Energia Solar ☀️\n\nSegue o seu orçamento personalizado de Energia Solar\n\n👤 *Cliente:* ${clientName}\n\n📍 *Cidade:* ${clientCity}\n\n📱 *Zap:* ${clientWhatsapp}\n\n🏠 *Estrutura do Telhado:* ${roofStructure}\n\n📦 *Kit Selecionado:* ${kitName}\n\n☀️ *Placas:* ${placas}\n\n⚡ *Potência:* ${cleanPotencia}\n\n🔄 *Inversor:* ${inversor}\n\n💰 *Valor do Kit:* ${valor}\n\n✨ *Condições Especiais:*\n\n💳 Financiamos 100% com Zero de Entrada\n\n📅 Primeira parcela com prazo de até 120 dias para começar a pagar\n\n💼 Atendido por: *${sellerName}*\n\nFicamos à disposição para esclarecer dúvidas e realizar o seu projeto.`;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!formData.sellerName || (!formData.kitString && !formData.kitMicro) || !formData.roofStructure || !formData.clientName || !formData.clientWhatsapp || !formData.clientCity) {
+      return showToast('Preencha todos os campos obrigatórios!');
+    }
+
+    let cleanPhone = formData.clientWhatsapp.replace(/\D/g, '');
+    if (cleanPhone.length < 10) return showToast('Insira um WhatsApp válido.');
+    if (cleanPhone.length === 10 || cleanPhone.length === 11) cleanPhone = '55' + cleanPhone;
+
+    try {
+      showToast('A enviar dados...', 'success');
+      await addDoc(collection(db, "orcamentos"), {
+        data: new Date().toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }),
+        vendedor: formData.sellerName, 
+        cliente: formData.clientName, 
+        whatsapp: formData.clientWhatsapp, 
+        cidade: formData.clientCity,
+        estrutura: formData.roofStructure, 
+        tipoKit: formData.kitString !== '' ? 'String' : 'Micro', 
+        kit: activeKit.Kit, 
+        valor: activeKit.Valor, 
+        timestamp: serverTimestamp(),
+        empresaId: userData?.empresaId || 'padrao', // Liga o orçamento à empresa dona
+        vendedorUid: userData?.uid || 'padrao'
+      });
+      const textMessage = buildMessage();
+      const encodedText = encodeURIComponent(textMessage);
+      const waUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodedText}`;
+      setTimeout(() => { window.open(waUrl, '_blank'); }, 800);
+    } catch (error) { showToast('Erro ao gravar na nuvem.'); }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#030811] text-slate-100 font-sans selection:bg-amber-500 overflow-x-hidden relative">
+      {toast && (
+        <div className={`fixed top-24 right-5 z-[100] flex items-center space-x-3 px-5 py-4 rounded-xl shadow-2xl transition-all duration-300 ${toast.type === 'error' ? 'bg-red-500' : 'bg-emerald-500'} text-white border border-white/10`}>
+          <AlertCircle className="w-5 h-5 flex-shrink-0" /> <span className="text-sm font-medium leading-snug">{toast.message}</span>
+        </div>
+      )}
+      <header className="sticky top-0 z-50 backdrop-blur-md bg-[#0B192C]/80 border-b border-white/10 shadow-lg">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between w-full">
+            <div className="flex items-center space-x-3 truncate pr-2">
+                <div className="bg-gradient-to-tr from-amber-500 to-amber-300 p-2.5 rounded-xl shadow-lg shadow-amber-500/20 shrink-0"><Sun className="w-6 h-6 text-[#0B192C]" /></div>
+                <div className="truncate">
+                    <span className="text-lg sm:text-xl font-extrabold tracking-tight text-white block truncate">LD <span className="text-amber-400">SIMULADOR SOLAR</span></span>
+                    <span className="text-[9px] uppercase tracking-widest text-slate-400 block -mt-1 font-semibold truncate">Tecnologia Sustentável</span>
+                </div>
+            </div>
+            <nav className="flex space-x-8 text-sm font-medium text-slate-300 shrink-0">
+                <button onClick={() => setView('login')} className="hover:text-amber-400 transition flex items-center gap-2"><span className="hidden sm:block">Sair do App</span><LogOut className="w-4 h-4"/></button>
+            </nav>
+        </div>
+      </header>
+
+      <section className="py-8 sm:py-20 bg-[#0B192C] border-t border-b border-slate-800 relative min-h-[80vh] flex items-center flex-col w-full" style={{ backgroundImage: 'radial-gradient(at 0% 0%, hsla(210,100%,12%,1) 0px, transparent 50%), radial-gradient(at 100% 100%, hsla(38,100%,50%,0.08) 0px, transparent 50%)' }}>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(245,166,35,0.04),transparent_50%)] pointer-events-none"></div>
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full">
+            
+            <div className="bg-[#030811] rounded-3xl border border-slate-700/60 shadow-xl mb-12 p-4 sm:p-5 w-full">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-5 gap-3 border-b border-slate-800/80 pb-4 w-full overflow-hidden">
+                <h2 className="text-xs font-extrabold text-slate-300 uppercase tracking-widest flex items-center gap-2 shrink-0"><Activity className="w-4 h-4 text-amber-500"/> O Meu Desempenho</h2>
+                <div className="w-full overflow-x-auto pb-2 sm:pb-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+                  <div className="bg-[#0B192C] rounded-xl p-1 flex text-xs font-bold border border-slate-700 shadow-inner w-max">
+                    <button onClick={() => setTimeFilter('hoje')} className={`px-4 py-1.5 rounded-lg transition ${timeFilter === 'hoje' ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'}`}>Hoje</button>
+                    <button onClick={() => setTimeFilter('semana')} className={`px-4 py-1.5 rounded-lg transition ${timeFilter === 'semana' ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'}`}>Semana</button>
+                    <button onClick={() => setTimeFilter('quinzena')} className={`px-4 py-1.5 rounded-lg transition ${timeFilter === 'quinzena' ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'}`}>Quinzena</button>
+                    <button onClick={() => setTimeFilter('mes')} className={`px-4 py-1.5 rounded-lg transition ${timeFilter === 'mes' ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'}`}>Mês</button>
+                    <button onClick={() => showToast('Abrirá calendário para Mês Específico', 'error')} className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1 text-slate-400 hover:text-white whitespace-nowrap`}><Search className="w-3 h-3"/> Personalizado</button>
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
+                 <div className="bg-[#0B192C] p-4 rounded-2xl border border-slate-800/50 shadow-sm text-center sm:text-left"><p className="text-[10px] text-slate-500 uppercase font-extrabold tracking-wider mb-1">Propostas</p><p className="text-2xl font-extrabold text-white">{timeFilter === 'hoje' ? '8' : timeFilter === 'semana' ? '34' : '142'}</p></div>
+                 <div className="bg-[#0B192C] p-4 rounded-2xl border border-slate-800/50 shadow-sm text-center sm:text-left"><p className="text-[10px] text-slate-500 uppercase font-extrabold tracking-wider mb-1">Kits String</p><p className="text-2xl font-extrabold text-blue-400">{timeFilter === 'hoje' ? '5' : timeFilter === 'semana' ? '20' : '90'}</p></div>
+                 <div className="bg-[#0B192C] p-4 rounded-2xl border border-slate-800/50 shadow-sm text-center sm:text-left"><p className="text-[10px] text-slate-500 uppercase font-extrabold tracking-wider mb-1">Kits Micro</p><p className="text-2xl font-extrabold text-emerald-400">{timeFilter === 'hoje' ? '3' : timeFilter === 'semana' ? '14' : '52'}</p></div>
+                 <div className="bg-[#0B192C] p-4 rounded-2xl border border-slate-800/50 shadow-sm flex flex-col justify-center items-center sm:items-start"><p className="text-[10px] text-slate-500 uppercase font-extrabold tracking-wider mb-1">Status Meta</p><span className="text-xs font-bold text-emerald-400 bg-emerald-400/10 px-2.5 py-1 rounded-md flex items-center gap-1 border border-emerald-400/20 mt-1"><CheckCircle className="w-3 h-3"/> No Ritmo</span></div>
+              </div>
+            </div>
+
+            <div className="text-center max-w-2xl mx-auto mb-8">
+                <span className="inline-block py-1 px-3 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-sm font-bold tracking-widest uppercase mb-4">NOVO ORÇAMENTO</span>
+                <p className="text-slate-300 mt-2 text-sm sm:text-base">Insira os dados do cliente, escolha o kit desejado e envie a proposta de forma imediata.</p>
+            </div>
+
+            <div className="bg-[#030811] rounded-3xl border border-slate-700/60 shadow-[0_0_25px_rgba(245,166,35,0.1)] overflow-hidden w-full">
+                <form onSubmit={handleSubmit} className="p-5 sm:p-10 space-y-8 sm:space-y-10">
+                    <div className="space-y-4 sm:space-y-5">
+                        <div className="flex items-center space-x-3 border-b border-slate-800/80 pb-3">
+                            <span className="bg-blue-500/10 border border-blue-500/30 text-blue-400 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shadow-sm shrink-0">1</span>
+                            <h4 className="text-sm font-bold text-white uppercase tracking-wider">Consultor</h4>
+                        </div>
+                        <div>
+                            <div className="relative group">
+                                <span className="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400 group-focus-within:text-amber-400 transition-colors"><User className="w-5 h-5"/></span>
+                                <input type="text" id="sellerName" value={formData.sellerName} onChange={handleInputChange} placeholder="Digite o seu nome completo" className="w-full bg-[#0B192C] border border-slate-700 focus:border-amber-500 rounded-xl py-3.5 pl-12 pr-4 text-sm text-white placeholder-slate-500 transition outline-none shadow-inner" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="space-y-4 sm:space-y-5">
+                        <div className="flex items-center space-x-3 border-b border-slate-800/80 pb-3">
+                            <span className="bg-amber-500/20 border border-amber-500/30 text-amber-500 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shadow-sm shrink-0">2</span>
+                            <h4 className="text-sm font-bold text-white uppercase tracking-wider">Configuração</h4>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+                            <div className="relative group">
+                                <span className="absolute inset-y-0 left-0 flex items-center pl-4 mt-6 text-amber-400"><Zap className="w-4 h-4"/></span>
+                                <label className="block text-xs font-semibold text-slate-300 mb-2">1: Kits String *</label>
+                                <select id="kitString" value={formData.kitString} onChange={handleInputChange} className="w-full bg-[#0B192C] border border-slate-700 focus:border-amber-500 rounded-xl py-3.5 pl-11 pr-8 text-sm text-white transition outline-none appearance-none shadow-inner cursor-pointer truncate">
+                                  <option value="" disabled>-- Selecione Kit String --</option>
+                                  {kitsString.length === 0 ? <option disabled>Sem kits. Faça Upload no CRM.</option> : kitsString.map((k, i) => <option key={i} value={i}>{k.Kit} - R$ {k.Valor}</option>)}
+                                </select>
+                                <span className="absolute inset-y-0 right-0 flex items-center pr-3 mt-6 pointer-events-none text-slate-400"><ChevronDown className="w-4 h-4"/></span>
+                            </div>
+                            <div className="relative group">
+                                <span className="absolute inset-y-0 left-0 flex items-center pl-4 mt-6 text-amber-400"><Zap className="w-4 h-4"/></span>
+                                <label className="block text-xs font-semibold text-slate-300 mb-2">2: Kits Micro *</label>
+                                <select id="kitMicro" value={formData.kitMicro} onChange={handleInputChange} className="w-full bg-[#0B192C] border border-slate-700 focus:border-amber-500 rounded-xl py-3.5 pl-11 pr-8 text-sm text-white transition outline-none appearance-none shadow-inner cursor-pointer truncate">
+                                  <option value="" disabled>-- Selecione Kit Micro --</option>
+                                  {kitsMicro.length === 0 ? <option disabled>Sem kits. Faça Upload no CRM.</option> : kitsMicro.map((k, i) => <option key={i} value={i}>{k.Kit} - R$ {k.Valor}</option>)}
+                                </select>
+                                <span className="absolute inset-y-0 right-0 flex items-center pr-3 mt-6 pointer-events-none text-slate-400"><ChevronDown className="w-4 h-4"/></span>
+                            </div>
+                        </div>
+                        <div>
+                            <div className="relative group">
+                                <label className="block text-xs font-semibold text-slate-300 mb-2">Estrutura do Telhado *</label>
+                                <span className="absolute inset-y-0 left-0 flex items-center pl-4 mt-6 text-slate-400 group-focus-within:text-amber-400 transition-colors"><Building className="w-4 h-4"/></span>
+                                <select id="roofStructure" value={formData.roofStructure} onChange={handleInputChange} className="w-full bg-[#0B192C] border border-slate-700 focus:border-amber-500 rounded-xl py-3.5 pl-11 pr-8 text-sm text-white transition outline-none appearance-none shadow-inner cursor-pointer truncate"><option value="" disabled>-- Selecione a Estrutura --</option><option value="Madeira">1: Madeira</option><option value="Ferro">2: Ferro</option></select>
+                                <span className="absolute inset-y-0 right-0 flex items-center pr-3 mt-6 pointer-events-none text-slate-400"><ChevronDown className="w-4 h-4"/></span>
+                            </div>
+                        </div>
+                        <div className="bg-gradient-to-br from-[#0B192C] to-slate-900 border border-slate-700/80 rounded-2xl p-5 sm:p-6 mt-2 grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 relative overflow-hidden shadow-lg">
+                            <div className="absolute -right-8 -bottom-8 text-slate-800/40 pointer-events-none transform rotate-12"><Sun className="w-48 h-48"/></div>
+                            <div className="space-y-1.5 relative z-10"><span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block flex items-center gap-1.5">Qtd. Placas</span><span className="text-base sm:text-lg font-extrabold text-white block truncate">{activeKit ? activeKit.Placas : '--'}</span></div>
+                            <div className="space-y-1.5 relative z-10"><span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block flex items-center gap-1.5">Potência</span><span className="text-base sm:text-lg font-extrabold text-white block truncate">{activeKit ? activeKit.Modulo.replace(/Módulo\s*/gi, '').trim() : '--'}</span></div>
+                            <div className="space-y-1.5 relative z-10"><span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block flex items-center gap-1.5">Inversor</span><span className="text-base sm:text-lg font-extrabold text-white block truncate">{activeKit ? activeKit.Inversor : '--'}</span></div>
+                            <div className="space-y-1.5 relative z-10"><span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block flex items-center gap-1.5"><span className="text-emerald-600">Valor do Kit</span></span><span className="text-base sm:text-lg font-extrabold text-emerald-400 block truncate">{activeKit ? `R$ ${activeKit.Valor}` : '--'}</span></div>
+                        </div>
+                    </div>
+
+                    <div className="space-y-4 sm:space-y-5">
+                        <div className="flex items-center space-x-3 border-b border-slate-800/80 pb-3">
+                            <span className="bg-orange-500/20 border border-orange-500/30 text-orange-500 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shadow-sm shrink-0">3</span>
+                            <h4 className="text-sm font-bold text-white uppercase tracking-wider">Cliente</h4>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5">
+                            <div className="relative group">
+                                <label className="block text-xs font-semibold text-slate-300 mb-2">Nome do Cliente *</label>
+                                <span className="absolute inset-y-0 left-0 flex items-center pl-4 mt-6 text-slate-400 group-focus-within:text-orange-500 transition-colors"><User className="w-4 h-4"/></span>
+                                <input type="text" id="clientName" value={formData.clientName} onChange={handleInputChange} placeholder="Nome do Cliente" className="w-full bg-[#0B192C] border border-slate-700 focus:border-orange-500 rounded-xl py-3.5 pl-11 pr-4 text-sm text-white placeholder-slate-500 transition outline-none shadow-inner" />
+                            </div>
+                            <div className="relative group">
+                                <label className="block text-xs font-semibold text-slate-300 mb-2">WhatsApp *</label>
+                                <span className="absolute inset-y-0 left-0 flex items-center pl-4 mt-6 text-slate-400 group-focus-within:text-orange-500 transition-colors"><Smartphone className="w-4 h-4"/></span>
+                                <input type="tel" id="clientWhatsapp" value={formData.clientWhatsapp} onChange={(e) => {
+                                      let val = e.target.value.replace(/\D/g, '');
+                                      if (val.length > 11) val = val.substring(0, 11);
+                                      let formatted = val.length > 0 ? '(' + val.substring(0, 2) : '';
+                                      if (val.length > 2) formatted += ') ' + val.substring(2, 7);
+                                      if (val.length > 7) formatted += '-' + val.substring(7, 11);
+                                      setFormData({...formData, clientWhatsapp: formatted});
+                                  }} placeholder="(00) 00000-0000" className="w-full bg-[#0B192C] border border-slate-700 focus:border-orange-500 rounded-xl py-3.5 pl-11 pr-4 text-sm text-white placeholder-slate-500 transition outline-none shadow-inner" />
+                            </div>
+                            <div className="relative group">
+                                <label className="block text-xs font-semibold text-slate-300 mb-2">Cidade / Estado *</label>
+                                <span className="absolute inset-y-0 left-0 flex items-center pl-4 mt-6 text-slate-400 group-focus-within:text-orange-500 transition-colors"><MapPin className="w-4 h-4"/></span>
+                                <input type="text" id="clientCity" value={formData.clientCity} onChange={handleInputChange} placeholder="Cidade - Estado" className="w-full bg-[#0B192C] border border-slate-700 focus:border-orange-500 rounded-xl py-3.5 pl-11 pr-4 text-sm text-white placeholder-slate-500 transition outline-none shadow-inner" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-[#0B192C]/50 border border-slate-700/60 rounded-2xl p-4 sm:p-6 space-y-4 backdrop-blur-sm w-full">
+                        <div className="flex items-center space-x-2 text-xs font-bold text-slate-400 uppercase tracking-widest"><span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0"></span><span>Visualização da Mensagem</span></div>
+                        <div className="bg-[#030811] p-4 sm:p-5 rounded-xl border border-slate-800 font-mono text-xs sm:text-sm text-slate-300 leading-relaxed whitespace-pre-wrap select-none max-h-64 overflow-y-auto shadow-inner w-full break-words">
+                            {buildMessage()}
+                        </div>
+                    </div>
+
+                    <div>
+                        <button type="submit" className="w-full inline-flex items-center justify-center px-4 sm:px-8 py-4 bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-slate-900 font-extrabold text-base sm:text-lg rounded-2xl transition-all duration-300 shadow-[0_0_20px_rgba(245,166,35,0.2)] hover:scale-[1.02] active:scale-[0.98]">
+                            Enviar Proposta WhatsApp
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+      </section>
+    </div>
   );
 };
 
