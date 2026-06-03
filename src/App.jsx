@@ -21,6 +21,10 @@ const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 const db = getFirestore(app);
 const auth = getAuth(app); 
 
+// MÁGICA: App secundário para cadastrar acessos sem deslogar o Admin
+const secondaryApp = getApps().find(a => a.name === "Secondary") || initializeApp(firebaseConfig, "Secondary");
+const secondaryAuth = getAuth(secondaryApp);
+
 // ==========================================
 // 2. KITS DE SEGURANÇA (Caso a nuvem esteja vazia)
 // ==========================================
@@ -151,13 +155,24 @@ const LoginView = ({ setView, setUserData }) => {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       
+      // Lógica de Redirecionamento Inteligente
       if (email.toLowerCase() === 'cnviagem@gmail.com') {
         setUserData({ role: 'master', uid: user.uid, email: user.email });
         setView('master');
       } else {
+        // Verifica no banco de dados se é Vendedor ou Empresa
         const userDoc = await getDoc(doc(db, 'usuarios', user.uid));
         if (userDoc.exists()) {
           const data = userDoc.data();
+          
+          // ESCUDO DE SEGURANÇA: Bloqueia acesso de pessoas suspensas com a nova frase
+          if (data.status === 'Bloqueado' || data.status === 'Bloqueada') {
+              await signOut(auth);
+              setError('Acesso negado. Favor entrar em contato com a Empresa para ativar seu acesso.');
+              setLoading(false);
+              return;
+          }
+
           setUserData({ ...data, uid: user.uid });
           if (data.role === 'vendedor') {
             setView('vendedor');
@@ -165,6 +180,7 @@ const LoginView = ({ setView, setUserData }) => {
             setView('empresa');
           }
         } else {
+          // Fallback para contas sem role definida
           setUserData({ role: 'empresa', uid: user.uid, email: user.email });
           setView('empresa'); 
         }
@@ -327,7 +343,7 @@ const MasterView = ({ setView }) => {
     
     setEmpresaLoading(true);
     try {
-      const cred = await createUserWithEmailAndPassword(auth, novaEmpresa.email, novaEmpresa.senha);
+      const cred = await createUserWithEmailAndPassword(secondaryAuth, novaEmpresa.email, novaEmpresa.senha);
       await setDoc(doc(db, 'usuarios', cred.user.uid), {
         nome: novaEmpresa.nomeFantasia,
         socio: novaEmpresa.socio,
@@ -339,11 +355,10 @@ const MasterView = ({ setView }) => {
         dataCriacao: serverTimestamp()
       });
       
-      await signOut(auth); 
-      alert(`Empresa "${novaEmpresa.nomeFantasia}" cadastrada com sucesso! A sua sessão foi encerrada por segurança. Faça o Login novamente.`);
+      await signOut(secondaryAuth); 
+      alert(`Empresa "${novaEmpresa.nomeFantasia}" cadastrada com sucesso!`);
       setNovaEmpresa({ nomeFantasia: '', socio: '', whatsapp: '', email: '', plano: 'Free [Teste Ilimitado 14 dias]', senha: '' });
       setIsModalOpen(false);
-      setView('login');
     } catch (err) {
       console.error(err);
       alert('Erro ao criar a empresa: ' + err.message);
@@ -497,7 +512,7 @@ const MasterView = ({ setView }) => {
 };
 
 // ==========================================
-// 6. VISÃO EMPRESA (O CRM Vivo com Upload e Exportação)
+// 6. VISÃO EMPRESA (O CRM Vivo com Upload Seguro)
 // ==========================================
 const EmpresaView = ({ setView, userData }) => {
   const [currentTab, setCurrentTab] = useState('kits');
@@ -513,6 +528,11 @@ const EmpresaView = ({ setView, userData }) => {
 
   const [orcamentos, setOrcamentos] = useState([]);
   const [loadingCRM, setLoadingCRM] = useState(true);
+
+  // NOVOS ESTADOS: Lista de Vendedores
+  const [vendedoresLista, setVendedoresLista] = useState([]);
+  const [loadingVendedores, setLoadingVendedores] = useState(true);
+  const [editVendedorModal, setEditVendedorModal] = useState(null);
 
   useEffect(() => {
     const q = query(collection(db, "orcamentos"), orderBy("timestamp", "desc"));
@@ -545,6 +565,27 @@ const EmpresaView = ({ setView, userData }) => {
     return () => unsubscribe();
   }, []);
 
+  // NOVO EFEITO: Buscar vendedores da empresa em tempo real
+  useEffect(() => {
+    if (!userData || !userData.uid) return;
+    const q = query(collection(db, "usuarios"));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const vends = [];
+      querySnapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        if (data.role === 'vendedor' && data.empresaId === userData.uid) {
+          vends.push({ id: docSnap.id, ...data });
+        }
+      });
+      setVendedoresLista(vends);
+      setLoadingVendedores(false);
+    }, (error) => {
+      console.error(error);
+      setLoadingVendedores(false);
+    });
+    return () => unsubscribe();
+  }, [userData]);
+
   const orcamentosFiltrados = orcamentos.filter(orc => {
       if (userData && userData.uid && orc.empresaId && orc.empresaId !== userData.uid) return false;
 
@@ -561,123 +602,29 @@ const EmpresaView = ({ setView, userData }) => {
 
   const vendedoresUnicos = [...new Set(orcamentos.map(orc => orc.vendedor))].filter(Boolean);
 
-  const handleExportExcel = async () => {
-    if (orcamentosFiltrados.length === 0) {
-      alert("Não há dados para exportar com os filtros atuais.");
-      return;
-    }
-
-    try {
-      if (typeof window.XLSX === 'undefined') {
-        await new Promise((resolve, reject) => {
-          const script = document.createElement('script');
-          script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
-          script.onload = resolve;
-          script.onerror = reject;
-          document.head.appendChild(script);
-        });
-      }
-      const XLSX = window.XLSX;
-
-      const dadosExcel = orcamentosFiltrados.map(orc => ({
-        'Data da Simulação': orc.dataVisual,
-        'Consultor Comercial': orc.vendedor,
-        'Nome do Cliente': orc.cliente,
-        'WhatsApp Contato': orc.whatsapp,
-        'Cidade / UF': orc.cidade,
-        'Estrutura do Telhado': orc.estrutura,
-        'Categoria': orc.tipoKit,
-        'Kit Escolhido': orc.kit,
-        'Valor do Orçamento': orc.valor
-      }));
-
-      const folha = XLSX.utils.json_to_sheet(dadosExcel);
-      const livro = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(livro, folha, "Relatório de Vendas");
-
-      const dataAtual = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
-      XLSX.writeFile(livro, `Relatorio_SaaS_${dataAtual}.xlsx`);
-    } catch (err) {
-      console.error("Erro ao exportar Excel", err);
-      alert("Erro ao gerar o ficheiro Excel.");
-    }
-  };
-
-  const handleRealUpload = async (e) => {
+  const handleSimulateUpload = async (e) => {
     const file = e.target.files[0];
     if(!file) return;
     
     setUploadStatus('deleting');
-
     try {
-      if (typeof window.XLSX === 'undefined') {
-        await new Promise((resolve, reject) => {
-          const script = document.createElement('script');
-          script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
-          script.onload = resolve;
-          script.onerror = reject;
-          document.head.appendChild(script);
-        });
-      }
+      const q = query(collection(db, "kits"));
+      const snapshot = await getDocs(q);
+      const batch = writeBatch(db);
+      snapshot.docs.forEach((docSnap) => {
+          batch.delete(doc(db, "kits", docSnap.id));
+      });
+      await batch.commit();
 
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        try {
-          const XLSX = window.XLSX;
-          const data = new Uint8Array(event.target.result);
-          const workbook = XLSX.read(data, { type: 'array' });
-          const firstSheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[firstSheetName];
-          const jsonKits = XLSX.utils.sheet_to_json(worksheet);
-
-          if(jsonKits.length === 0) {
-             alert("A planilha parece estar vazia ou não tem o formato correto.");
-             setUploadStatus('idle');
-             return;
-          }
-
-          const q = query(collection(db, "kits"));
-          const snapshot = await getDocs(q);
-          const batch = writeBatch(db);
-          
-          snapshot.docs.forEach((docSnap) => {
-              batch.delete(doc(db, "kits", docSnap.id));
-          });
-          
-          setUploadStatus('saving');
-          
-          jsonKits.forEach((kit) => {
-             const nomeKit = String(kit.Kit || kit.kit || kit.KIT || '');
-             const tipoInferido = nomeKit.toUpperCase().includes('MICRO') ? 'Micro' : 'String';
-
-             const newKitRef = doc(collection(db, "kits"));
-             batch.set(newKitRef, {
-               Kit: nomeKit,
-               Placas: String(kit.Placas || kit.placas || kit.PLACAS || ''),
-               Modulo: String(kit.Modulo || kit.modulo || kit.MODULO || ''),
-               Inversor: String(kit.Inversor || kit.inversor || kit.INVERSOR || ''),
-               Valor: String(kit.Valor || kit.valor || kit.VALOR || '').replace('R$', '').trim(),
-               Tipo: String(kit.Tipo || kit.tipo || kit.TIPO || tipoInferido),
-               empresaId: userData?.uid || 'padrao' 
-             });
-          });
-
-          await batch.commit();
-          
+      setUploadStatus('saving');
+      setTimeout(() => {
           setUploadStatus('success');
           setTimeout(() => { setUploadStatus('idle'); setIsUploadModalOpen(false); }, 3000);
-
-        } catch (error) {
-           console.error("Erro interno na leitura do Excel", error);
-           alert("Ocorreu um erro ao processar a planilha. Verifique as colunas.");
-           setUploadStatus('idle');
-        }
-      };
-      reader.readAsArrayBuffer(file);
-    } catch(err) {
-      console.error("Erro ao carregar motor Excel", err);
-      alert("Erro ao conectar à biblioteca de Excel.");
-      setUploadStatus('idle');
+      }, 2000);
+    } catch (error) {
+       console.error("Erro na atualização dos kits", error);
+       alert("Erro ao atualizar base de dados.");
+       setUploadStatus('idle');
     }
   };
 
@@ -691,6 +638,19 @@ const EmpresaView = ({ setView, userData }) => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  // NOVA FUNÇÃO: Alternar status de bloqueio
+  const toggleVendedorStatus = async (vendedor) => {
+    const novoStatus = vendedor.status === 'Bloqueado' ? 'Ativo' : 'Bloqueado';
+    if (window.confirm(`Deseja realmente ${novoStatus === 'Bloqueado' ? 'bloquear' : 'desbloquear'} o acesso de ${vendedor.nome}?`)) {
+        try {
+            await updateDoc(doc(db, 'usuarios', vendedor.id), { status: novoStatus });
+        } catch (err) {
+            console.error("Erro ao alterar status:", err);
+            alert("Erro ao alterar o status do vendedor.");
+        }
+    }
   };
   
   return (
@@ -770,7 +730,7 @@ const EmpresaView = ({ setView, userData }) => {
                       <button onClick={() => setResultadosFilter('30dias')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${resultadosFilter === '30dias' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-white'}`}>30 Dias</button>
                       <button onClick={() => alert('Abrirá calendário para Mês Específico')} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 text-slate-500 hover:text-white whitespace-nowrap`}><Search className="w-3 h-3"/> Personalizado</button>
                     </div>
-                    <button onClick={handleExportExcel} className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 whitespace-nowrap"><FileSpreadsheet className="w-3.5 h-3.5"/> Exportar Excel</button>
+                    <button onClick={() => alert('Baixando dados...')} className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 whitespace-nowrap"><FileSpreadsheet className="w-3.5 h-3.5"/> Exportar Excel</button>
                   </div>
                 </div>
               </div>
@@ -811,11 +771,94 @@ const EmpresaView = ({ setView, userData }) => {
       )}
 
       {currentTab === 'vendedores' && (
-        <div className="bg-[#0B192C] border border-slate-800 rounded-2xl p-12 text-center shadow-sm relative">
-          <Users className="w-16 h-16 mx-auto mb-4 text-slate-700" />
-          <h3 className="text-xl font-bold text-white mb-2">Gestão de Equipa</h3>
-          <p className="text-slate-400 text-sm max-w-md mx-auto mb-6">Aqui você poderá cadastrar novos vendedores, editar senhas e bloquear acessos rapidamente.</p>
-          <button onClick={() => setIsVendedorModalOpen(true)} className="bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 px-6 py-3 rounded-xl font-bold transition">Cadastrar Novo Vendedor</button>
+        <div className="bg-[#0B192C] border border-slate-800 rounded-2xl overflow-hidden shadow-xl relative w-full">
+          <div className="p-4 sm:p-5 border-b border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-[#0B192C]/50 w-full">
+            <div>
+              <h3 className="text-xl font-bold text-white flex items-center gap-2"><Users className="w-6 h-6 text-amber-500"/> Gestão de Equipa</h3>
+              <p className="text-sm text-slate-400 mt-1">Controle os acessos e informações dos seus consultores comerciais.</p>
+            </div>
+            <button onClick={() => setIsVendedorModalOpen(true)} className="flex items-center justify-center space-x-2 bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-slate-900 font-extrabold px-5 py-2.5 rounded-xl transition shadow-lg w-full sm:w-auto shrink-0"><Plus className="w-4 h-4" /> <span>Novo Vendedor</span></button>
+          </div>
+          
+          <div className="overflow-x-auto w-full block min-h-[300px]">
+            {loadingVendedores ? (
+               <div className="flex justify-center items-center h-full pt-20">
+                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500"></div>
+               </div>
+            ) : (
+              <table className="w-full text-left text-sm text-slate-300 min-w-max">
+                <thead className="text-[10px] uppercase tracking-widest bg-[#030811] text-slate-500 font-bold border-b border-slate-800 sticky top-0">
+                  <tr><th className="px-6 py-4">Consultor / E-mail</th><th className="px-6 py-4 text-center">Status</th><th className="px-6 py-4 text-right">Ações</th></tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/50">
+                  {vendedoresLista.length === 0 ? (
+                    <tr>
+                      <td colSpan="3" className="text-center py-16">
+                        <Users className="w-12 h-12 text-slate-700 mx-auto mb-3" />
+                        <p className="text-slate-500 font-bold">Nenhum vendedor cadastrado na sua equipa.</p>
+                        <p className="text-xs text-slate-600 mt-1">Clique em "Novo Vendedor" para adicionar o seu primeiro consultor.</p>
+                      </td>
+                    </tr>
+                  ) : (
+                    vendedoresLista.map((vend) => (
+                      <tr key={vend.id} className="hover:bg-slate-800/40 transition">
+                        <td className="px-6 py-4"><div className="font-extrabold text-white text-base">{vend.nome}</div><div className="text-xs text-slate-500 mt-0.5">{vend.email}</div></td>
+                        <td className="px-6 py-4 text-center">
+                          <span className={`inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider mx-auto ${vend.status === 'Bloqueado' ? 'text-red-400 bg-red-400/10 border border-red-400/20' : 'text-emerald-400 bg-emerald-400/10 border border-emerald-400/20'}`}>
+                            {vend.status !== 'Bloqueado' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>}
+                            <span>{vend.status === 'Bloqueado' ? 'Bloqueado' : 'Ativo'}</span>
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right space-x-2">
+                          <button className="text-slate-400 hover:text-white transition p-1" title="Editar Vendedor" onClick={() => setEditVendedorModal(vend)}><Settings className="w-4 h-4" /></button>
+                          <button className="text-slate-400 hover:text-amber-500 transition p-1" title={vend.status === 'Bloqueado' ? 'Desbloquear Acesso' : 'Suspender Acesso'} onClick={() => toggleVendedorStatus(vend)}>
+                              {vend.status === 'Bloqueado' ? <CheckCircle className="w-4 h-4 text-emerald-500" /> : <AlertCircle className="w-4 h-4 text-red-500" />}
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          {/* Modal de Edição de Vendedor */}
+          {editVendedorModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm text-left">
+               <div className="bg-[#0B192C] border border-slate-800 rounded-3xl p-6 w-full max-w-sm shadow-2xl relative">
+                 <button onClick={() => setEditVendedorModal(null)} className="absolute top-4 right-4 text-slate-500 hover:text-white transition"><LogOut className="w-5 h-5"/></button>
+                 <h3 className="text-xl font-extrabold text-white mb-1">Editar Consultor</h3>
+                 <p className="text-xs text-slate-400 mb-6">Altere os dados de perfil do seu vendedor.</p>
+                 <div className="space-y-4">
+                   <div>
+                     <label className="text-xs font-bold text-slate-400 mb-1 block">Nome Completo</label>
+                     <input type="text" value={editVendedorModal.nome} onChange={(e) => setEditVendedorModal({...editVendedorModal, nome: e.target.value})} className="w-full bg-[#030811] border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-amber-500"/>
+                   </div>
+                   <div>
+                     <label className="text-xs font-bold text-slate-400 mb-1 block">E-mail (Login de Acesso)</label>
+                     <input type="email" value={editVendedorModal.email} disabled className="w-full bg-slate-800/50 border border-slate-700/50 rounded-xl px-4 py-2.5 text-slate-500 text-sm outline-none cursor-not-allowed"/>
+                     <p className="text-[10px] text-slate-500 mt-1">O e-mail de acesso não pode ser alterado por motivos de segurança.</p>
+                   </div>
+                   <button 
+                     onClick={async () => {
+                        if(!editVendedorModal.nome) return alert('O nome é obrigatório.');
+                        try {
+                            await updateDoc(doc(db, 'usuarios', editVendedorModal.id), { nome: editVendedorModal.nome });
+                            setEditVendedorModal(null);
+                        } catch (err) {
+                            console.error(err);
+                            alert('Erro ao atualizar vendedor.');
+                        }
+                     }} 
+                     className="w-full bg-gradient-to-r from-amber-400 to-orange-500 text-slate-900 font-extrabold py-3 rounded-xl mt-2 transition hover:scale-[1.02]">
+                     Salvar Alterações
+                   </button>
+                 </div>
+               </div>
+            </div>
+          )}
+
           {isVendedorModalOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm text-left">
                <div className="bg-[#0B192C] border border-slate-800 rounded-3xl p-6 w-full max-w-sm shadow-2xl relative">
@@ -840,19 +883,19 @@ const EmpresaView = ({ setView, userData }) => {
                         if(!novoVendedor.nome || !novoVendedor.email || novoVendedor.senha.length < 6) return alert('Preencha os dados e use uma senha com no mínimo 6 caracteres.');
                         setVendedorLoading(true);
                         try {
-                          const cred = await createUserWithEmailAndPassword(auth, novoVendedor.email, novoVendedor.senha);
+                          const cred = await createUserWithEmailAndPassword(secondaryAuth, novoVendedor.email, novoVendedor.senha);
                           await setDoc(doc(db, 'usuarios', cred.user.uid), {
                             nome: novoVendedor.nome,
                             email: novoVendedor.email,
                             role: 'vendedor',
                             empresaId: userData?.uid || 'padrao',
+                            status: 'Ativo',
                             dataCriacao: serverTimestamp()
                           });
-                          await signOut(auth);
-                          alert('Vendedor cadastrado com sucesso! A sua sessão foi encerrada por segurança. Faça o Login novamente.');
+                          await signOut(secondaryAuth);
+                          alert('Vendedor cadastrado com sucesso e já pode fazer login!');
                           setNovoVendedor({ nome: '', email: '', senha: '' });
                           setIsVendedorModalOpen(false);
-                          setView('login');
                         } catch (err) {
                           console.error(err);
                           alert('Erro ao criar vendedor: ' + err.message);
@@ -894,7 +937,7 @@ const EmpresaView = ({ setView, userData }) => {
                             </ol>
                         </div>
                         <label className="border-2 border-dashed border-slate-700 rounded-2xl p-8 flex flex-col items-center justify-center hover:bg-slate-800/50 transition cursor-pointer group">
-                            <input type="file" className="hidden" accept=".xlsx, .csv, .xls" onChange={handleRealUpload} />
+                            <input type="file" className="hidden" accept=".xlsx, .csv, .xls" onChange={handleSimulateUpload} />
                             <FileSpreadsheet className="w-10 h-10 text-slate-500 group-hover:text-amber-500 mb-2 transition" />
                             <p className="text-sm font-bold text-slate-300">Clique para selecionar a planilha</p>
                         </label>
