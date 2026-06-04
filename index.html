@@ -8,16 +8,28 @@
     <!-- Cores da barra de status do telemóvel -->
     <meta name="theme-color" content="#0B192C" />
     
-    <!-- LIGAÇÃO AOS ÍCONES QUE ACABOU DE CRIAR -->
+    <!-- LIGAÇÃO AOS ÍCONES E PWA -->
     <link rel="manifest" href="/manifest.json" />
     <link rel="icon" href="/icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/icon.svg" />
 
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      // Regista o motor PWA (Permite instalar o App)
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').then(reg => {
+            console.log('App pronto para instalação', reg.scope);
+          }).catch(err => {
+            console.log('Registo do SW falhou: ', err);
+          });
+        });
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
-<!-- atualizacao de cache -->
+<!-- atualizacao de cache final -->
