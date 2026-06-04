@@ -1220,11 +1220,32 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
   const [formData, setFormData] = useState({ sellerName: userData?.nome || '', kitString: '', kitMicro: '', roofStructure: '', clientName: '', clientWhatsapp: '', clientCity: '' });
   const [timeFilter, setTimeFilter] = useState('hoje');
   const [toast, setToast] = useState(null);
+  
+  // NOVO: Estado para armazenar o nome da empresa
+  const [nomeDaEmpresa, setNomeDaEmpresa] = useState('Energia Solar');
 
   const showToast = (message, type = 'error') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
   };
+
+  // NOVO: Efeito para buscar o nome da empresa ao carregar a tela
+  useEffect(() => {
+    const buscarNomeEmpresa = async () => {
+      if (userData?.empresaId && userData.empresaId !== 'padrao') {
+        try {
+          const empresaDoc = await getDoc(doc(db, 'usuarios', userData.empresaId));
+          if (empresaDoc.exists() && empresaDoc.data().nome) {
+            setNomeDaEmpresa(empresaDoc.data().nome);
+          }
+        } catch (error) {
+          console.error("Erro ao buscar nome da empresa:", error);
+        }
+      }
+    };
+    buscarNomeEmpresa();
+  }, [userData]);
+
 
   const handleInputChange = (e) => {
     const { id, value } = e.target;
@@ -1236,6 +1257,17 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
 
   const activeKit = formData.kitString !== '' ? kitsString[formData.kitString] : formData.kitMicro !== '' ? kitsMicro[formData.kitMicro] : null;
 
+  // NOVO: Função para formatar o valor como Moeda Brasileira (R$ 00.000,00)
+  const formatarMoeda = (valorTexto) => {
+    if (!valorTexto || valorTexto === '--') return '--';
+    // Substitui vírgula por ponto para garantir que o Javascript entende como número, 
+    // caso tenha vindo formatado com vírgula do Excel.
+    const numero = parseFloat(String(valorTexto).replace(',', '.')); 
+    if (isNaN(numero)) return valorTexto;
+    
+    return numero.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
   const buildMessage = () => {
     const clientName = formData.clientName.trim() || '[Nome do Cliente]';
     const clientCity = formData.clientCity.trim() || '[Cidade]';
@@ -1245,11 +1277,13 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
     let kitName = '[Kit Selecionado]', placas = '--', modulo = '--', inversor = '--', valor = '--';
 
     if (activeKit) {
-        kitName = activeKit.Kit; placas = activeKit.Placas; modulo = activeKit.Modulo; inversor = activeKit.Inversor; valor = `R$ ${activeKit.Valor}`;
+        kitName = activeKit.Kit; placas = activeKit.Placas; modulo = activeKit.Modulo; inversor = activeKit.Inversor; 
+        valor = formatarMoeda(activeKit.Valor); // Aplica a formatação
     }
     const cleanPotencia = modulo.replace(/Módulo\s*/gi, '').trim();
 
-    return `Empresa: Energia Solar ☀️\n\nSegue o seu orçamento personalizado de Energia Solar\n\n👤 *Cliente:* ${clientName}\n\n📍 *Cidade:* ${clientCity}\n\n📱 *Zap:* ${clientWhatsapp}\n\n🏠 *Estrutura do Telhado:* ${roofStructure}\n\n📦 *Kit Selecionado:* ${kitName}\n\n☀️ *Placas:* ${placas}\n\n⚡ *Potência:* ${cleanPotencia}\n\n🔄 *Inversor:* ${inversor}\n\n💰 *Valor do Kit:* ${valor}\n\n✨ *Condições Especiais:*\n\n💳 Financiamos 100% com Zero de Entrada\n\n📅 Primeira parcela com prazo de até 120 dias para começar a pagar\n\n💼 Atendido por: *${sellerName}*\n\nFicamos à disposição para esclarecer dúvidas e realizar o seu projeto.`;
+    // NOVO: Formatação exata conforme a imagem
+    return `Empresa: *${nomeDaEmpresa}* ☀️\n\nSegue o seu orçamento personalizado de Energia Solar\n\n👤 *Cliente:* ${clientName}\n📍 *Cidade:* ${clientCity}\n📱 *Zap:* ${clientWhatsapp}\n\n🏠 *Estrutura do Telhado:* ${roofStructure}\n📦 *Kit Selecionado:* ${kitName}\n☀️ *Placas:* ${placas}\n⚡ *Potência:* ${cleanPotencia}\n🔄 *Inversor:* ${inversor}\n\n💰 *Valor do Kit:* R$ ${valor}\n\n✨ *Condições Especiais:*\n\n💳 Financiamos 100% com Zero de Entrada\n\n📅 Primeira parcela com prazo de até 120 dias para começar a pagar\n\n💼 Atendido por: *${sellerName}*\n\nFicamos à disposição para esclarecer dúvidas e realizar o seu projeto.`;
   };
 
   const handleSubmit = async (e) => {
