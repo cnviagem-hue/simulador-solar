@@ -1532,12 +1532,26 @@ export default function App() {
           }
         });
         
+        // MÁGICA DA ORDENAÇÃO: Organiza do Menor para o Maior Valor (Preço/Tamanho)
+        const ordenarKits = (a, b) => {
+            const parseValor = (val) => {
+                if (!val) return 0;
+                let str = String(val).trim();
+                // Limpa os formatos de dinheiro (ex: 10.000,00 ou 10000.00)
+                if (str.includes('.') && str.includes(',')) str = str.replace(/\./g, '').replace(',', '.');
+                else if (str.includes(',')) str = str.replace(',', '.');
+                return parseFloat(str) || 0;
+            };
+            return parseValor(a.Valor) - parseValor(b.Valor);
+        };
+        
         if(strings.length === 0 && micros.length === 0) {
             setKitsString(fallbackKitsString);
             setKitsMicro(fallbackKitsMicro);
         } else {
-            setKitsString(strings);
-            setKitsMicro(micros);
+            // Aplica a ordenação automática antes de enviar para o ecrã
+            setKitsString(strings.sort(ordenarKits));
+            setKitsMicro(micros.sort(ordenarKits));
         }
       }
     });
