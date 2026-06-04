@@ -809,7 +809,7 @@ const EmpresaView = ({ setView, userData }) => {
         'Nome do Cliente': orc.cliente,
         'WhatsApp Contato': orc.whatsapp,
         'Cidade / UF': orc.cidade,
-        'Estrutura do Telhado': orc.estrutura,
+        'Estrutura do Telhado': orc.Categoria || orc.tipoKit,
         'Categoria': orc.tipoKit,
         'Kit Escolhido': orc.kit,
         'Valor do Orçamento': orc.valor
@@ -829,7 +829,8 @@ const EmpresaView = ({ setView, userData }) => {
 
   const downloadTemplate = (e) => {
     e.preventDefault();
-    const csvContent = "data:text/csv;charset=utf-8,Kit,Placas,Modulo,Inversor,Valor,Tipo\nKIT 500kWh,6,590W,AUXSOL 3K,10000.00,String\nKIT MICRO 300kWh,4,620W,TSUNESS,8500.00,Micro";
+    // Trocado de vírgula (,) para ponto-e-vírgula (;) e adicionado o BOM UTF-8 para o Excel no Brasil ler perfeitamente as colunas
+    const csvContent = "data:text/csv;charset=utf-8,%EF%BB%BFKit;Placas;Modulo;Inversor;Valor;Tipo\nKIT 500kWh;6;590W;AUXSOL 3K;10000.00;String\nKIT MICRO 300kWh;4;620W;TSUNESS;8500.00;Micro";
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
