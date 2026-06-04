@@ -829,9 +829,9 @@ const EmpresaView = ({ setView, userData }) => {
 
   const downloadTemplate = (e) => {
     e.preventDefault();
-    // Trocado de vírgula (,) para ponto-e-vírgula (;) e adicionado o BOM UTF-8 para o Excel no Brasil ler perfeitamente as colunas
-    const csvContent = "data:text/csv;charset=utf-8,%EF%BB%BFKit;Placas;Modulo;Inversor;Valor;Tipo\nKIT 500kWh;6;590W;AUXSOL 3K;10000.00;String\nKIT MICRO 300kWh;4;620W;TSUNESS;8500.00;Micro";
-    const encodedUri = encodeURI(csvContent);
+    const csvText = "Kit;Placas;Modulo;Inversor;Valor;Tipo\nKIT 500kWh;6;590W;AUXSOL 3K;R$ 10.000,00;String\nKIT MICRO 300kWh;4;620W;TSUNESS;R$ 8.500,00;Micro";
+    // Colocamos o código de formatação %EF%BB%BF fora do texto para o navegador não o estragar
+    const encodedUri = "data:text/csv;charset=utf-8,%EF%BB%BF" + encodeURI(csvText);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
     link.setAttribute("download", "Modelo_Kits_Solar.csv");
