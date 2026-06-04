@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, getDocs, writeBatch, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { getAuth, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from 'firebase/auth';
-import { Search, Building, Users, Zap, Plus, Settings, AlertCircle, LogOut, CheckCircle, ChevronDown, User, Smartphone, MapPin, Activity, Sun, Download, List, MessageCircle, BookOpen, Menu, X, Eye, EyeOff, MessageSquare } from 'lucide-react';
+import { Search, Building, Users, Zap, Plus, Settings, AlertCircle, LogOut, CheckCircle, ChevronDown, User, Smartphone, MapPin, Sun, FileText, BookOpen, Menu, X, Eye, EyeOff, TrendingUp, ArrowDown, MessageSquare, Activity, List, Download } from 'lucide-react';
 
 // ==========================================
 // 1. CONFIGURAÇÃO DO FIREBASE (LIMPA E SEGURA)
@@ -95,7 +95,7 @@ const DashboardLayout = ({ children, title, setView, role, currentTab, setCurren
                     <BookOpen className={`w-5 h-5 ${currentTab === 'tutorial' ? 'text-amber-500' : ''}`} /> <span>Tutorial do Sistema</span>
                   </button>
                   <button onClick={() => window.open('https://wa.me/5562999999999?text=Olá', '_blank')} className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition font-medium text-slate-400 hover:bg-emerald-500/10 hover:text-emerald-400">
-                    <MessageCircle className="w-5 h-5" /> <span>Suporte</span>
+                    <MessageSquare className="w-5 h-5" /> <span>Suporte</span>
                   </button>
                 </div>
               </>
@@ -1316,7 +1316,7 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
       });
       const textMessage = buildMessage();
       const encodedText = encodeURIComponent(textMessage);
-      const waUrl = `https://wa.me/${cleanPhone}?text=${encodedText}`;
+      const waUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodedText}`;
       
       // Tenta abrir em nova aba. Se o telemóvel bloquear devido à espera do banco de dados, força o redirecionamento.
       const newWindow = window.open(waUrl, '_blank');
@@ -1429,8 +1429,8 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
                         <div className="bg-gradient-to-br from-[#0B192C] to-slate-900 border border-slate-700/80 rounded-2xl p-5 sm:p-6 mt-2 grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 relative overflow-hidden shadow-lg">
                             <div className="absolute -right-8 -bottom-8 text-slate-800/40 pointer-events-none transform rotate-12"><Sun className="w-48 h-48"/></div>
                             <div className="space-y-1.5 relative z-10"><span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block flex items-center gap-1.5">Qtd. Placas</span><span className="text-base sm:text-lg font-extrabold text-white block truncate">{activeKit ? activeKit.Placas : '--'}</span></div>
+                            <div className="space-y-1.5 relative z-10"><span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block flex items-center gap-1.5">Potência</span><span className="text-base sm:text-lg font-extrabold text-white block truncate">{activeKit ? activeKit.Modulo.replace(/Módulo\s*/gi, '').trim() : '--'}</span></div>
                             <div className="space-y-1.5 relative z-10"><span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block flex items-center gap-1.5">Inversor</span><span className="text-base sm:text-lg font-extrabold text-white block truncate">{activeKit ? activeKit.Inversor : '--'}</span></div>
-                            <div className="space-y-1.5 relative z-10"><span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block flex items-center gap-1.5">Estrutura</span><span className="text-base sm:text-lg font-extrabold text-white block truncate">{formData.roofStructure || '--'}</span></div>
                             <div className="space-y-1.5 relative z-10"><span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block flex items-center gap-1.5"><span className="text-emerald-600">Valor do Kit</span></span><span className="text-base sm:text-lg font-extrabold text-emerald-400 block truncate">{activeKit ? `R$ ${activeKit.Valor}` : '--'}</span></div>
                         </div>
                     </div>
