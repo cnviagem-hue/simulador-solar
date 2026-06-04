@@ -1620,7 +1620,17 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
                              <tr key={sim.id} className="hover:bg-slate-800/40 transition">
                                <td className="px-4 py-3 text-xs text-slate-400 whitespace-nowrap">{sim.dataVisual}</td>
                                <td className="px-4 py-3 font-bold text-slate-200 whitespace-nowrap"><div className="truncate max-w-[150px]">{sim.cliente}</div></td>
-                               <td className="px-4 py-3 font-mono text-xs whitespace-nowrap">{sim.whatsapp}</td>
+                               <td className="px-4 py-3 font-mono text-xs whitespace-nowrap">
+                                  <a 
+                                    href={`https://wa.me/${String(sim.whatsapp).replace(/\D/g, '').length >= 10 && !String(sim.whatsapp).replace(/\D/g, '').startsWith('55') ? '55' + String(sim.whatsapp).replace(/\D/g, '') : String(sim.whatsapp).replace(/\D/g, '')}`} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="text-emerald-400 hover:text-emerald-300 flex items-center gap-1 bg-emerald-400/10 px-2 py-0.5 rounded border border-emerald-400/20 transition-colors w-max cursor-pointer"
+                                  >
+                                    <Smartphone className="w-3 h-3"/>
+                                    {sim.whatsapp}
+                                  </a>
+                               </td>
                                <td className="px-4 py-3 text-xs whitespace-nowrap"><div className="truncate max-w-[150px]">{sim.kit}</div></td>
                                <td className="px-4 py-3 whitespace-nowrap">
                                    <select 
