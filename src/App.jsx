@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, getDocs, writeBatch, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { getAuth, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from 'firebase/auth';
-import { Search, Building, Users, Zap, Plus, Settings, AlertCircle, LogOut, CheckCircle, ChevronDown, User, Smartphone, MapPin, Sun, FileText, BookOpen, Menu, X, Eye, EyeOff, TrendingUp, ArrowDown, MessageSquare, Activity, List, Download } from 'lucide-react';
+import { Search, Building, Users, Zap, Plus, Settings, AlertCircle, LogOut, CheckCircle, ChevronDown, User, Smartphone, MapPin, BarChart, Sun, FileText, Clipboard, MessageCircle, BookOpen, Menu, X, Eye, EyeOff, Download, Activity, List, ArrowLeft } from 'lucide-react';
 
 // ==========================================
 // 1. CONFIGURAÇÃO DO FIREBASE (LIMPA E SEGURA)
@@ -26,7 +26,7 @@ const secondaryApp = getApps().find(a => a.name === "Secondary") || initializeAp
 const secondaryAuth = getAuth(secondaryApp);
 
 // ==========================================
-// 2. KITS DE SEGURANÇA (Caso a nuvem esteja vazia)
+// 2. KITS DE SEGURANÇA E STATUS CRM
 // ==========================================
 const fallbackKitsString = [
   { Kit: 'KIT 370kWh (Padrão)', Placas: '5', Modulo: '590W', Inversor: 'AUXSOL 3K', Valor: '9335.68' },
@@ -44,6 +44,25 @@ const chartData = [
   { name: 'Seg', propostas: 12, height: '40%' }, { name: 'Ter', propostas: 19, height: '65%' }, { name: 'Qua', propostas: 15, height: '50%' },
   { name: 'Qui', propostas: 22, height: '80%' }, { name: 'Sex', propostas: 28, height: '100%' }, { name: 'Sáb', propostas: 9, height: '30%' }, { name: 'Dom', propostas: 4, height: '15%' }
 ];
+
+// Dicionário de Cores para o CRM
+const statusColors = {
+  'Negociando': 'text-amber-400 bg-amber-400/10 border-amber-400/20',
+  'Fin Aprovado': 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20',
+  'Fechou': 'text-blue-400 bg-blue-400/10 border-blue-400/20',
+  'Fin Reprovado': 'text-red-400 bg-red-400/10 border-red-400/20',
+  'Não Interessou': 'text-slate-400 bg-slate-400/10 border-slate-400/20'
+};
+
+const statusOptions = ['Negociando', 'Fin Aprovado', 'Fechou', 'Fin Reprovado', 'Não Interessou'];
+
+// FUNÇÃO MÁGICA DE FORMATAÇÃO DE MOEDA (Padrão Brasil)
+const formatarMoeda = (valorTexto) => {
+  if (!valorTexto || valorTexto === '--') return '--';
+  const numero = parseFloat(String(valorTexto).replace(',', '.')); 
+  if (isNaN(numero)) return valorTexto;
+  return numero.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
 
 // ==========================================
 // 3. LAYOUT BASE DO SAAS 
@@ -95,7 +114,7 @@ const DashboardLayout = ({ children, title, setView, role, currentTab, setCurren
                     <BookOpen className={`w-5 h-5 ${currentTab === 'tutorial' ? 'text-amber-500' : ''}`} /> <span>Tutorial do Sistema</span>
                   </button>
                   <button onClick={() => window.open('https://wa.me/5562999999999?text=Olá', '_blank')} className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition font-medium text-slate-400 hover:bg-emerald-500/10 hover:text-emerald-400">
-                    <MessageSquare className="w-5 h-5" /> <span>Suporte</span>
+                    <MessageCircle className="w-5 h-5" /> <span>Suporte</span>
                   </button>
                 </div>
               </>
@@ -473,7 +492,7 @@ const MasterView = ({ setView }) => {
                               }}
                               className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400 hover:text-emerald-300 transition bg-emerald-400/10 hover:bg-emerald-400/20 px-3 py-1.5 rounded-lg border border-emerald-400/20 cursor-pointer"
                             >
-                              <MessageSquare className="w-4 h-4" />
+                              <MessageCircle className="w-4 h-4" />
                               {item.whatsapp}
                             </button>
                           ) : (
@@ -618,6 +637,8 @@ const EmpresaView = ({ setView, userData }) => {
   const [dateFilter, setDateFilter] = useState('semana');
   const [resultadosFilter, setResultadosFilter] = useState('7dias');
   const [vendedorFilter, setVendedorFilter] = useState('todos');
+  const [crmStatusFilter, setCrmStatusFilter] = useState('todos'); // NOVO: Filtro de Status
+  
   const [isVendedorModalOpen, setIsVendedorModalOpen] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [uploadStatus, setUploadStatus] = useState('idle');
@@ -696,6 +717,11 @@ const EmpresaView = ({ setView, userData }) => {
       if (userData && userData.uid && orc.empresaId && orc.empresaId !== userData.uid) return false;
 
       if (vendedorFilter !== 'todos' && orc.vendedor !== vendedorFilter) return false;
+      
+      // NOVO: Filtro de Status
+      const currentStatus = orc.status || 'Negociando';
+      if (crmStatusFilter !== 'todos' && currentStatus !== crmStatusFilter) return false;
+
       const hojeMs = new Date().getTime();
       const umDiaMs = 24 * 60 * 60 * 1000;
       let limiteMs = 0;
@@ -707,6 +733,16 @@ const EmpresaView = ({ setView, userData }) => {
   });
 
   const vendedoresUnicos = [...new Set(orcamentos.map(orc => orc.vendedor))].filter(Boolean);
+
+  const handleStatusChange = async (id, newStatus) => {
+    try {
+        await updateDoc(doc(db, "orcamentos", id), { status: newStatus });
+        showToast('Status do orçamento atualizado!', 'success');
+    } catch (err) {
+        console.error(err);
+        showToast('Erro ao atualizar status.', 'error');
+    }
+  };
 
   const handleSimulateUpload = async (e) => {
     const file = e.target.files[0];
@@ -809,10 +845,11 @@ const EmpresaView = ({ setView, userData }) => {
         'Nome do Cliente': orc.cliente,
         'WhatsApp Contato': orc.whatsapp,
         'Cidade / UF': orc.cidade,
-        'Estrutura do Telhado': orc.Categoria || orc.tipoKit,
+        'Estrutura do Telhado': orc.estrutura || orc.Categoria || orc.tipoKit,
         'Categoria': orc.tipoKit,
         'Kit Escolhido': orc.kit,
-        'Valor do Orçamento': orc.valor
+        'Valor do Orçamento': orc.valor,
+        'Status Atual': orc.status || 'Negociando'
       }));
 
       const folha = XLSX.utils.json_to_sheet(dadosExcel);
@@ -829,9 +866,8 @@ const EmpresaView = ({ setView, userData }) => {
 
   const downloadTemplate = (e) => {
     e.preventDefault();
-    const csvText = "Kit;Placas;Modulo;Inversor;Valor;Tipo\nKIT 500kWh;6;590W;AUXSOL 3K;R$ 10.000,00;String\nKIT MICRO 300kWh;4;620W;TSUNESS;R$ 8.500,00;Micro";
-    // Colocamos o código de formatação %EF%BB%BF fora do texto para o navegador não o estragar
-    const encodedUri = "data:text/csv;charset=utf-8,%EF%BB%BF" + encodeURI(csvText);
+    const csvContent = "data:text/csv;charset=utf-8,%EF%BB%BFKit;Placas;Modulo;Inversor;Valor;Tipo\nKIT 500kWh;6;590W;AUXSOL 3K;R$ 10.000,00;String\nKIT MICRO 300kWh;4;620W;TSUNESS;R$ 8.500,00;Micro";
+    const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
     link.setAttribute("download", "Modelo_Kits_Solar.csv");
@@ -917,15 +953,28 @@ const EmpresaView = ({ setView, userData }) => {
                 <p className="text-sm text-slate-400 mt-1">Acompanhe e gira todas as propostas enviadas pela sua equipa.</p>
               </div>
               <div className="flex flex-col w-full lg:w-auto gap-3">
-                <div className="relative w-full sm:w-48 group">
-                  <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500"><User className="w-4 h-4" /></span>
-                  <select value={vendedorFilter} onChange={(e) => setVendedorFilter(e.target.value)} className="w-full bg-[#030811] border border-slate-700 rounded-xl py-2 pl-9 pr-8 text-sm text-white focus:border-amber-500 outline-none shadow-inner appearance-none cursor-pointer transition">
-                     <option value="todos">Todos Vendedores</option>
-                     {vendedoresUnicos.map((vend, idx) => (
-                        <option key={idx} value={vend}>{vend}</option>
-                     ))}
-                  </select>
-                  <ChevronDown className="w-4 h-4 absolute right-3 top-2.5 text-slate-500 pointer-events-none" />
+                <div className="flex flex-col sm:flex-row gap-2">
+                    <div className="relative w-full sm:w-40 group">
+                      <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500"><User className="w-4 h-4" /></span>
+                      <select value={vendedorFilter} onChange={(e) => setVendedorFilter(e.target.value)} className="w-full bg-[#030811] border border-slate-700 rounded-xl py-2 pl-9 pr-8 text-sm text-white focus:border-amber-500 outline-none shadow-inner appearance-none cursor-pointer transition truncate">
+                         <option value="todos">Todos Vendedores</option>
+                         {vendedoresUnicos.map((vend, idx) => (
+                            <option key={idx} value={vend}>{vend}</option>
+                         ))}
+                      </select>
+                      <ChevronDown className="w-4 h-4 absolute right-3 top-2.5 text-slate-500 pointer-events-none" />
+                    </div>
+                    {/* NOVO FILTRO DE STATUS */}
+                    <div className="relative w-full sm:w-40 group">
+                      <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500"><Activity className="w-4 h-4" /></span>
+                      <select value={crmStatusFilter} onChange={(e) => setCrmStatusFilter(e.target.value)} className="w-full bg-[#030811] border border-slate-700 rounded-xl py-2 pl-9 pr-8 text-sm text-white focus:border-amber-500 outline-none shadow-inner appearance-none cursor-pointer transition truncate">
+                         <option value="todos">Todos Status</option>
+                         {statusOptions.map((st, idx) => (
+                            <option key={idx} value={st}>{st}</option>
+                         ))}
+                      </select>
+                      <ChevronDown className="w-4 h-4 absolute right-3 top-2.5 text-slate-500 pointer-events-none" />
+                    </div>
                 </div>
                 <div className="w-full overflow-x-auto pb-2 sm:pb-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
                   <div className="flex items-center gap-2 w-max">
@@ -948,27 +997,42 @@ const EmpresaView = ({ setView, userData }) => {
               ) : (
                 <table className="w-full text-left text-sm text-slate-300 min-w-max">
                   <thead className="text-[10px] uppercase tracking-widest bg-[#030811] text-slate-500 font-bold border-b border-slate-800 sticky top-0 z-10">
-                    <tr><th className="px-4 py-3 rounded-tl-lg">Data / Hora</th><th className="px-4 py-3">Vendedor</th><th className="px-4 py-3">Cliente</th><th className="px-4 py-3">WhatsApp</th><th className="px-4 py-3">Cidade</th><th className="px-4 py-3">Estrutura</th><th className="px-4 py-3">Inversor</th><th className="px-4 py-3">Placas</th><th className="px-4 py-3">Tipo</th><th className="px-4 py-3">Kit Solar</th><th className="px-4 py-3 rounded-tr-lg text-right">Valor (R$)</th></tr>
+                    <tr><th className="px-4 py-3 rounded-tl-lg">Data / Hora</th><th className="px-4 py-3">Vendedor</th><th className="px-4 py-3">Cliente</th><th className="px-4 py-3">Estrutura</th><th className="px-4 py-3">Kit Solar</th><th className="px-4 py-3">Status do Lead</th><th className="px-4 py-3 rounded-tr-lg text-right">Valor (R$)</th></tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/50">
                     {orcamentosFiltrados.length === 0 ? (
-                      <tr><td colSpan="11" className="text-center py-8 text-slate-500 font-bold">Nenhum orçamento encontrado com estes filtros.</td></tr>
+                      <tr><td colSpan="7" className="text-center py-8 text-slate-500 font-bold">Nenhum orçamento encontrado com estes filtros.</td></tr>
                     ) : (
-                      orcamentosFiltrados.map((sim) => (
+                      orcamentosFiltrados.map((sim) => {
+                        const currentStatus = sim.status || 'Negociando';
+                        return (
                         <tr key={sim.id} className="hover:bg-slate-800/40 transition">
                           <td className="px-4 py-3 text-xs text-slate-400 whitespace-nowrap">{sim.dataVisual}</td>
                           <td className="px-4 py-3 font-medium text-white whitespace-nowrap">{sim.vendedor}</td>
-                          <td className="px-4 py-3 whitespace-nowrap">{sim.cliente}</td>
-                          <td className="px-4 py-3 font-mono text-xs whitespace-nowrap">{sim.whatsapp}</td>
-                          <td className="px-4 py-3 text-xs whitespace-nowrap">{sim.cidade}</td>
+                          <td className="px-4 py-3 whitespace-nowrap">
+                             <div className="font-bold text-slate-200">{sim.cliente}</div>
+                             <div className="flex items-center gap-2 mt-1">
+                                <span className="font-mono text-xs text-slate-500 flex items-center gap-1"><Smartphone className="w-3 h-3"/>{sim.whatsapp}</span>
+                                <span className="text-[10px] text-slate-500">{sim.cidade}</span>
+                             </div>
+                          </td>
                           <td className="px-4 py-3 text-xs whitespace-nowrap">{sim.estrutura}</td>
-                          <td className="px-4 py-3 text-xs whitespace-nowrap text-amber-400/80">{sim.inversor || '--'}</td>
-                          <td className="px-4 py-3 font-bold text-slate-300 whitespace-nowrap">{sim.placas || '--'}</td>
-                          <td className="px-4 py-3 whitespace-nowrap"><span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${sim.tipoKit === 'String' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'}`}>{sim.tipoKit}</span></td>
-                          <td className="px-4 py-3 text-xs font-semibold whitespace-nowrap">{sim.kit}</td>
+                          <td className="px-4 py-3 text-xs whitespace-nowrap">
+                             <div className="font-semibold text-white">{sim.kit}</div>
+                             <div className="text-[10px] text-slate-500 mt-1 flex gap-2"><span>{sim.inversor || '--'}</span><span>{sim.placas ? `${sim.placas} Placas` : '--'}</span></div>
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap">
+                              <select 
+                                value={currentStatus}
+                                onChange={(e) => handleStatusChange(sim.id, e.target.value)}
+                                className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md outline-none cursor-pointer appearance-none ${statusColors[currentStatus] || statusColors['Negociando']}`}
+                              >
+                                 {statusOptions.map(opt => <option key={opt} value={opt} className="bg-slate-800 text-white">{opt}</option>)}
+                              </select>
+                          </td>
                           <td className="px-4 py-3 text-right font-bold text-amber-500 whitespace-nowrap">{sim.valor}</td>
                         </tr>
-                      ))
+                      )})
                     )}
                   </tbody>
                 </table>
@@ -1025,7 +1089,7 @@ const EmpresaView = ({ setView, userData }) => {
                               }}
                               className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400 hover:text-emerald-300 transition bg-emerald-400/10 hover:bg-emerald-400/20 px-3 py-1.5 rounded-lg border border-emerald-400/20 cursor-pointer"
                             >
-                              <MessageSquare className="w-4 h-4" />
+                              <MessageCircle className="w-4 h-4" />
                               {vend.whatsapp}
                             </button>
                           ) : (
@@ -1215,16 +1279,77 @@ const EmpresaView = ({ setView, userData }) => {
 };
 
 // ==========================================
-// 7. VISÃO VENDEDOR (Agora com dados da Nuvem)
+// 7. VISÃO VENDEDOR (Agora com CRM)
 // ==========================================
 const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
+  const [viewMode, setViewMode] = useState('simulador'); // 'simulador' ou 'historico'
   const [formData, setFormData] = useState({ sellerName: userData?.nome || '', kitString: '', kitMicro: '', roofStructure: '', clientName: '', clientWhatsapp: '', clientCity: '' });
   const [timeFilter, setTimeFilter] = useState('hoje');
   const [toast, setToast] = useState(null);
+  
+  // Estados para o Histórico do Vendedor
+  const [meusOrcamentos, setMeusOrcamentos] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(true);
+  const [vendedorStatusFilter, setVendedorStatusFilter] = useState('todos');
+  const [nomeEmpresa, setNomeEmpresa] = useState('Energia Solar');
 
   const showToast = (message, type = 'error') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
+  };
+
+  // Buscar Nome da Empresa e Orçamentos do Vendedor
+  useEffect(() => {
+    if (!userData || !userData.uid) return;
+
+    // Buscar o nome real da empresa
+    if (userData.empresaId && userData.empresaId !== 'padrao') {
+        getDoc(doc(db, 'usuarios', userData.empresaId)).then(docSnap => {
+            if (docSnap.exists()) setNomeEmpresa(docSnap.data().nome || 'Energia Solar');
+        });
+    }
+
+    // Buscar os orçamentos (apenas os deste vendedor)
+    const q = query(collection(db, "orcamentos"), orderBy("timestamp", "desc"));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const docs = [];
+      querySnapshot.forEach((document) => {
+        const data = document.data();
+        if (data.vendedorUid === userData.uid) { // Filtro de segurança local
+            let dataFormatada = 'Sem Data';
+            let msTimestamp = 0;
+            if (data.timestamp) {
+               const date = data.timestamp.toDate();
+               msTimestamp = date.getTime();
+               dataFormatada = date.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+            } else if (data.data) {
+               dataFormatada = data.data;
+            }
+            docs.push({ id: document.id, ...data, dataVisual: dataFormatada, msTimestamp });
+        }
+      });
+      setMeusOrcamentos(docs);
+      setLoadingHistory(false);
+    }, (error) => {
+      setLoadingHistory(false);
+    });
+    return () => unsubscribe();
+  }, [userData]);
+
+  const orcamentosFiltrados = meusOrcamentos.filter(orc => {
+      const currentStatus = orc.status || 'Negociando';
+      if (vendedorStatusFilter !== 'todos' && currentStatus !== vendedorStatusFilter) return false;
+      return true;
+  });
+
+  const handleStatusChange = async (id, newStatus) => {
+    try {
+        await updateDoc(doc(db, "orcamentos", id), { status: newStatus });
+        showToast('Status atualizado!', 'success');
+    } catch (err) {
+        console.error(err);
+        showToast('Erro ao atualizar status.', 'error');
+    }
   };
 
   const handleInputChange = (e) => {
@@ -1237,14 +1362,6 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
 
   const activeKit = formData.kitString !== '' ? kitsString[formData.kitString] : formData.kitMicro !== '' ? kitsMicro[formData.kitMicro] : null;
 
-  // FUNÇÃO MÁGICA DE FORMATAÇÃO DE MOEDA (Padrão Brasil)
-  const formatarMoeda = (valorTexto) => {
-    if (!valorTexto || valorTexto === '--') return '--';
-    const numero = parseFloat(String(valorTexto).replace(',', '.')); 
-    if (isNaN(numero)) return valorTexto;
-    return numero.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  };
-
   const buildMessage = () => {
     const clientName = formData.clientName.trim() || '[Nome do Cliente]';
     const clientCity = formData.clientCity.trim() || '[Cidade]';
@@ -1255,11 +1372,11 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
 
     if (activeKit) {
         kitName = activeKit.Kit; placas = activeKit.Placas; modulo = activeKit.Modulo; inversor = activeKit.Inversor; 
-        valor = `R$ ${formatarMoeda(activeKit.Valor)}`; // Moeda formatada no WhatsApp
+        valor = `R$ ${formatarMoeda(activeKit.Valor)}`; 
     }
     const cleanPotencia = modulo.replace(/Módulo\s*/gi, '').trim();
 
-    return `Empresa: Energia Solar ☀️\n\nSegue o seu orçamento personalizado de Energia Solar\n\n👤 *Cliente:* ${clientName}\n\n📍 *Cidade:* ${clientCity}\n\n📱 *Zap:* ${clientWhatsapp}\n\n🏠 *Estrutura do Telhado:* ${roofStructure}\n\n📦 *Kit Selecionado:* ${kitName}\n\n☀️ *Placas:* ${placas}\n\n⚡ *Potência:* ${cleanPotencia}\n\n🔄 *Inversor:* ${inversor}\n\n💰 *Valor do Kit:* ${valor}\n\n✨ *Condições Especiais:*\n\n💳 Financiamos 100% com Zero de Entrada\n\n📅 Primeira parcela com prazo de até 120 dias para começar a pagar\n\n💼 Atendido por: *${sellerName}*\n\nFicamos à disposição para esclarecer dúvidas e realizar o seu projeto.`;
+    return `Empresa: *${nomeEmpresa}* ☀️\n\nSegue o seu orçamento personalizado de Energia Solar\n\n👤 *Cliente:* ${clientName}\n📍 *Cidade:* ${clientCity}\n📱 *Zap:* ${clientWhatsapp}\n\n🏠 *Estrutura do Telhado:* ${roofStructure}\n📦 *Kit Selecionado:* ${kitName}\n☀️ *Placas:* ${placas}\n⚡ *Potência:* ${cleanPotencia}\n🔄 *Inversor:* ${inversor}\n\n💰 *Valor do Kit:* ${valor}\n\n✨ *Condições Especiais:*\n\n💳 Financiamos 100% com Zero de Entrada\n\n📅 Primeira parcela com prazo de até 120 dias para começar a pagar\n\n💼 Atendido por: *${sellerName}*\n\nFicamos à disposição para esclarecer dúvidas e realizar o seu projeto.`;
   };
 
   const handleSubmit = async (e) => {
@@ -1283,15 +1400,18 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
         estrutura: formData.roofStructure, 
         tipoKit: formData.kitString !== '' ? 'String' : 'Micro', 
         kit: activeKit.Kit, 
-        valor: activeKit.Valor, 
+        valor: `R$ ${formatarMoeda(activeKit.Valor)}`, 
+        placas: activeKit.Placas,
+        inversor: activeKit.Inversor,
+        status: 'Negociando', // NOVO ORÇAMENTO NASCE EM NEGOCIAÇÃO
         timestamp: serverTimestamp(),
-        empresaId: userData?.empresaId || 'padrao', // Liga o orçamento à empresa dona
+        empresaId: userData?.empresaId || 'padrao', 
         vendedorUid: userData?.uid || 'padrao'
       });
       const textMessage = buildMessage();
       const encodedText = encodeURIComponent(textMessage);
-      const waUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodedText}`;
-      setTimeout(() => { window.open(waUrl, '_blank'); }, 800);
+      const waUrl = `https://wa.me/${cleanPhone}?text=${encodedText}`;
+      window.location.href = waUrl; 
     } catch (error) { showToast('Erro ao gravar na nuvem.'); }
   };
 
@@ -1299,7 +1419,8 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
     <div className="min-h-screen bg-[#030811] text-slate-100 font-sans selection:bg-amber-500 overflow-x-hidden relative">
       {toast && (
         <div className={`fixed top-24 right-5 z-[100] flex items-center space-x-3 px-5 py-4 rounded-xl shadow-2xl transition-all duration-300 ${toast.type === 'error' ? 'bg-red-500' : 'bg-emerald-500'} text-white border border-white/10`}>
-          <AlertCircle className="w-5 h-5 flex-shrink-0" /> <span className="text-sm font-medium leading-snug">{toast.message}</span>
+          {toast.type === 'error' ? <AlertCircle className="w-5 h-5 flex-shrink-0" /> : <CheckCircle className="w-5 h-5 flex-shrink-0" />}
+          <span className="text-sm font-medium leading-snug">{toast.message}</span>
         </div>
       )}
       <header className="sticky top-0 z-50 backdrop-blur-md bg-[#0B192C]/80 border-b border-white/10 shadow-lg">
@@ -1307,12 +1428,21 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
             <div className="flex items-center space-x-3 truncate pr-2">
                 <div className="bg-gradient-to-tr from-amber-500 to-amber-300 p-2.5 rounded-xl shadow-lg shadow-amber-500/20 shrink-0"><Sun className="w-6 h-6 text-[#0B192C]" /></div>
                 <div className="truncate">
-                    <span className="text-lg sm:text-xl font-extrabold tracking-tight text-white block truncate">LD <span className="text-amber-400">SIMULADOR SOLAR</span></span>
-                    <span className="text-[9px] uppercase tracking-widest text-slate-400 block -mt-1 font-semibold truncate">Tecnologia Sustentável</span>
+                    <span className="text-lg sm:text-xl font-extrabold tracking-tight text-white block truncate">LD <span className="text-amber-400">SIMULADOR</span></span>
+                    <span className="text-[9px] uppercase tracking-widest text-slate-400 block -mt-1 font-semibold truncate">{nomeEmpresa}</span>
                 </div>
             </div>
-            <nav className="flex space-x-8 text-sm font-medium text-slate-300 shrink-0">
-                <button onClick={() => setView('login')} className="hover:text-amber-400 transition flex items-center gap-2"><span className="hidden sm:block">Sair do App</span><LogOut className="w-4 h-4"/></button>
+            <nav className="flex items-center space-x-4 sm:space-x-8 text-sm font-medium text-slate-300 shrink-0">
+                {viewMode === 'simulador' ? (
+                  <button onClick={() => setViewMode('historico')} className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white px-4 py-2 rounded-xl transition flex items-center gap-2 font-bold shadow-sm">
+                     <List className="w-4 h-4"/> <span className="hidden sm:block">Meus Orçamentos</span>
+                  </button>
+                ) : (
+                  <button onClick={() => setViewMode('simulador')} className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white px-4 py-2 rounded-xl transition flex items-center gap-2 font-bold shadow-sm">
+                     <ArrowLeft className="w-4 h-4"/> <span className="hidden sm:block">Voltar ao Simulador</span>
+                  </button>
+                )}
+                <button onClick={() => setView('login')} className="hover:text-red-400 transition flex items-center gap-2"><LogOut className="w-5 h-5"/></button>
             </nav>
         </div>
       </header>
@@ -1321,137 +1451,196 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(245,166,35,0.04),transparent_50%)] pointer-events-none"></div>
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full">
             
-            <div className="bg-[#030811] rounded-3xl border border-slate-700/60 shadow-xl mb-12 p-4 sm:p-5 w-full">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-5 gap-3 border-b border-slate-800/80 pb-4 w-full overflow-hidden">
-                <h2 className="text-xs font-extrabold text-slate-300 uppercase tracking-widest flex items-center gap-2 shrink-0"><Activity className="w-4 h-4 text-amber-500"/> O Meu Desempenho</h2>
-                <div className="w-full overflow-x-auto pb-2 sm:pb-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
-                  <div className="bg-[#0B192C] rounded-xl p-1 flex text-xs font-bold border border-slate-700 shadow-inner w-max">
-                    <button onClick={() => setTimeFilter('hoje')} className={`px-4 py-1.5 rounded-lg transition ${timeFilter === 'hoje' ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'}`}>Hoje</button>
-                    <button onClick={() => setTimeFilter('semana')} className={`px-4 py-1.5 rounded-lg transition ${timeFilter === 'semana' ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'}`}>Semana</button>
-                    <button onClick={() => setTimeFilter('quinzena')} className={`px-4 py-1.5 rounded-lg transition ${timeFilter === 'quinzena' ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'}`}>Quinzena</button>
-                    <button onClick={() => setTimeFilter('mes')} className={`px-4 py-1.5 rounded-lg transition ${timeFilter === 'mes' ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'}`}>Mês</button>
-                    <button onClick={() => showToast('Abrirá calendário para Mês Específico', 'error')} className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1 text-slate-400 hover:text-white whitespace-nowrap`}><Search className="w-3 h-3"/> Personalizado</button>
+            {viewMode === 'simulador' ? (
+              <>
+                <div className="bg-[#030811] rounded-3xl border border-slate-700/60 shadow-xl mb-12 p-4 sm:p-5 w-full">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-5 gap-3 border-b border-slate-800/80 pb-4 w-full overflow-hidden">
+                    <h2 className="text-xs font-extrabold text-slate-300 uppercase tracking-widest flex items-center gap-2 shrink-0"><Activity className="w-4 h-4 text-amber-500"/> O Meu Desempenho</h2>
+                    <div className="w-full overflow-x-auto pb-2 sm:pb-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+                      <div className="bg-[#0B192C] rounded-xl p-1 flex text-xs font-bold border border-slate-700 shadow-inner w-max">
+                        <button onClick={() => setTimeFilter('hoje')} className={`px-4 py-1.5 rounded-lg transition ${timeFilter === 'hoje' ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'}`}>Hoje</button>
+                        <button onClick={() => setTimeFilter('semana')} className={`px-4 py-1.5 rounded-lg transition ${timeFilter === 'semana' ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'}`}>Semana</button>
+                        <button onClick={() => setTimeFilter('quinzena')} className={`px-4 py-1.5 rounded-lg transition ${timeFilter === 'quinzena' ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'}`}>Quinzena</button>
+                        <button onClick={() => setTimeFilter('mes')} className={`px-4 py-1.5 rounded-lg transition ${timeFilter === 'mes' ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'}`}>Mês</button>
+                        <button onClick={() => showToast('Abrirá calendário para Mês Específico', 'error')} className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1 text-slate-400 hover:text-white whitespace-nowrap`}><Search className="w-3 h-3"/> Personalizado</button>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
+                     <div className="bg-[#0B192C] p-4 rounded-2xl border border-slate-800/50 shadow-sm text-center sm:text-left"><p className="text-[10px] text-slate-500 uppercase font-extrabold tracking-wider mb-1">Propostas</p><p className="text-2xl font-extrabold text-white">{timeFilter === 'hoje' ? '8' : timeFilter === 'semana' ? '34' : '142'}</p></div>
+                     <div className="bg-[#0B192C] p-4 rounded-2xl border border-slate-800/50 shadow-sm text-center sm:text-left"><p className="text-[10px] text-slate-500 uppercase font-extrabold tracking-wider mb-1">Kits String</p><p className="text-2xl font-extrabold text-blue-400">{timeFilter === 'hoje' ? '5' : timeFilter === 'semana' ? '20' : '90'}</p></div>
+                     <div className="bg-[#0B192C] p-4 rounded-2xl border border-slate-800/50 shadow-sm text-center sm:text-left"><p className="text-[10px] text-slate-500 uppercase font-extrabold tracking-wider mb-1">Kits Micro</p><p className="text-2xl font-extrabold text-emerald-400">{timeFilter === 'hoje' ? '3' : timeFilter === 'semana' ? '14' : '52'}</p></div>
+                     <div className="bg-[#0B192C] p-4 rounded-2xl border border-slate-800/50 shadow-sm flex flex-col justify-center items-center sm:items-start"><p className="text-[10px] text-slate-500 uppercase font-extrabold tracking-wider mb-1">Status Meta</p><span className="text-xs font-bold text-emerald-400 bg-emerald-400/10 px-2.5 py-1 rounded-md flex items-center gap-1 border border-emerald-400/20 mt-1"><CheckCircle className="w-3 h-3"/> No Ritmo</span></div>
                   </div>
                 </div>
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
-                 <div className="bg-[#0B192C] p-4 rounded-2xl border border-slate-800/50 shadow-sm text-center sm:text-left"><p className="text-[10px] text-slate-500 uppercase font-extrabold tracking-wider mb-1">Propostas</p><p className="text-2xl font-extrabold text-white">{timeFilter === 'hoje' ? '8' : timeFilter === 'semana' ? '34' : '142'}</p></div>
-                 <div className="bg-[#0B192C] p-4 rounded-2xl border border-slate-800/50 shadow-sm text-center sm:text-left"><p className="text-[10px] text-slate-500 uppercase font-extrabold tracking-wider mb-1">Kits String</p><p className="text-2xl font-extrabold text-blue-400">{timeFilter === 'hoje' ? '5' : timeFilter === 'semana' ? '20' : '90'}</p></div>
-                 <div className="bg-[#0B192C] p-4 rounded-2xl border border-slate-800/50 shadow-sm text-center sm:text-left"><p className="text-[10px] text-slate-500 uppercase font-extrabold tracking-wider mb-1">Kits Micro</p><p className="text-2xl font-extrabold text-emerald-400">{timeFilter === 'hoje' ? '3' : timeFilter === 'semana' ? '14' : '52'}</p></div>
-                 <div className="bg-[#0B192C] p-4 rounded-2xl border border-slate-800/50 shadow-sm flex flex-col justify-center items-center sm:items-start"><p className="text-[10px] text-slate-500 uppercase font-extrabold tracking-wider mb-1">Status Meta</p><span className="text-xs font-bold text-emerald-400 bg-emerald-400/10 px-2.5 py-1 rounded-md flex items-center gap-1 border border-emerald-400/20 mt-1"><CheckCircle className="w-3 h-3"/> No Ritmo</span></div>
-              </div>
-            </div>
 
-            <div className="text-center max-w-2xl mx-auto mb-8">
-                <span className="inline-block py-1 px-3 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-sm font-bold tracking-widest uppercase mb-4">NOVO ORÇAMENTO</span>
-                <p className="text-slate-300 mt-2 text-sm sm:text-base">Insira os dados do cliente, escolha o kit desejado e envie a proposta de forma imediata.</p>
-            </div>
+                <div className="text-center max-w-2xl mx-auto mb-8">
+                    <span className="inline-block py-1 px-3 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-sm font-bold tracking-widest uppercase mb-4">NOVO ORÇAMENTO</span>
+                    <p className="text-slate-300 mt-2 text-sm sm:text-base">Insira os dados do cliente, escolha o kit desejado e envie a proposta de forma imediata.</p>
+                </div>
 
-            <div className="bg-[#030811] rounded-3xl border border-slate-700/60 shadow-[0_0_25px_rgba(245,166,35,0.1)] overflow-hidden w-full">
-                <form onSubmit={handleSubmit} className="p-5 sm:p-10 space-y-8 sm:space-y-10">
-                    <div className="space-y-4 sm:space-y-5">
-                        <div className="flex items-center space-x-3 border-b border-slate-800/80 pb-3">
-                            <span className="bg-blue-500/10 border border-blue-500/30 text-blue-400 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shadow-sm shrink-0">1</span>
-                            <h4 className="text-sm font-bold text-white uppercase tracking-wider">Consultor</h4>
+                <div className="bg-[#030811] rounded-3xl border border-slate-700/60 shadow-[0_0_25px_rgba(245,166,35,0.1)] overflow-hidden w-full">
+                    <form onSubmit={handleSubmit} className="p-5 sm:p-10 space-y-8 sm:space-y-10">
+                        <div className="space-y-4 sm:space-y-5">
+                            <div className="flex items-center space-x-3 border-b border-slate-800/80 pb-3">
+                                <span className="bg-blue-500/10 border border-blue-500/30 text-blue-400 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shadow-sm shrink-0">1</span>
+                                <h4 className="text-sm font-bold text-white uppercase tracking-wider">Consultor</h4>
+                            </div>
+                            <div>
+                                <div className="relative group">
+                                    <span className="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400 group-focus-within:text-amber-400 transition-colors"><User className="w-5 h-5"/></span>
+                                    <input type="text" id="sellerName" value={formData.sellerName} onChange={handleInputChange} placeholder="Digite o seu nome completo" className="w-full bg-[#0B192C] border border-slate-700 focus:border-amber-500 rounded-xl py-3.5 pl-12 pr-4 text-sm text-white placeholder-slate-500 transition outline-none shadow-inner" />
+                                </div>
+                            </div>
                         </div>
+
+                        <div className="space-y-4 sm:space-y-5">
+                            <div className="flex items-center space-x-3 border-b border-slate-800/80 pb-3">
+                                <span className="bg-amber-500/20 border border-amber-500/30 text-amber-500 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shadow-sm shrink-0">2</span>
+                                <h4 className="text-sm font-bold text-white uppercase tracking-wider">Configuração</h4>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+                                <div className="relative group">
+                                    <span className="absolute inset-y-0 left-0 flex items-center pl-4 mt-6 text-amber-400"><Zap className="w-4 h-4"/></span>
+                                    <label className="block text-xs font-semibold text-slate-300 mb-2">1: Kits String *</label>
+                                    <select id="kitString" value={formData.kitString} onChange={handleInputChange} className="w-full bg-[#0B192C] border border-slate-700 focus:border-amber-500 rounded-xl py-3.5 pl-11 pr-8 text-sm text-white transition outline-none appearance-none shadow-inner cursor-pointer truncate">
+                                      <option value="" disabled>-- Selecione Kit String --</option>
+                                      {kitsString.length === 0 ? <option disabled>Sem kits. Faça Upload no CRM.</option> : kitsString.map((k, i) => <option key={i} value={i}>{k.Kit} - R$ {formatarMoeda(k.Valor)}</option>)}
+                                    </select>
+                                    <span className="absolute inset-y-0 right-0 flex items-center pr-3 mt-6 pointer-events-none text-slate-400"><ChevronDown className="w-4 h-4"/></span>
+                                </div>
+                                <div className="relative group">
+                                    <span className="absolute inset-y-0 left-0 flex items-center pl-4 mt-6 text-amber-400"><Zap className="w-4 h-4"/></span>
+                                    <label className="block text-xs font-semibold text-slate-300 mb-2">2: Kits Micro *</label>
+                                    <select id="kitMicro" value={formData.kitMicro} onChange={handleInputChange} className="w-full bg-[#0B192C] border border-slate-700 focus:border-amber-500 rounded-xl py-3.5 pl-11 pr-8 text-sm text-white transition outline-none appearance-none shadow-inner cursor-pointer truncate">
+                                      <option value="" disabled>-- Selecione Kit Micro --</option>
+                                      {kitsMicro.length === 0 ? <option disabled>Sem kits. Faça Upload no CRM.</option> : kitsMicro.map((k, i) => <option key={i} value={i}>{k.Kit} - R$ {formatarMoeda(k.Valor)}</option>)}
+                                    </select>
+                                    <span className="absolute inset-y-0 right-0 flex items-center pr-3 mt-6 pointer-events-none text-slate-400"><ChevronDown className="w-4 h-4"/></span>
+                                </div>
+                            </div>
+                            <div>
+                                <div className="relative group">
+                                    <label className="block text-xs font-semibold text-slate-300 mb-2">Estrutura do Telhado *</label>
+                                    <span className="absolute inset-y-0 left-0 flex items-center pl-4 mt-6 text-slate-400 group-focus-within:text-amber-400 transition-colors"><Building className="w-4 h-4"/></span>
+                                    <select id="roofStructure" value={formData.roofStructure} onChange={handleInputChange} className="w-full bg-[#0B192C] border border-slate-700 focus:border-amber-500 rounded-xl py-3.5 pl-11 pr-8 text-sm text-white transition outline-none appearance-none shadow-inner cursor-pointer truncate"><option value="" disabled>-- Selecione a Estrutura --</option><option value="Madeira">1: Madeira</option><option value="Ferro">2: Ferro</option></select>
+                                    <span className="absolute inset-y-0 right-0 flex items-center pr-3 mt-6 pointer-events-none text-slate-400"><ChevronDown className="w-4 h-4"/></span>
+                                </div>
+                            </div>
+                            <div className="bg-gradient-to-br from-[#0B192C] to-slate-900 border border-slate-700/80 rounded-2xl p-5 sm:p-6 mt-2 grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 relative overflow-hidden shadow-lg">
+                                <div className="absolute -right-8 -bottom-8 text-slate-800/40 pointer-events-none transform rotate-12"><Sun className="w-48 h-48"/></div>
+                                <div className="space-y-1.5 relative z-10"><span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block flex items-center gap-1.5">Qtd. Placas</span><span className="text-base sm:text-lg font-extrabold text-white block truncate">{activeKit ? activeKit.Placas : '--'}</span></div>
+                                <div className="space-y-1.5 relative z-10"><span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block flex items-center gap-1.5">Inversor</span><span className="text-base sm:text-lg font-extrabold text-white block truncate">{activeKit ? activeKit.Inversor : '--'}</span></div>
+                                <div className="space-y-1.5 relative z-10"><span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block flex items-center gap-1.5">Estrutura</span><span className="text-base sm:text-lg font-extrabold text-white block truncate">{formData.roofStructure || '--'}</span></div>
+                                <div className="space-y-1.5 relative z-10"><span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block flex items-center gap-1.5"><span className="text-emerald-600">Valor do Kit</span></span><span className="text-base sm:text-lg font-extrabold text-emerald-400 block truncate">{activeKit ? `R$ ${formatarMoeda(activeKit.Valor)}` : '--'}</span></div>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4 sm:space-y-5">
+                            <div className="flex items-center space-x-3 border-b border-slate-800/80 pb-3">
+                                <span className="bg-orange-500/20 border border-orange-500/30 text-orange-500 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shadow-sm shrink-0">3</span>
+                                <h4 className="text-sm font-bold text-white uppercase tracking-wider">Cliente</h4>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5">
+                                <div className="relative group">
+                                    <label className="block text-xs font-semibold text-slate-300 mb-2">Nome do Cliente *</label>
+                                    <span className="absolute inset-y-0 left-0 flex items-center pl-4 mt-6 text-slate-400 group-focus-within:text-orange-500 transition-colors"><User className="w-4 h-4"/></span>
+                                    <input type="text" id="clientName" value={formData.clientName} onChange={handleInputChange} placeholder="Nome do Cliente" className="w-full bg-[#0B192C] border border-slate-700 focus:border-orange-500 rounded-xl py-3.5 pl-11 pr-4 text-sm text-white placeholder-slate-500 transition outline-none shadow-inner" />
+                                </div>
+                                <div className="relative group">
+                                    <label className="block text-xs font-semibold text-slate-300 mb-2">WhatsApp *</label>
+                                    <span className="absolute inset-y-0 left-0 flex items-center pl-4 mt-6 text-slate-400 group-focus-within:text-orange-500 transition-colors"><Smartphone className="w-4 h-4"/></span>
+                                    <input type="tel" id="clientWhatsapp" value={formData.clientWhatsapp} onChange={(e) => {
+                                          let val = e.target.value.replace(/\D/g, '');
+                                          if (val.length > 11) val = val.substring(0, 11);
+                                          let formatted = val.length > 0 ? '(' + val.substring(0, 2) : '';
+                                          if (val.length > 2) formatted += ') ' + val.substring(2, 7);
+                                          if (val.length > 7) formatted += '-' + val.substring(7, 11);
+                                          setFormData({...formData, clientWhatsapp: formatted});
+                                      }} placeholder="(00) 00000-0000" className="w-full bg-[#0B192C] border border-slate-700 focus:border-orange-500 rounded-xl py-3.5 pl-11 pr-4 text-sm text-white placeholder-slate-500 transition outline-none shadow-inner" />
+                                </div>
+                                <div className="relative group">
+                                    <label className="block text-xs font-semibold text-slate-300 mb-2">Cidade / Estado *</label>
+                                    <span className="absolute inset-y-0 left-0 flex items-center pl-4 mt-6 text-slate-400 group-focus-within:text-orange-500 transition-colors"><MapPin className="w-4 h-4"/></span>
+                                    <input type="text" id="clientCity" value={formData.clientCity} onChange={handleInputChange} placeholder="Cidade - Estado" className="w-full bg-[#0B192C] border border-slate-700 focus:border-orange-500 rounded-xl py-3.5 pl-11 pr-4 text-sm text-white placeholder-slate-500 transition outline-none shadow-inner" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-[#0B192C]/50 border border-slate-700/60 rounded-2xl p-4 sm:p-6 space-y-4 backdrop-blur-sm w-full">
+                            <div className="flex items-center space-x-2 text-xs font-bold text-slate-400 uppercase tracking-widest"><span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0"></span><span>Visualização da Mensagem</span></div>
+                            <div className="bg-[#030811] p-4 sm:p-5 rounded-xl border border-slate-800 font-mono text-xs sm:text-sm text-slate-300 leading-relaxed whitespace-pre-wrap select-none max-h-64 overflow-y-auto shadow-inner w-full break-words">
+                                {buildMessage()}
+                            </div>
+                        </div>
+
                         <div>
-                            <div className="relative group">
-                                <span className="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400 group-focus-within:text-amber-400 transition-colors"><User className="w-5 h-5"/></span>
-                                <input type="text" id="sellerName" value={formData.sellerName} onChange={handleInputChange} placeholder="Digite o seu nome completo" className="w-full bg-[#0B192C] border border-slate-700 focus:border-amber-500 rounded-xl py-3.5 pl-12 pr-4 text-sm text-white placeholder-slate-500 transition outline-none shadow-inner" />
-                            </div>
+                            <button type="submit" className="w-full inline-flex items-center justify-center px-4 sm:px-8 py-4 bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-slate-900 font-extrabold text-base sm:text-lg rounded-2xl transition-all duration-300 shadow-[0_0_20px_rgba(245,166,35,0.2)] hover:scale-[1.02] active:scale-[0.98]">
+                                Enviar Proposta WhatsApp
+                            </button>
                         </div>
-                    </div>
-
-                    <div className="space-y-4 sm:space-y-5">
-                        <div className="flex items-center space-x-3 border-b border-slate-800/80 pb-3">
-                            <span className="bg-amber-500/20 border border-amber-500/30 text-amber-500 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shadow-sm shrink-0">2</span>
-                            <h4 className="text-sm font-bold text-white uppercase tracking-wider">Configuração</h4>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
-                            <div className="relative group">
-                                <span className="absolute inset-y-0 left-0 flex items-center pl-4 mt-6 text-amber-400"><Zap className="w-4 h-4"/></span>
-                                <label className="block text-xs font-semibold text-slate-300 mb-2">1: Kits String *</label>
-                                <select id="kitString" value={formData.kitString} onChange={handleInputChange} className="w-full bg-[#0B192C] border border-slate-700 focus:border-amber-500 rounded-xl py-3.5 pl-11 pr-8 text-sm text-white transition outline-none appearance-none shadow-inner cursor-pointer truncate">
-                                  <option value="" disabled>-- Selecione Kit String --</option>
-                                  {/* Formatação de Moeda aplicada aqui na lista String */}
-                                  {kitsString.length === 0 ? <option disabled>Sem kits. Faça Upload no CRM.</option> : kitsString.map((k, i) => <option key={i} value={i}>{k.Kit} - R$ {formatarMoeda(k.Valor)}</option>)}
-                                </select>
-                                <span className="absolute inset-y-0 right-0 flex items-center pr-3 mt-6 pointer-events-none text-slate-400"><ChevronDown className="w-4 h-4"/></span>
-                            </div>
-                            <div className="relative group">
-                                <span className="absolute inset-y-0 left-0 flex items-center pl-4 mt-6 text-amber-400"><Zap className="w-4 h-4"/></span>
-                                <label className="block text-xs font-semibold text-slate-300 mb-2">2: Kits Micro *</label>
-                                <select id="kitMicro" value={formData.kitMicro} onChange={handleInputChange} className="w-full bg-[#0B192C] border border-slate-700 focus:border-amber-500 rounded-xl py-3.5 pl-11 pr-8 text-sm text-white transition outline-none appearance-none shadow-inner cursor-pointer truncate">
-                                  <option value="" disabled>-- Selecione Kit Micro --</option>
-                                  {/* Formatação de Moeda aplicada aqui na lista Micro */}
-                                  {kitsMicro.length === 0 ? <option disabled>Sem kits. Faça Upload no CRM.</option> : kitsMicro.map((k, i) => <option key={i} value={i}>{k.Kit} - R$ {formatarMoeda(k.Valor)}</option>)}
-                                </select>
-                                <span className="absolute inset-y-0 right-0 flex items-center pr-3 mt-6 pointer-events-none text-slate-400"><ChevronDown className="w-4 h-4"/></span>
-                            </div>
-                        </div>
-                        <div>
-                            <div className="relative group">
-                                <label className="block text-xs font-semibold text-slate-300 mb-2">Estrutura do Telhado *</label>
-                                <span className="absolute inset-y-0 left-0 flex items-center pl-4 mt-6 text-slate-400 group-focus-within:text-amber-400 transition-colors"><Building className="w-4 h-4"/></span>
-                                <select id="roofStructure" value={formData.roofStructure} onChange={handleInputChange} className="w-full bg-[#0B192C] border border-slate-700 focus:border-amber-500 rounded-xl py-3.5 pl-11 pr-8 text-sm text-white transition outline-none appearance-none shadow-inner cursor-pointer truncate"><option value="" disabled>-- Selecione a Estrutura --</option><option value="Madeira">1: Madeira</option><option value="Ferro">2: Ferro</option></select>
-                                <span className="absolute inset-y-0 right-0 flex items-center pr-3 mt-6 pointer-events-none text-slate-400"><ChevronDown className="w-4 h-4"/></span>
-                            </div>
-                        </div>
-                        <div className="bg-gradient-to-br from-[#0B192C] to-slate-900 border border-slate-700/80 rounded-2xl p-5 sm:p-6 mt-2 grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 relative overflow-hidden shadow-lg">
-                            <div className="absolute -right-8 -bottom-8 text-slate-800/40 pointer-events-none transform rotate-12"><Sun className="w-48 h-48"/></div>
-                            <div className="space-y-1.5 relative z-10"><span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block flex items-center gap-1.5">Qtd. Placas</span><span className="text-base sm:text-lg font-extrabold text-white block truncate">{activeKit ? activeKit.Placas : '--'}</span></div>
-                            <div className="space-y-1.5 relative z-10"><span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block flex items-center gap-1.5">Potência</span><span className="text-base sm:text-lg font-extrabold text-white block truncate">{activeKit ? activeKit.Modulo.replace(/Módulo\s*/gi, '').trim() : '--'}</span></div>
-                            <div className="space-y-1.5 relative z-10"><span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block flex items-center gap-1.5">Inversor</span><span className="text-base sm:text-lg font-extrabold text-white block truncate">{activeKit ? activeKit.Inversor : '--'}</span></div>
-                            {/* Formatação de Moeda aplicada aqui na caixa visual */}
-                            <div className="space-y-1.5 relative z-10"><span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block flex items-center gap-1.5"><span className="text-emerald-600">Valor do Kit</span></span><span className="text-base sm:text-lg font-extrabold text-emerald-400 block truncate">{activeKit ? `R$ ${formatarMoeda(activeKit.Valor)}` : '--'}</span></div>
-                        </div>
-                    </div>
-
-                    <div className="space-y-4 sm:space-y-5">
-                        <div className="flex items-center space-x-3 border-b border-slate-800/80 pb-3">
-                            <span className="bg-orange-500/20 border border-orange-500/30 text-orange-500 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shadow-sm shrink-0">3</span>
-                            <h4 className="text-sm font-bold text-white uppercase tracking-wider">Cliente</h4>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5">
-                            <div className="relative group">
-                                <label className="block text-xs font-semibold text-slate-300 mb-2">Nome do Cliente *</label>
-                                <span className="absolute inset-y-0 left-0 flex items-center pl-4 mt-6 text-slate-400 group-focus-within:text-orange-500 transition-colors"><User className="w-4 h-4"/></span>
-                                <input type="text" id="clientName" value={formData.clientName} onChange={handleInputChange} placeholder="Nome do Cliente" className="w-full bg-[#0B192C] border border-slate-700 focus:border-orange-500 rounded-xl py-3.5 pl-11 pr-4 text-sm text-white placeholder-slate-500 transition outline-none shadow-inner" />
-                            </div>
-                            <div className="relative group">
-                                <label className="block text-xs font-semibold text-slate-300 mb-2">WhatsApp *</label>
-                                <span className="absolute inset-y-0 left-0 flex items-center pl-4 mt-6 text-slate-400 group-focus-within:text-orange-500 transition-colors"><Smartphone className="w-4 h-4"/></span>
-                                <input type="tel" id="clientWhatsapp" value={formData.clientWhatsapp} onChange={(e) => {
-                                      let val = e.target.value.replace(/\D/g, '');
-                                      if (val.length > 11) val = val.substring(0, 11);
-                                      let formatted = val.length > 0 ? '(' + val.substring(0, 2) : '';
-                                      if (val.length > 2) formatted += ') ' + val.substring(2, 7);
-                                      if (val.length > 7) formatted += '-' + val.substring(7, 11);
-                                      setFormData({...formData, clientWhatsapp: formatted});
-                                  }} placeholder="(00) 00000-0000" className="w-full bg-[#0B192C] border border-slate-700 focus:border-orange-500 rounded-xl py-3.5 pl-11 pr-4 text-sm text-white placeholder-slate-500 transition outline-none shadow-inner" />
-                            </div>
-                            <div className="relative group">
-                                <label className="block text-xs font-semibold text-slate-300 mb-2">Cidade / Estado *</label>
-                                <span className="absolute inset-y-0 left-0 flex items-center pl-4 mt-6 text-slate-400 group-focus-within:text-orange-500 transition-colors"><MapPin className="w-4 h-4"/></span>
-                                <input type="text" id="clientCity" value={formData.clientCity} onChange={handleInputChange} placeholder="Cidade - Estado" className="w-full bg-[#0B192C] border border-slate-700 focus:border-orange-500 rounded-xl py-3.5 pl-11 pr-4 text-sm text-white placeholder-slate-500 transition outline-none shadow-inner" />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="bg-[#0B192C]/50 border border-slate-700/60 rounded-2xl p-4 sm:p-6 space-y-4 backdrop-blur-sm w-full">
-                        <div className="flex items-center space-x-2 text-xs font-bold text-slate-400 uppercase tracking-widest"><span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0"></span><span>Visualização da Mensagem</span></div>
-                        <div className="bg-[#030811] p-4 sm:p-5 rounded-xl border border-slate-800 font-mono text-xs sm:text-sm text-slate-300 leading-relaxed whitespace-pre-wrap select-none max-h-64 overflow-y-auto shadow-inner w-full break-words">
-                            {buildMessage()}
-                        </div>
-                    </div>
-
-                    <div>
-                        <button type="submit" className="w-full inline-flex items-center justify-center px-4 sm:px-8 py-4 bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-slate-900 font-extrabold text-base sm:text-lg rounded-2xl transition-all duration-300 shadow-[0_0_20px_rgba(245,166,35,0.2)] hover:scale-[1.02] active:scale-[0.98]">
-                            Enviar Proposta WhatsApp
-                        </button>
-                    </div>
-                </form>
-            </div>
+                    </form>
+                </div>
+              </>
+            ) : (
+              <div className="bg-[#0B192C] border border-slate-800 rounded-3xl overflow-hidden shadow-xl flex flex-col w-full h-[70vh]">
+                 <div className="p-4 sm:p-6 border-b border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-[#0B192C]/80 w-full">
+                   <div>
+                     <h3 className="text-xl font-bold text-white flex items-center gap-2"><List className="w-6 h-6 text-amber-500"/> Meus Orçamentos (CRM)</h3>
+                     <p className="text-sm text-slate-400 mt-1">Gira o status das propostas que você enviou aos clientes.</p>
+                   </div>
+                   <div className="relative w-full sm:w-48 group">
+                      <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500"><Activity className="w-4 h-4" /></span>
+                      <select value={vendedorStatusFilter} onChange={(e) => setVendedorStatusFilter(e.target.value)} className="w-full bg-[#030811] border border-slate-700 rounded-xl py-2 pl-9 pr-8 text-sm text-white focus:border-amber-500 outline-none shadow-inner appearance-none cursor-pointer transition">
+                         <option value="todos">Todos Status</option>
+                         {statusOptions.map((st, idx) => (
+                            <option key={idx} value={st}>{st}</option>
+                         ))}
+                      </select>
+                      <ChevronDown className="w-4 h-4 absolute right-3 top-2.5 text-slate-500 pointer-events-none" />
+                   </div>
+                 </div>
+                 <div className="flex-1 overflow-x-auto p-4">
+                   {loadingHistory ? (
+                      <div className="flex justify-center items-center h-32">
+                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500"></div>
+                      </div>
+                   ) : (
+                     <table className="w-full text-left text-sm text-slate-300 min-w-max">
+                       <thead className="text-[10px] uppercase tracking-widest bg-[#030811] text-slate-500 font-bold border-b border-slate-800 sticky top-0 z-10">
+                         <tr><th className="px-4 py-3 rounded-tl-lg">Data</th><th className="px-4 py-3">Cliente</th><th className="px-4 py-3">WhatsApp</th><th className="px-4 py-3">Kit Oferecido</th><th className="px-4 py-3">Status Atual</th><th className="px-4 py-3 rounded-tr-lg text-right">Valor (R$)</th></tr>
+                       </thead>
+                       <tbody className="divide-y divide-slate-800/50">
+                         {orcamentosFiltrados.length === 0 ? (
+                           <tr><td colSpan="6" className="text-center py-8 text-slate-500 font-bold">Nenhum orçamento encontrado no seu histórico.</td></tr>
+                         ) : (
+                           orcamentosFiltrados.map((sim) => {
+                             const currentStatus = sim.status || 'Negociando';
+                             return (
+                             <tr key={sim.id} className="hover:bg-slate-800/40 transition">
+                               <td className="px-4 py-3 text-xs text-slate-400 whitespace-nowrap">{sim.dataVisual}</td>
+                               <td className="px-4 py-3 font-bold text-slate-200 whitespace-nowrap"><div className="truncate max-w-[150px]">{sim.cliente}</div></td>
+                               <td className="px-4 py-3 font-mono text-xs whitespace-nowrap">{sim.whatsapp}</td>
+                               <td className="px-4 py-3 text-xs whitespace-nowrap"><div className="truncate max-w-[150px]">{sim.kit}</div></td>
+                               <td className="px-4 py-3 whitespace-nowrap">
+                                   <select 
+                                     value={currentStatus}
+                                     onChange={(e) => handleStatusChange(sim.id, e.target.value)}
+                                     className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md outline-none cursor-pointer appearance-none ${statusColors[currentStatus] || statusColors['Negociando']}`}
+                                   >
+                                      {statusOptions.map(opt => <option key={opt} value={opt} className="bg-slate-800 text-white">{opt}</option>)}
+                                   </select>
+                               </td>
+                               <td className="px-4 py-3 text-right font-bold text-amber-500 whitespace-nowrap">{sim.valor}</td>
+                             </tr>
+                           )})
+                         )}
+                       </tbody>
+                     </table>
+                   )}
+                 </div>
+              </div>
+            )}
         </div>
       </section>
     </div>
@@ -1503,12 +1692,11 @@ export default function App() {
           }
         });
         
-        // MÁGICA DA ORDENAÇÃO: Organiza do Menor para o Maior Valor (Preço/Tamanho)
+        // ORDENAÇÃO: Do Menor para o Maior Valor
         const ordenarKits = (a, b) => {
             const parseValor = (val) => {
                 if (!val) return 0;
                 let str = String(val).trim();
-                // Limpa os formatos de dinheiro (ex: 10.000,00 ou 10000.00)
                 if (str.includes('.') && str.includes(',')) str = str.replace(/\./g, '').replace(',', '.');
                 else if (str.includes(',')) str = str.replace(',', '.');
                 return parseFloat(str) || 0;
@@ -1520,7 +1708,6 @@ export default function App() {
             setKitsString(fallbackKitsString);
             setKitsMicro(fallbackKitsMicro);
         } else {
-            // Aplica a ordenação automática antes de enviar para o ecrã
             setKitsString(strings.sort(ordenarKits));
             setKitsMicro(micros.sort(ordenarKits));
         }
