@@ -1221,32 +1221,11 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
   const [formData, setFormData] = useState({ sellerName: userData?.nome || '', kitString: '', kitMicro: '', roofStructure: '', clientName: '', clientWhatsapp: '', clientCity: '' });
   const [timeFilter, setTimeFilter] = useState('hoje');
   const [toast, setToast] = useState(null);
-  
-  // NOVO: Estado para armazenar o nome da empresa
-  const [nomeDaEmpresa, setNomeDaEmpresa] = useState('Energia Solar');
 
   const showToast = (message, type = 'error') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
   };
-
-  // NOVO: Efeito para buscar o nome da empresa ao carregar a tela
-  useEffect(() => {
-    const buscarNomeEmpresa = async () => {
-      if (userData?.empresaId && userData.empresaId !== 'padrao') {
-        try {
-          const empresaDoc = await getDoc(doc(db, 'usuarios', userData.empresaId));
-          if (empresaDoc.exists() && empresaDoc.data().nome) {
-            setNomeDaEmpresa(empresaDoc.data().nome);
-          }
-        } catch (error) {
-          console.error("Erro ao buscar nome da empresa:", error);
-        }
-      }
-    };
-    buscarNomeEmpresa();
-  }, [userData]);
-
 
   const handleInputChange = (e) => {
     const { id, value } = e.target;
@@ -1258,14 +1237,11 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
 
   const activeKit = formData.kitString !== '' ? kitsString[formData.kitString] : formData.kitMicro !== '' ? kitsMicro[formData.kitMicro] : null;
 
-  // NOVO: Função para formatar o valor como Moeda Brasileira (R$ 00.000,00)
+  // FUNÇÃO MÁGICA DE FORMATAÇÃO DE MOEDA (Padrão Brasil)
   const formatarMoeda = (valorTexto) => {
     if (!valorTexto || valorTexto === '--') return '--';
-    // Substitui vírgula por ponto para garantir que o Javascript entende como número, 
-    // caso tenha vindo formatado com vírgula do Excel.
     const numero = parseFloat(String(valorTexto).replace(',', '.')); 
     if (isNaN(numero)) return valorTexto;
-    
     return numero.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
@@ -1279,12 +1255,11 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
 
     if (activeKit) {
         kitName = activeKit.Kit; placas = activeKit.Placas; modulo = activeKit.Modulo; inversor = activeKit.Inversor; 
-        valor = formatarMoeda(activeKit.Valor); // Aplica a formatação
+        valor = `R$ ${formatarMoeda(activeKit.Valor)}`; // Moeda formatada no WhatsApp
     }
     const cleanPotencia = modulo.replace(/Módulo\s*/gi, '').trim();
 
-    // NOVO: Formatação exata conforme a imagem
-    return `Empresa: *${nomeDaEmpresa}* ☀️\n\nSegue o seu orçamento personalizado de Energia Solar\n\n👤 *Cliente:* ${clientName}\n📍 *Cidade:* ${clientCity}\n📱 *Zap:* ${clientWhatsapp}\n\n🏠 *Estrutura do Telhado:* ${roofStructure}\n📦 *Kit Selecionado:* ${kitName}\n☀️ *Placas:* ${placas}\n⚡ *Potência:* ${cleanPotencia}\n🔄 *Inversor:* ${inversor}\n\n💰 *Valor do Kit:* R$ ${valor}\n\n✨ *Condições Especiais:*\n\n💳 Financiamos 100% com Zero de Entrada\n\n📅 Primeira parcela com prazo de até 120 dias para começar a pagar\n\n💼 Atendido por: *${sellerName}*\n\nFicamos à disposição para esclarecer dúvidas e realizar o seu projeto.`;
+    return `Empresa: Energia Solar ☀️\n\nSegue o seu orçamento personalizado de Energia Solar\n\n👤 *Cliente:* ${clientName}\n\n📍 *Cidade:* ${clientCity}\n\n📱 *Zap:* ${clientWhatsapp}\n\n🏠 *Estrutura do Telhado:* ${roofStructure}\n\n📦 *Kit Selecionado:* ${kitName}\n\n☀️ *Placas:* ${placas}\n\n⚡ *Potência:* ${cleanPotencia}\n\n🔄 *Inversor:* ${inversor}\n\n💰 *Valor do Kit:* ${valor}\n\n✨ *Condições Especiais:*\n\n💳 Financiamos 100% com Zero de Entrada\n\n📅 Primeira parcela com prazo de até 120 dias para começar a pagar\n\n💼 Atendido por: *${sellerName}*\n\nFicamos à disposição para esclarecer dúvidas e realizar o seu projeto.`;
   };
 
   const handleSubmit = async (e) => {
@@ -1309,8 +1284,6 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
         tipoKit: formData.kitString !== '' ? 'String' : 'Micro', 
         kit: activeKit.Kit, 
         valor: activeKit.Valor, 
-        placas: activeKit.Placas, // NOVA COLUNA
-        inversor: activeKit.Inversor, // NOVA COLUNA
         timestamp: serverTimestamp(),
         empresaId: userData?.empresaId || 'padrao', // Liga o orçamento à empresa dona
         vendedorUid: userData?.uid || 'padrao'
@@ -1318,12 +1291,7 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
       const textMessage = buildMessage();
       const encodedText = encodeURIComponent(textMessage);
       const waUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodedText}`;
-      
-      // Tenta abrir em nova aba. Se o telemóvel bloquear devido à espera do banco de dados, força o redirecionamento.
-      const newWindow = window.open(waUrl, '_blank');
-      if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
-          window.location.href = waUrl;
-      }
+      setTimeout(() => { window.open(waUrl, '_blank'); }, 800);
     } catch (error) { showToast('Erro ao gravar na nuvem.'); }
   };
 
@@ -1405,7 +1373,8 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
                                 <label className="block text-xs font-semibold text-slate-300 mb-2">1: Kits String *</label>
                                 <select id="kitString" value={formData.kitString} onChange={handleInputChange} className="w-full bg-[#0B192C] border border-slate-700 focus:border-amber-500 rounded-xl py-3.5 pl-11 pr-8 text-sm text-white transition outline-none appearance-none shadow-inner cursor-pointer truncate">
                                   <option value="" disabled>-- Selecione Kit String --</option>
-                                  {kitsString.length === 0 ? <option disabled>Sem kits. Faça Upload no CRM.</option> : kitsString.map((k, i) => <option key={i} value={i}>{k.Kit} - R$ {k.Valor}</option>)}
+                                  {/* Formatação de Moeda aplicada aqui na lista String */}
+                                  {kitsString.length === 0 ? <option disabled>Sem kits. Faça Upload no CRM.</option> : kitsString.map((k, i) => <option key={i} value={i}>{k.Kit} - R$ {formatarMoeda(k.Valor)}</option>)}
                                 </select>
                                 <span className="absolute inset-y-0 right-0 flex items-center pr-3 mt-6 pointer-events-none text-slate-400"><ChevronDown className="w-4 h-4"/></span>
                             </div>
@@ -1414,7 +1383,8 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
                                 <label className="block text-xs font-semibold text-slate-300 mb-2">2: Kits Micro *</label>
                                 <select id="kitMicro" value={formData.kitMicro} onChange={handleInputChange} className="w-full bg-[#0B192C] border border-slate-700 focus:border-amber-500 rounded-xl py-3.5 pl-11 pr-8 text-sm text-white transition outline-none appearance-none shadow-inner cursor-pointer truncate">
                                   <option value="" disabled>-- Selecione Kit Micro --</option>
-                                  {kitsMicro.length === 0 ? <option disabled>Sem kits. Faça Upload no CRM.</option> : kitsMicro.map((k, i) => <option key={i} value={i}>{k.Kit} - R$ {k.Valor}</option>)}
+                                  {/* Formatação de Moeda aplicada aqui na lista Micro */}
+                                  {kitsMicro.length === 0 ? <option disabled>Sem kits. Faça Upload no CRM.</option> : kitsMicro.map((k, i) => <option key={i} value={i}>{k.Kit} - R$ {formatarMoeda(k.Valor)}</option>)}
                                 </select>
                                 <span className="absolute inset-y-0 right-0 flex items-center pr-3 mt-6 pointer-events-none text-slate-400"><ChevronDown className="w-4 h-4"/></span>
                             </div>
@@ -1432,7 +1402,8 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
                             <div className="space-y-1.5 relative z-10"><span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block flex items-center gap-1.5">Qtd. Placas</span><span className="text-base sm:text-lg font-extrabold text-white block truncate">{activeKit ? activeKit.Placas : '--'}</span></div>
                             <div className="space-y-1.5 relative z-10"><span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block flex items-center gap-1.5">Potência</span><span className="text-base sm:text-lg font-extrabold text-white block truncate">{activeKit ? activeKit.Modulo.replace(/Módulo\s*/gi, '').trim() : '--'}</span></div>
                             <div className="space-y-1.5 relative z-10"><span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block flex items-center gap-1.5">Inversor</span><span className="text-base sm:text-lg font-extrabold text-white block truncate">{activeKit ? activeKit.Inversor : '--'}</span></div>
-                            <div className="space-y-1.5 relative z-10"><span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block flex items-center gap-1.5"><span className="text-emerald-600">Valor do Kit</span></span><span className="text-base sm:text-lg font-extrabold text-emerald-400 block truncate">{activeKit ? `R$ ${activeKit.Valor}` : '--'}</span></div>
+                            {/* Formatação de Moeda aplicada aqui na caixa visual */}
+                            <div className="space-y-1.5 relative z-10"><span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block flex items-center gap-1.5"><span className="text-emerald-600">Valor do Kit</span></span><span className="text-base sm:text-lg font-extrabold text-emerald-400 block truncate">{activeKit ? `R$ ${formatarMoeda(activeKit.Valor)}` : '--'}</span></div>
                         </div>
                     </div>
 
