@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, getDocs, writeBatch, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { getAuth, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from 'firebase/auth';
-import { Search, Building, Users, Zap, Plus, Settings, AlertCircle, LogOut, CheckCircle, ChevronDown, User, Smartphone, MapPin, BarChart, Sun, FileText, Clipboard, MessageCircle, BookOpen, Menu, X, Eye, EyeOff, Download, Activity, List, ArrowLeft } from 'lucide-react';
+import { Search, Building, Users, Zap, Plus, Settings, AlertCircle, LogOut, CheckCircle, ChevronDown, User, Smartphone, MapPin, Sun, FileText, Clipboard, MessageCircle, BookOpen, Menu, X, Eye, EyeOff, Download, Activity, List, TrendingUp, Calendar, MessageSquare, BarChart3 } from 'lucide-react';
 
 // ==========================================
 // 1. CONFIGURAÇÃO DO FIREBASE (LIMPA E SEGURA)
@@ -16,17 +16,26 @@ const firebaseConfig = {
   appId: "1:9543973605:web:721bdd9895198418f6b20c"
 };
 
-// Inicialização única: Previne a temida "Tela Branca" na Prévia
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 const db = getFirestore(app);
 const auth = getAuth(app); 
 
-// MÁGICA: App secundário para cadastrar acessos sem deslogar o Admin
 const secondaryApp = getApps().find(a => a.name === "Secondary") || initializeApp(firebaseConfig, "Secondary");
 const secondaryAuth = getAuth(secondaryApp);
 
 // ==========================================
-// 2. KITS DE SEGURANÇA E STATUS CRM
+// HELPER: FORMATAR MOEDA
+// ==========================================
+export const formatarMoeda = (valor) => {
+    if (!valor) return 'R$ 0,00';
+    const numeroStr = String(valor).replace(/[^\d.,-]/g, '').replace(',', '.');
+    const numero = parseFloat(numeroStr);
+    if (isNaN(numero)) return valor;
+    return numero.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+};
+
+// ==========================================
+// 2. KITS DE SEGURANÇA (Caso a nuvem esteja vazia)
 // ==========================================
 const fallbackKitsString = [
   { Kit: 'KIT 370kWh (Padrão)', Placas: '5', Modulo: '590W', Inversor: 'AUXSOL 3K', Valor: '9335.68' },
@@ -44,25 +53,6 @@ const chartData = [
   { name: 'Seg', propostas: 12, height: '40%' }, { name: 'Ter', propostas: 19, height: '65%' }, { name: 'Qua', propostas: 15, height: '50%' },
   { name: 'Qui', propostas: 22, height: '80%' }, { name: 'Sex', propostas: 28, height: '100%' }, { name: 'Sáb', propostas: 9, height: '30%' }, { name: 'Dom', propostas: 4, height: '15%' }
 ];
-
-// Dicionário de Cores para o CRM
-const statusColors = {
-  'Negociando': 'text-amber-400 bg-amber-400/10 border-amber-400/20',
-  'Fin Aprovado': 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20',
-  'Fechou': 'text-blue-400 bg-blue-400/10 border-blue-400/20',
-  'Fin Reprovado': 'text-red-400 bg-red-400/10 border-red-400/20',
-  'Não Interessou': 'text-slate-400 bg-slate-400/10 border-slate-400/20'
-};
-
-const statusOptions = ['Negociando', 'Fin Aprovado', 'Fechou', 'Fin Reprovado', 'Não Interessou'];
-
-// FUNÇÃO MÁGICA DE FORMATAÇÃO DE MOEDA (Padrão Brasil)
-const formatarMoeda = (valorTexto) => {
-  if (!valorTexto || valorTexto === '--') return '--';
-  const numero = parseFloat(String(valorTexto).replace(',', '.')); 
-  if (isNaN(numero)) return valorTexto;
-  return numero.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-};
 
 // ==========================================
 // 3. LAYOUT BASE DO SAAS 
@@ -101,7 +91,7 @@ const DashboardLayout = ({ children, title, setView, role, currentTab, setCurren
             {role === 'empresa' && (
               <>
                 <button onClick={() => handleTabChange('resultados')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition font-medium ${currentTab === 'resultados' ? 'bg-slate-800 text-white border-l-2 border-amber-500' : 'text-slate-400 hover:bg-slate-900/50 hover:text-white'}`}>
-                  <List className={`w-5 h-5 ${currentTab === 'resultados' ? 'text-amber-500' : ''}`} /> <span>Resultados (CRM)</span>
+                  <Clipboard className={`w-5 h-5 ${currentTab === 'resultados' ? 'text-amber-500' : ''}`} /> <span>Resultados (CRM)</span>
                 </button>
                 <button onClick={() => handleTabChange('vendedores')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition font-medium ${currentTab === 'vendedores' ? 'bg-slate-800 text-white border-l-2 border-amber-500' : 'text-slate-400 hover:bg-slate-900/50 hover:text-white'}`}>
                   <Users className={`w-5 h-5 ${currentTab === 'vendedores' ? 'text-amber-500' : ''}`} /> <span>Meus Vendedores</span>
@@ -485,11 +475,7 @@ const MasterView = ({ setView }) => {
                         <td className="px-6 py-4">
                           {item.whatsapp ? (
                             <button 
-                              onClick={() => {
-                                const cleanPhone = String(item.whatsapp).replace(/\D/g, '');
-                                const phoneWithCountryCode = cleanPhone.length >= 10 && !cleanPhone.startsWith('55') ? '55' + cleanPhone : cleanPhone;
-                                window.open(`https://wa.me/${phoneWithCountryCode}`, '_blank');
-                              }}
+                              onClick={() => window.open(`https://wa.me/${String(item.whatsapp).replace(/\D/g, '').length >= 10 && !String(item.whatsapp).replace(/\D/g, '').startsWith('55') ? '55' + String(item.whatsapp).replace(/\D/g, '') : String(item.whatsapp).replace(/\D/g, '')}`, '_blank')}
                               className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400 hover:text-emerald-300 transition bg-emerald-400/10 hover:bg-emerald-400/20 px-3 py-1.5 rounded-lg border border-emerald-400/20 cursor-pointer"
                             >
                               <MessageCircle className="w-4 h-4" />
@@ -519,53 +505,6 @@ const MasterView = ({ setView }) => {
               </table>
             )}
           </div>
-
-          {/* Modal de Edição de Empresa */}
-          {editEmpresaModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm text-left">
-               <div className="bg-[#0B192C] border border-slate-800 rounded-3xl p-6 w-full max-w-sm shadow-2xl relative">
-                 <button onClick={() => setEditEmpresaModal(null)} className="absolute top-4 right-4 text-slate-500 hover:text-white transition"><LogOut className="w-5 h-5"/></button>
-                 <h3 className="text-xl font-extrabold text-white mb-1">Editar Empresa</h3>
-                 <p className="text-xs text-slate-400 mb-6">Altere os dados de perfil da empresa cliente.</p>
-                 <div className="space-y-4">
-                   <div>
-                     <label className="text-xs font-bold text-slate-400 mb-1 block">Nome Fantasia / Razão Social</label>
-                     <input type="text" value={editEmpresaModal.nome} onChange={(e) => setEditEmpresaModal({...editEmpresaModal, nome: e.target.value})} className="w-full bg-[#030811] border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-amber-500"/>
-                   </div>
-                   <div className="relative group">
-                     <label className="text-xs font-bold text-slate-400 mb-1 block">Plano Contratado</label>
-                     <select value={editEmpresaModal.plano || 'Free [Teste Ilimitado 14 dias]'} onChange={(e) => setEditEmpresaModal({...editEmpresaModal, plano: e.target.value})} className="w-full bg-[#030811] border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-amber-500 appearance-none cursor-pointer">
-                        <option value="Free [Teste Ilimitado 14 dias]">Free [Teste Ilimitado 14 dias]</option>
-                        <option value="Básico até 5 vendedores [R$ 100,00]">Básico até 5 vendedores [R$ 100,00]</option>
-                        <option value="Pró até 10 vendedores [R$ 125,00]">Pró até 10 vendedores [R$ 125,00]</option>
-                        <option value="Master Ilimitado [R$ 150,00]">Master Ilimitado [R$ 150,00]</option>
-                     </select>
-                     <span className="absolute inset-y-0 right-0 flex items-center pr-4 pt-5 pointer-events-none text-slate-400"><ChevronDown className="w-4 h-4"/></span>
-                   </div>
-                   <div>
-                     <label className="text-xs font-bold text-slate-400 mb-1 block">E-mail (Login de Acesso)</label>
-                     <input type="email" value={editEmpresaModal.email} disabled className="w-full bg-slate-800/50 border border-slate-700/50 rounded-xl px-4 py-2.5 text-slate-500 text-sm outline-none cursor-not-allowed"/>
-                     <p className="text-[10px] text-slate-500 mt-1">O e-mail de acesso não pode ser alterado por motivos de segurança.</p>
-                   </div>
-                   <button 
-                     onClick={async () => {
-                        if(!editEmpresaModal.nome) return showToast('O nome é obrigatório.', 'error');
-                        try {
-                            await updateDoc(doc(db, 'usuarios', editEmpresaModal.id), { nome: editEmpresaModal.nome, plano: editEmpresaModal.plano });
-                            setEditEmpresaModal(null);
-                            showToast('Empresa atualizada com sucesso!', 'success');
-                        } catch (err) {
-                            console.error(err);
-                            showToast('Erro ao atualizar empresa.', 'error');
-                        }
-                     }} 
-                     className="w-full bg-gradient-to-r from-amber-400 to-orange-500 text-slate-900 font-extrabold py-3 rounded-xl mt-2 transition hover:scale-[1.02]">
-                     Salvar Alterações
-                   </button>
-                 </div>
-               </div>
-            </div>
-          )}
 
           {isModalOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
@@ -623,6 +562,52 @@ const MasterView = ({ setView }) => {
                </div>
             </div>
           )}
+
+          {editEmpresaModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm text-left">
+               <div className="bg-[#0B192C] border border-slate-800 rounded-3xl p-6 w-full max-w-sm shadow-2xl relative">
+                 <button onClick={() => setEditEmpresaModal(null)} className="absolute top-4 right-4 text-slate-500 hover:text-white transition"><LogOut className="w-5 h-5"/></button>
+                 <h3 className="text-xl font-extrabold text-white mb-1">Editar Empresa</h3>
+                 <p className="text-xs text-slate-400 mb-6">Altere os dados de perfil da empresa cliente.</p>
+                 <div className="space-y-4">
+                   <div>
+                     <label className="text-xs font-bold text-slate-400 mb-1 block">Nome Fantasia / Razão Social</label>
+                     <input type="text" value={editEmpresaModal.nome} onChange={(e) => setEditEmpresaModal({...editEmpresaModal, nome: e.target.value})} className="w-full bg-[#030811] border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-amber-500"/>
+                   </div>
+                   <div className="relative group">
+                     <label className="text-xs font-bold text-slate-400 mb-1 block">Plano Contratado</label>
+                     <select value={editEmpresaModal.plano || 'Free [Teste Ilimitado 14 dias]'} onChange={(e) => setEditEmpresaModal({...editEmpresaModal, plano: e.target.value})} className="w-full bg-[#030811] border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-amber-500 appearance-none cursor-pointer">
+                        <option value="Free [Teste Ilimitado 14 dias]">Free [Teste Ilimitado 14 dias]</option>
+                        <option value="Básico até 5 vendedores [R$ 100,00]">Básico até 5 vendedores [R$ 100,00]</option>
+                        <option value="Pró até 10 vendedores [R$ 125,00]">Pró até 10 vendedores [R$ 125,00]</option>
+                        <option value="Master Ilimitado [R$ 150,00]">Master Ilimitado [R$ 150,00]</option>
+                     </select>
+                     <span className="absolute inset-y-0 right-0 flex items-center pr-4 pt-5 pointer-events-none text-slate-400"><ChevronDown className="w-4 h-4"/></span>
+                   </div>
+                   <div>
+                     <label className="text-xs font-bold text-slate-400 mb-1 block">E-mail (Login de Acesso)</label>
+                     <input type="email" value={editEmpresaModal.email} disabled className="w-full bg-slate-800/50 border border-slate-700/50 rounded-xl px-4 py-2.5 text-slate-500 text-sm outline-none cursor-not-allowed"/>
+                     <p className="text-[10px] text-slate-500 mt-1">O e-mail de acesso não pode ser alterado por motivos de segurança.</p>
+                   </div>
+                   <button 
+                     onClick={async () => {
+                        if(!editEmpresaModal.nome) return showToast('O nome é obrigatório.', 'error');
+                        try {
+                            await updateDoc(doc(db, 'usuarios', editEmpresaModal.id), { nome: editEmpresaModal.nome, plano: editEmpresaModal.plano });
+                            setEditEmpresaModal(null);
+                            showToast('Empresa atualizada com sucesso!', 'success');
+                        } catch (err) {
+                            console.error(err);
+                            showToast('Erro ao atualizar empresa.', 'error');
+                        }
+                     }} 
+                     className="w-full bg-gradient-to-r from-amber-400 to-orange-500 text-slate-900 font-extrabold py-3 rounded-xl mt-2 transition hover:scale-[1.02]">
+                     Salvar Alterações
+                   </button>
+                 </div>
+               </div>
+            </div>
+          )}
         </div>
       )}
     </DashboardLayout>
@@ -634,11 +619,18 @@ const MasterView = ({ setView }) => {
 // ==========================================
 const EmpresaView = ({ setView, userData }) => {
   const [currentTab, setCurrentTab] = useState('kits');
-  const [dateFilter, setDateFilter] = useState('semana');
-  const [resultadosFilter, setResultadosFilter] = useState('7dias');
-  const [vendedorFilter, setVendedorFilter] = useState('todos');
-  const [crmStatusFilter, setCrmStatusFilter] = useState('todos'); // NOVO: Filtro de Status
   
+  const [dateFilter, setDateFilter] = useState('semana');
+  const [customStartDash, setCustomStartDash] = useState('');
+  const [customEndDash, setCustomEndDash] = useState('');
+
+  const [resultadosFilter, setResultadosFilter] = useState('7dias');
+  const [customStartCRM, setCustomStartCRM] = useState('');
+  const [customEndCRM, setCustomEndCRM] = useState('');
+  
+  const [vendedorFilter, setVendedorFilter] = useState('todos');
+  const [crmStatusFilter, setCrmStatusFilter] = useState('todos'); 
+
   const [isVendedorModalOpen, setIsVendedorModalOpen] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [uploadStatus, setUploadStatus] = useState('idle');
@@ -649,12 +641,10 @@ const EmpresaView = ({ setView, userData }) => {
   const [orcamentos, setOrcamentos] = useState([]);
   const [loadingCRM, setLoadingCRM] = useState(true);
 
-  // NOVOS ESTADOS: Lista de Vendedores
   const [vendedoresLista, setVendedoresLista] = useState([]);
   const [loadingVendedores, setLoadingVendedores] = useState(true);
   const [editVendedorModal, setEditVendedorModal] = useState(null);
 
-  // NOVO: Sistema de Toast para a Visão Empresa
   const [toast, setToast] = useState(null);
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
@@ -692,7 +682,6 @@ const EmpresaView = ({ setView, userData }) => {
     return () => unsubscribe();
   }, []);
 
-  // NOVO EFEITO: Buscar vendedores da empresa em tempo real
   useEffect(() => {
     if (!userData || !userData.uid) return;
     const q = query(collection(db, "usuarios"));
@@ -718,31 +707,39 @@ const EmpresaView = ({ setView, userData }) => {
 
       if (vendedorFilter !== 'todos' && orc.vendedor !== vendedorFilter) return false;
       
-      // NOVO: Filtro de Status
       const currentStatus = orc.status || 'Negociando';
       if (crmStatusFilter !== 'todos' && currentStatus !== crmStatusFilter) return false;
 
-      const hojeMs = new Date().getTime();
+      const hojeIncio = new Date();
+      hojeIncio.setHours(0, 0, 0, 0);
+      const hojeMs = hojeIncio.getTime();
       const umDiaMs = 24 * 60 * 60 * 1000;
-      let limiteMs = 0;
-      if (resultadosFilter === '7dias') limiteMs = hojeMs - (7 * umDiaMs);
-      else if (resultadosFilter === '15dias') limiteMs = hojeMs - (15 * umDiaMs);
-      else if (resultadosFilter === '30dias') limiteMs = hojeMs - (30 * umDiaMs);
-      if (limiteMs > 0 && orc.msTimestamp && orc.msTimestamp < limiteMs) return false;
+      
+      let aprovadoData = true;
+      if (resultadosFilter === 'hoje') {
+          if (!orc.msTimestamp || orc.msTimestamp < hojeMs) aprovadoData = false;
+      } else if (resultadosFilter === '7dias') {
+          if (!orc.msTimestamp || orc.msTimestamp < (hojeMs - 7 * umDiaMs)) aprovadoData = false;
+      } else if (resultadosFilter === '15dias') {
+          if (!orc.msTimestamp || orc.msTimestamp < (hojeMs - 15 * umDiaMs)) aprovadoData = false;
+      } else if (resultadosFilter === '30dias') {
+          if (!orc.msTimestamp || orc.msTimestamp < (hojeMs - 30 * umDiaMs)) aprovadoData = false;
+      } else if (resultadosFilter === 'personalizado') {
+          if (customStartCRM) {
+              const start = new Date(customStartCRM + 'T00:00:00').getTime();
+              if (!orc.msTimestamp || orc.msTimestamp < start) aprovadoData = false;
+          }
+          if (customEndCRM) {
+              const end = new Date(customEndCRM + 'T23:59:59').getTime();
+              if (!orc.msTimestamp || orc.msTimestamp > end) aprovadoData = false;
+          }
+      }
+
+      if (!aprovadoData) return false;
       return true;
   });
 
   const vendedoresUnicos = [...new Set(orcamentos.map(orc => orc.vendedor))].filter(Boolean);
-
-  const handleStatusChange = async (id, newStatus) => {
-    try {
-        await updateDoc(doc(db, "orcamentos", id), { status: newStatus });
-        showToast('Status do orçamento atualizado!', 'success');
-    } catch (err) {
-        console.error(err);
-        showToast('Erro ao atualizar status.', 'error');
-    }
-  };
 
   const handleSimulateUpload = async (e) => {
     const file = e.target.files[0];
@@ -839,35 +836,18 @@ const EmpresaView = ({ setView, userData }) => {
       }
       const XLSX = window.XLSX;
 
-      const dadosExcel = orcamentosFiltrados.map(orc => {
-        // MÁGICA: Formatação Inteligente Contábil para Excel
-        let valorContabil = orc.valor || '--';
-        if (valorContabil !== '--') {
-            // Remove o R$ para tratar o número puramente
-            let strValor = String(valorContabil).trim().replace(/R\$\s?/gi, '').trim();
-            // Se já tem vírgula, significa que já está no formato PT-BR
-            if (strValor.includes(',')) {
-                valorContabil = `R$ ${strValor}`;
-            } else {
-                // Se não tem vírgula, formata o padrão antigo (americano) para PT-BR
-                let num = parseFloat(strValor);
-                if (!isNaN(num)) valorContabil = `R$ ${num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-            }
-        }
-
-        return {
-          'Data da Simulação': orc.dataVisual,
-          'Consultor Comercial': orc.vendedor,
-          'Nome do Cliente': orc.cliente,
-          'WhatsApp Contato': orc.whatsapp,
-          'Cidade / UF': orc.cidade,
-          'Estrutura do Telhado': orc.estrutura || orc.Categoria || orc.tipoKit,
-          'Categoria': orc.tipoKit,
-          'Kit Escolhido': orc.kit,
-          'Valor do Orçamento': valorContabil,
-          'Status Atual': orc.status || 'Negociando'
-        };
-      });
+      const dadosExcel = orcamentosFiltrados.map(orc => ({
+        'Data da Simulação': orc.dataVisual,
+        'Consultor Comercial': orc.vendedor,
+        'Nome do Cliente': orc.cliente,
+        'WhatsApp Contato': orc.whatsapp,
+        'Cidade / UF': orc.cidade,
+        'Estrutura do Telhado': orc.estrutura || '--',
+        'Categoria': orc.tipoKit,
+        'Kit Escolhido': orc.kit,
+        'Valor do Orçamento': formatarMoeda(orc.valor),
+        'Status Atual': orc.status || 'Negociando'
+      }));
 
       const folha = XLSX.utils.json_to_sheet(dadosExcel);
       const livro = XLSX.utils.book_new();
@@ -883,7 +863,7 @@ const EmpresaView = ({ setView, userData }) => {
 
   const downloadTemplate = (e) => {
     e.preventDefault();
-    const csvContent = "data:text/csv;charset=utf-8,%EF%BB%BFKit;Placas;Modulo;Inversor;Valor;Tipo\nKIT 500kWh;6;590W;AUXSOL 3K;R$ 10.000,00;String\nKIT MICRO 300kWh;4;620W;TSUNESS;R$ 8.500,00;Micro";
+    const csvContent = "data:text/csv;charset=utf-8,%EF%BB%BFKit;Placas;Modulo;Inversor;Valor;Tipo\nKIT 500kWh;6;590W;AUXSOL 3K;10000.00;String\nKIT MICRO 300kWh;4;620W;TSUNESS;8500.00;Micro";
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
@@ -901,6 +881,15 @@ const EmpresaView = ({ setView, userData }) => {
     } catch (err) {
         console.error("Erro ao alterar status:", err);
         showToast("Erro ao alterar o status do vendedor.", "error");
+    }
+  };
+
+  const handleStatusChange = async (id, newStatus) => {
+    try {
+        await updateDoc(doc(db, "orcamentos", id), { status: newStatus });
+    } catch (error) {
+        console.error("Erro ao atualizar status", error);
+        showToast('Erro ao atualizar status do lead.', 'error');
     }
   };
   
@@ -943,7 +932,16 @@ const EmpresaView = ({ setView, userData }) => {
                 <div className="bg-[#030811] border border-slate-700 rounded-xl p-1 inline-flex shadow-inner">
                   <button onClick={() => setDateFilter('semana')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition ${dateFilter === 'semana' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-white'}`}>Últimos 7 dias</button>
                   <button onClick={() => setDateFilter('mes')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition ${dateFilter === 'mes' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-white'}`}>Este Mês</button>
-                  <button onClick={() => showToast('Abrirá calendário para Mês Específico', 'error')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 text-slate-500 hover:text-white`}><Search className="w-3 h-3"/> Personalizado</button>
+                  {dateFilter === 'personalizado' ? (
+                      <div className="flex items-center gap-2 ml-1 bg-slate-800 px-2 py-1 rounded-lg border border-amber-500/30">
+                         <input type="date" value={customStartDash} onChange={(e) => setCustomStartDash(e.target.value)} className="bg-transparent text-xs text-amber-400 outline-none cursor-pointer [color-scheme:dark]" />
+                         <span className="text-slate-500 text-xs">até</span>
+                         <input type="date" value={customEndDash} onChange={(e) => setCustomEndDash(e.target.value)} className="bg-transparent text-xs text-amber-400 outline-none cursor-pointer [color-scheme:dark]" />
+                         <button onClick={() => setDateFilter('semana')} className="ml-1 text-slate-400 hover:text-red-400 transition" title="Fechar calendário"><X className="w-3 h-3"/></button>
+                      </div>
+                  ) : (
+                      <button onClick={() => setDateFilter('personalizado')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 text-slate-500 hover:text-white`}><Calendar className="w-3 h-3"/> Personalizado</button>
+                  )}
                 </div>
              </div>
              <div className="h-64 w-full flex items-end justify-between gap-2 sm:gap-4 pt-6">
@@ -971,35 +969,46 @@ const EmpresaView = ({ setView, userData }) => {
               </div>
               <div className="flex flex-col w-full lg:w-auto gap-3">
                 <div className="flex flex-col sm:flex-row gap-2">
-                    <div className="relative w-full sm:w-40 group">
-                      <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500"><User className="w-4 h-4" /></span>
-                      <select value={vendedorFilter} onChange={(e) => setVendedorFilter(e.target.value)} className="w-full bg-[#030811] border border-slate-700 rounded-xl py-2 pl-9 pr-8 text-sm text-white focus:border-amber-500 outline-none shadow-inner appearance-none cursor-pointer transition truncate">
-                         <option value="todos">Todos Vendedores</option>
-                         {vendedoresUnicos.map((vend, idx) => (
+                    <div className="relative w-full sm:w-48 group">
+                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500"><User className="w-4 h-4" /></span>
+                    <select value={vendedorFilter} onChange={(e) => setVendedorFilter(e.target.value)} className="w-full bg-[#030811] border border-slate-700 rounded-xl py-2 pl-9 pr-8 text-sm text-white focus:border-amber-500 outline-none shadow-inner appearance-none cursor-pointer transition">
+                        <option value="todos">Todos Vendedores</option>
+                        {vendedoresUnicos.map((vend, idx) => (
                             <option key={idx} value={vend}>{vend}</option>
-                         ))}
-                      </select>
-                      <ChevronDown className="w-4 h-4 absolute right-3 top-2.5 text-slate-500 pointer-events-none" />
+                        ))}
+                    </select>
+                    <ChevronDown className="w-4 h-4 absolute right-3 top-2.5 text-slate-500 pointer-events-none" />
                     </div>
-                    {/* NOVO FILTRO DE STATUS */}
-                    <div className="relative w-full sm:w-40 group">
-                      <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500"><Activity className="w-4 h-4" /></span>
-                      <select value={crmStatusFilter} onChange={(e) => setCrmStatusFilter(e.target.value)} className="w-full bg-[#030811] border border-slate-700 rounded-xl py-2 pl-9 pr-8 text-sm text-white focus:border-amber-500 outline-none shadow-inner appearance-none cursor-pointer transition truncate">
-                         <option value="todos">Todos Status</option>
-                         {statusOptions.map((st, idx) => (
-                            <option key={idx} value={st}>{st}</option>
-                         ))}
-                      </select>
-                      <ChevronDown className="w-4 h-4 absolute right-3 top-2.5 text-slate-500 pointer-events-none" />
+                    <div className="relative w-full sm:w-48 group">
+                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500"><Activity className="w-4 h-4" /></span>
+                    <select value={crmStatusFilter} onChange={(e) => setCrmStatusFilter(e.target.value)} className="w-full bg-[#030811] border border-slate-700 rounded-xl py-2 pl-9 pr-8 text-sm text-white focus:border-amber-500 outline-none shadow-inner appearance-none cursor-pointer transition">
+                        <option value="todos">Todos Status</option>
+                        <option value="Negociando">Negociando</option>
+                        <option value="Fin Aprovado">Fin Aprovado</option>
+                        <option value="Fin Reprovado">Fin Reprovado</option>
+                        <option value="Não Interessou">Não Interessou</option>
+                        <option value="Fechou">Fechou</option>
+                    </select>
+                    <ChevronDown className="w-4 h-4 absolute right-3 top-2.5 text-slate-500 pointer-events-none" />
                     </div>
                 </div>
                 <div className="w-full overflow-x-auto pb-2 sm:pb-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
                   <div className="flex items-center gap-2 w-max">
                     <div className="flex items-center bg-[#030811] border border-slate-700 rounded-xl p-1 shadow-inner shrink-0">
+                      <button onClick={() => setResultadosFilter('hoje')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${resultadosFilter === 'hoje' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-white'}`}>Hoje</button>
                       <button onClick={() => setResultadosFilter('7dias')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${resultadosFilter === '7dias' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-white'}`}>7 Dias</button>
                       <button onClick={() => setResultadosFilter('15dias')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${resultadosFilter === '15dias' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-white'}`}>15 Dias</button>
                       <button onClick={() => setResultadosFilter('30dias')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${resultadosFilter === '30dias' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-white'}`}>30 Dias</button>
-                      <button onClick={() => showToast('Abrirá calendário para Mês Específico', 'error')} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 text-slate-500 hover:text-white whitespace-nowrap`}><Search className="w-3 h-3"/> Personalizado</button>
+                      {resultadosFilter === 'personalizado' ? (
+                          <div className="flex items-center gap-2 ml-1 bg-slate-800 px-2 py-1 rounded-lg border border-amber-500/30">
+                             <input type="date" value={customStartCRM} onChange={(e) => setCustomStartCRM(e.target.value)} className="bg-transparent text-xs text-amber-400 outline-none cursor-pointer [color-scheme:dark]" />
+                             <span className="text-slate-500 text-xs">até</span>
+                             <input type="date" value={customEndCRM} onChange={(e) => setCustomEndCRM(e.target.value)} className="bg-transparent text-xs text-amber-400 outline-none cursor-pointer [color-scheme:dark]" />
+                             <button onClick={() => setResultadosFilter('7dias')} className="ml-1 text-slate-400 hover:text-red-400 transition" title="Fechar calendário"><X className="w-3 h-3"/></button>
+                          </div>
+                      ) : (
+                          <button onClick={() => setResultadosFilter('personalizado')} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 text-slate-500 hover:text-white whitespace-nowrap`}><Calendar className="w-3 h-3"/> Personalizado</button>
+                      )}
                     </div>
                     <button onClick={handleExportExcel} className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 whitespace-nowrap"><Download className="w-3.5 h-3.5"/> Exportar Excel</button>
                   </div>
@@ -1014,49 +1023,55 @@ const EmpresaView = ({ setView, userData }) => {
               ) : (
                 <table className="w-full text-left text-sm text-slate-300 min-w-max">
                   <thead className="text-[10px] uppercase tracking-widest bg-[#030811] text-slate-500 font-bold border-b border-slate-800 sticky top-0 z-10">
-                    <tr><th className="px-4 py-3 rounded-tl-lg">Data / Hora</th><th className="px-4 py-3">Vendedor</th><th className="px-4 py-3">Cliente</th><th className="px-4 py-3">Estrutura</th><th className="px-4 py-3">Kit Solar</th><th className="px-4 py-3">Status do Lead</th><th className="px-4 py-3 rounded-tr-lg text-right">Valor (R$)</th></tr>
+                    <tr><th className="px-4 py-3 rounded-tl-lg">Data / Hora</th><th className="px-4 py-3">Vendedor</th><th className="px-4 py-3">Cliente</th><th className="px-4 py-3">Cidade</th><th className="px-4 py-3">Estrutura</th><th className="px-4 py-3">Inversor</th><th className="px-4 py-3 text-center">Placas</th><th className="px-4 py-3">Tipo</th><th className="px-4 py-3 text-center">Status do Lead</th><th className="px-4 py-3 rounded-tr-lg text-right">Valor (R$)</th></tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/50">
                     {orcamentosFiltrados.length === 0 ? (
-                      <tr><td colSpan="7" className="text-center py-8 text-slate-500 font-bold">Nenhum orçamento encontrado com estes filtros.</td></tr>
+                      <tr><td colSpan="10" className="text-center py-8 text-slate-500 font-bold">Nenhum orçamento encontrado com estes filtros.</td></tr>
                     ) : (
-                      orcamentosFiltrados.map((sim) => {
-                        const currentStatus = sim.status || 'Negociando';
-                        return (
+                      orcamentosFiltrados.map((sim) => (
                         <tr key={sim.id} className="hover:bg-slate-800/40 transition">
                           <td className="px-4 py-3 text-xs text-slate-400 whitespace-nowrap">{sim.dataVisual}</td>
                           <td className="px-4 py-3 font-medium text-white whitespace-nowrap">{sim.vendedor}</td>
                           <td className="px-4 py-3 whitespace-nowrap">
-                             <div className="font-bold text-slate-200">{sim.cliente}</div>
-                             <div className="flex items-center gap-2 mt-1">
-                                <a 
-                                  href={`https://wa.me/${String(sim.whatsapp).replace(/\D/g, '').length >= 10 && !String(sim.whatsapp).replace(/\D/g, '').startsWith('55') ? '55' + String(sim.whatsapp).replace(/\D/g, '') : String(sim.whatsapp).replace(/\D/g, '')}`} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  className="font-mono text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-1 transition-colors cursor-pointer"
+                             <div className="font-bold text-white">{sim.cliente}</div>
+                             {sim.whatsapp ? (
+                                <button 
+                                  onClick={() => window.open(`https://wa.me/${String(sim.whatsapp).replace(/\D/g, '').length >= 10 && !String(sim.whatsapp).replace(/\D/g, '').startsWith('55') ? '55' + String(sim.whatsapp).replace(/\D/g, '') : String(sim.whatsapp).replace(/\D/g, '')}`, '_blank')}
+                                  className="inline-flex items-center gap-1.5 text-[10px] font-bold text-emerald-400 hover:text-emerald-300 transition mt-1 cursor-pointer"
                                 >
-                                  <Smartphone className="w-3 h-3"/>{sim.whatsapp}
-                                </a>
-                                <span className="text-[10px] text-slate-500">{sim.cidade}</span>
-                             </div>
+                                  <MessageSquare className="w-3 h-3" />
+                                  {sim.whatsapp}
+                                </button>
+                              ) : (
+                                <span className="text-[10px] text-slate-600 italic mt-1 block">Sem número</span>
+                              )}
                           </td>
-                          <td className="px-4 py-3 text-xs whitespace-nowrap">{sim.estrutura}</td>
-                          <td className="px-4 py-3 text-xs whitespace-nowrap">
-                             <div className="font-semibold text-white">{sim.kit}</div>
-                             <div className="text-[10px] text-slate-500 mt-1 flex gap-2"><span>{sim.inversor || '--'}</span><span>{sim.placas ? `${sim.placas} Placas` : '--'}</span></div>
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap">
+                          <td className="px-4 py-3 text-xs whitespace-nowrap">{sim.cidade}</td>
+                          <td className="px-4 py-3 text-xs whitespace-nowrap">{sim.estrutura || '--'}</td>
+                          <td className="px-4 py-3 text-xs text-amber-500 whitespace-nowrap">{sim.inversor || '--'}</td>
+                          <td className="px-4 py-3 text-sm font-bold text-white text-center whitespace-nowrap">{sim.placas || '--'}</td>
+                          <td className="px-4 py-3 whitespace-nowrap"><span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${sim.tipoKit === 'String' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'}`}>{sim.tipoKit}</span></td>
+                          <td className="px-4 py-3 text-center whitespace-nowrap">
                               <select 
-                                value={currentStatus}
-                                onChange={(e) => handleStatusChange(sim.id, e.target.value)}
-                                className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md outline-none cursor-pointer appearance-none ${statusColors[currentStatus] || statusColors['Negociando']}`}
+                                 value={sim.status || 'Negociando'} 
+                                 onChange={(e) => handleStatusChange(sim.id, e.target.value)}
+                                 className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded outline-none cursor-pointer transition-colors
+                                    ${sim.status === 'Fechou' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 
+                                      sim.status === 'Não Interessou' || sim.status === 'Fin Reprovado' ? 'bg-red-500/10 text-red-400 border border-red-500/20' :
+                                      sim.status === 'Fin Aprovado' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
+                                      'bg-amber-500/10 text-amber-400 border border-amber-500/20'}`}
                               >
-                                 {statusOptions.map(opt => <option key={opt} value={opt} className="bg-slate-800 text-white">{opt}</option>)}
+                                 <option value="Negociando">Negociando</option>
+                                 <option value="Fin Aprovado">Fin Aprovado</option>
+                                 <option value="Fin Reprovado">Fin Reprovado</option>
+                                 <option value="Não Interessou">Não Interessou</option>
+                                 <option value="Fechou">Fechou</option>
                               </select>
                           </td>
-                          <td className="px-4 py-3 text-right font-bold text-amber-500 whitespace-nowrap">{sim.valor}</td>
+                          <td className="px-4 py-3 text-right font-bold text-amber-500 whitespace-nowrap">{formatarMoeda(sim.valor)}</td>
                         </tr>
-                      )})
+                      ))
                     )}
                   </tbody>
                 </table>
@@ -1106,14 +1121,10 @@ const EmpresaView = ({ setView, userData }) => {
                         <td className="px-6 py-4">
                           {vend.whatsapp ? (
                             <button 
-                              onClick={() => {
-                                const cleanPhone = String(vend.whatsapp).replace(/\D/g, '');
-                                const phoneWithCountryCode = cleanPhone.length >= 10 && !cleanPhone.startsWith('55') ? '55' + cleanPhone : cleanPhone;
-                                window.open(`https://wa.me/${phoneWithCountryCode}`, '_blank');
-                              }}
+                              onClick={() => window.open(`https://wa.me/${String(vend.whatsapp).replace(/\D/g, '').length >= 10 && !String(vend.whatsapp).replace(/\D/g, '').startsWith('55') ? '55' + String(vend.whatsapp).replace(/\D/g, '') : String(vend.whatsapp).replace(/\D/g, '')}`, '_blank')}
                               className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400 hover:text-emerald-300 transition bg-emerald-400/10 hover:bg-emerald-400/20 px-3 py-1.5 rounded-lg border border-emerald-400/20 cursor-pointer"
                             >
-                              <MessageCircle className="w-4 h-4" />
+                              <MessageSquare className="w-4 h-4" />
                               {vend.whatsapp}
                             </button>
                           ) : (
@@ -1303,43 +1314,36 @@ const EmpresaView = ({ setView, userData }) => {
 };
 
 // ==========================================
-// 7. VISÃO VENDEDOR (Agora com CRM)
+// 7. VISÃO VENDEDOR (Formulário e Histórico Pessoal)
 // ==========================================
 const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
-  const [viewMode, setViewMode] = useState('simulador'); // 'simulador' ou 'historico'
+  const [viewMode, setViewMode] = useState('simulador'); // 'simulador' | 'historico'
+  
   const [formData, setFormData] = useState({ sellerName: userData?.nome || '', kitString: '', kitMicro: '', roofStructure: '', clientName: '', clientWhatsapp: '', clientCity: '' });
+  
   const [timeFilter, setTimeFilter] = useState('hoje');
+  const [customStartVend, setCustomStartVend] = useState('');
+  const [customEndVend, setCustomEndVend] = useState('');
+
   const [toast, setToast] = useState(null);
   
-  // Estados para o Histórico do Vendedor
-  const [meusOrcamentos, setMeusOrcamentos] = useState([]);
-  const [loadingHistory, setLoadingHistory] = useState(true);
-  const [vendedorStatusFilter, setVendedorStatusFilter] = useState('todos');
-  const [nomeEmpresa, setNomeEmpresa] = useState('Energia Solar');
+  const [orcamentos, setOrcamentos] = useState([]);
+  const [loadingCRM, setLoadingCRM] = useState(true);
+  const [crmStatusFilter, setCrmStatusFilter] = useState('todos'); 
 
   const showToast = (message, type = 'error') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
   };
 
-  // Buscar Nome da Empresa e Orçamentos do Vendedor
   useEffect(() => {
     if (!userData || !userData.uid) return;
-
-    // Buscar o nome real da empresa
-    if (userData.empresaId && userData.empresaId !== 'padrao') {
-        getDoc(doc(db, 'usuarios', userData.empresaId)).then(docSnap => {
-            if (docSnap.exists()) setNomeEmpresa(docSnap.data().nome || 'Energia Solar');
-        });
-    }
-
-    // Buscar os orçamentos (apenas os deste vendedor)
     const q = query(collection(db, "orcamentos"), orderBy("timestamp", "desc"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const docs = [];
-      querySnapshot.forEach((document) => {
-        const data = document.data();
-        if (data.vendedorUid === userData.uid) { // Filtro de segurança local
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        if (data.vendedorUid === userData.uid || data.vendedor === userData.nome) {
             let dataFormatada = 'Sem Data';
             let msTimestamp = 0;
             if (data.timestamp) {
@@ -1348,33 +1352,23 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
                dataFormatada = date.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
             } else if (data.data) {
                dataFormatada = data.data;
+               const [dataPart, timePart] = data.data.split(' ');
+               if(dataPart && timePart) {
+                   const [day, month, year] = dataPart.split('/');
+                   const [hour, min] = timePart.split(':');
+                   msTimestamp = new Date(year, month - 1, day, hour, min).getTime();
+               }
             }
-            docs.push({ id: document.id, ...data, dataVisual: dataFormatada, msTimestamp });
+            docs.push({ id: doc.id, ...data, dataVisual: dataFormatada, msTimestamp });
         }
       });
-      setMeusOrcamentos(docs);
-      setLoadingHistory(false);
+      setOrcamentos(docs);
+      setLoadingCRM(false);
     }, (error) => {
-      setLoadingHistory(false);
+      setLoadingCRM(false);
     });
     return () => unsubscribe();
   }, [userData]);
-
-  const orcamentosFiltrados = meusOrcamentos.filter(orc => {
-      const currentStatus = orc.status || 'Negociando';
-      if (vendedorStatusFilter !== 'todos' && currentStatus !== vendedorStatusFilter) return false;
-      return true;
-  });
-
-  const handleStatusChange = async (id, newStatus) => {
-    try {
-        await updateDoc(doc(db, "orcamentos", id), { status: newStatus });
-        showToast('Status atualizado!', 'success');
-    } catch (err) {
-        console.error(err);
-        showToast('Erro ao atualizar status.', 'error');
-    }
-  };
 
   const handleInputChange = (e) => {
     const { id, value } = e.target;
@@ -1386,6 +1380,18 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
 
   const activeKit = formData.kitString !== '' ? kitsString[formData.kitString] : formData.kitMicro !== '' ? kitsMicro[formData.kitMicro] : null;
 
+  const [nomeEmpresa, setNomeEmpresa] = useState("Energia Solar ☀️");
+  
+  useEffect(() => {
+     if(userData && userData.empresaId && userData.empresaId !== 'padrao') {
+         getDoc(doc(db, 'usuarios', userData.empresaId)).then(docSnap => {
+             if(docSnap.exists()) {
+                 setNomeEmpresa(docSnap.data().nome + " ☀️");
+             }
+         }).catch(err => console.log("Erro ao buscar nome empresa:", err));
+     }
+  }, [userData]);
+
   const buildMessage = () => {
     const clientName = formData.clientName.trim() || '[Nome do Cliente]';
     const clientCity = formData.clientCity.trim() || '[Cidade]';
@@ -1395,12 +1401,11 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
     let kitName = '[Kit Selecionado]', placas = '--', modulo = '--', inversor = '--', valor = '--';
 
     if (activeKit) {
-        kitName = activeKit.Kit; placas = activeKit.Placas; modulo = activeKit.Modulo; inversor = activeKit.Inversor; 
-        valor = `R$ ${formatarMoeda(activeKit.Valor)}`; 
+        kitName = activeKit.Kit; placas = activeKit.Placas; modulo = activeKit.Modulo; inversor = activeKit.Inversor; valor = formatarMoeda(activeKit.Valor);
     }
     const cleanPotencia = modulo.replace(/Módulo\s*/gi, '').trim();
 
-    return `Empresa: *${nomeEmpresa}* ☀️\n\nSegue o seu orçamento personalizado de Energia Solar\n\n👤 *Cliente:* ${clientName}\n📍 *Cidade:* ${clientCity}\n📱 *Zap:* ${clientWhatsapp}\n\n🏠 *Estrutura do Telhado:* ${roofStructure}\n📦 *Kit Selecionado:* ${kitName}\n☀️ *Placas:* ${placas}\n⚡ *Potência:* ${cleanPotencia}\n🔄 *Inversor:* ${inversor}\n\n💰 *Valor do Kit:* ${valor}\n\n✨ *Condições Especiais:*\n\n💳 Financiamos 100% com Zero de Entrada\n\n📅 Primeira parcela com prazo de até 120 dias para começar a pagar\n\n💼 Atendido por: *${sellerName}*\n\nFicamos à disposição para esclarecer dúvidas e realizar o seu projeto.`;
+    return `Empresa: *${nomeEmpresa}*\n\nSegue o seu orçamento personalizado de Energia Solar\n\n👤 *Cliente:* ${clientName}\n📍 *Cidade:* ${clientCity}\n📱 *Zap:* ${clientWhatsapp}\n\n🏠 *Estrutura do Telhado:* ${roofStructure}\n📦 *Kit Selecionado:* ${kitName}\n☀️ *Placas:* ${placas}\n⚡ *Potência:* ${cleanPotencia}\n🔄 *Inversor:* ${inversor}\n\n💰 *Valor do Kit:* ${valor}\n\n✨ *Condições Especiais:*\n\n💳 Financiamos 100% com Zero de Entrada\n\n📅 Primeira parcela com prazo de até 120 dias para começar a pagar\n\n💼 Atendido por: *${sellerName}*\n\nFicamos à disposição para esclarecer dúvidas e realizar o seu projeto.`;
   };
 
   const handleSubmit = async (e) => {
@@ -1422,12 +1427,12 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
         whatsapp: formData.clientWhatsapp, 
         cidade: formData.clientCity,
         estrutura: formData.roofStructure, 
+        inversor: activeKit.Inversor,
+        placas: activeKit.Placas,
         tipoKit: formData.kitString !== '' ? 'String' : 'Micro', 
         kit: activeKit.Kit, 
-        valor: `R$ ${formatarMoeda(activeKit.Valor)}`, 
-        placas: activeKit.Placas,
-        inversor: activeKit.Inversor,
-        status: 'Negociando', // NOVO ORÇAMENTO NASCE EM NEGOCIAÇÃO
+        valor: activeKit.Valor, 
+        status: 'Negociando', // Status inicial
         timestamp: serverTimestamp(),
         empresaId: userData?.empresaId || 'padrao', 
         vendedorUid: userData?.uid || 'padrao'
@@ -1435,16 +1440,54 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
       const textMessage = buildMessage();
       const encodedText = encodeURIComponent(textMessage);
       const waUrl = `https://wa.me/${cleanPhone}?text=${encodedText}`;
-      window.location.href = waUrl; 
+      window.location.href = waUrl;
     } catch (error) { showToast('Erro ao gravar na nuvem.'); }
   };
+
+  const handleStatusChange = async (id, newStatus) => {
+    try {
+        await updateDoc(doc(db, "orcamentos", id), { status: newStatus });
+        showToast('Status atualizado!', 'success');
+    } catch (error) {
+        console.error("Erro ao atualizar status", error);
+        showToast('Erro ao atualizar status do lead.', 'error');
+    }
+  };
+
+  const orcamentosVendedorFiltrados = orcamentos.filter(orc => {
+    if (crmStatusFilter !== 'todos' && (orc.status || 'Negociando') !== crmStatusFilter) return false;
+    
+    const hojeIncio = new Date();
+    hojeIncio.setHours(0, 0, 0, 0);
+    const hojeMs = hojeIncio.getTime();
+    const umDiaMs = 24 * 60 * 60 * 1000;
+    
+    if (timeFilter === 'hoje') {
+        if (!orc.msTimestamp || orc.msTimestamp < hojeMs) return false;
+    } else if (timeFilter === 'semana') {
+        if (!orc.msTimestamp || orc.msTimestamp < (hojeMs - 7 * umDiaMs)) return false;
+    } else if (timeFilter === 'quinzena') {
+        if (!orc.msTimestamp || orc.msTimestamp < (hojeMs - 15 * umDiaMs)) return false;
+    } else if (timeFilter === 'mes') {
+        if (!orc.msTimestamp || orc.msTimestamp < (hojeMs - 30 * umDiaMs)) return false;
+    } else if (timeFilter === 'personalizado') {
+        if (customStartVend) {
+            const start = new Date(customStartVend + 'T00:00:00').getTime();
+            if (!orc.msTimestamp || orc.msTimestamp < start) return false;
+        }
+        if (customEndVend) {
+            const end = new Date(customEndVend + 'T23:59:59').getTime();
+            if (!orc.msTimestamp || orc.msTimestamp > end) return false;
+        }
+    }
+    return true;
+  });
 
   return (
     <div className="min-h-screen bg-[#030811] text-slate-100 font-sans selection:bg-amber-500 overflow-x-hidden relative">
       {toast && (
         <div className={`fixed top-24 right-5 z-[100] flex items-center space-x-3 px-5 py-4 rounded-xl shadow-2xl transition-all duration-300 ${toast.type === 'error' ? 'bg-red-500' : 'bg-emerald-500'} text-white border border-white/10`}>
-          {toast.type === 'error' ? <AlertCircle className="w-5 h-5 flex-shrink-0" /> : <CheckCircle className="w-5 h-5 flex-shrink-0" />}
-          <span className="text-sm font-medium leading-snug">{toast.message}</span>
+          <AlertCircle className="w-5 h-5 flex-shrink-0" /> <span className="text-sm font-medium leading-snug">{toast.message}</span>
         </div>
       )}
       <header className="sticky top-0 z-50 backdrop-blur-md bg-[#0B192C]/80 border-b border-white/10 shadow-lg">
@@ -1452,57 +1495,34 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
             <div className="flex items-center space-x-3 truncate pr-2">
                 <div className="bg-gradient-to-tr from-amber-500 to-amber-300 p-2.5 rounded-xl shadow-lg shadow-amber-500/20 shrink-0"><Sun className="w-6 h-6 text-[#0B192C]" /></div>
                 <div className="truncate">
-                    <span className="text-lg sm:text-xl font-extrabold tracking-tight text-white block truncate">LD <span className="text-amber-400">SIMULADOR</span></span>
-                    <span className="text-[9px] uppercase tracking-widest text-slate-400 block -mt-1 font-semibold truncate">{nomeEmpresa}</span>
+                    <span className="text-lg sm:text-xl font-extrabold tracking-tight text-white block truncate">LD <span className="text-amber-400">SIMULADOR SOLAR</span></span>
+                    <span className="text-[9px] uppercase tracking-widest text-slate-400 block -mt-1 font-semibold truncate">Tecnologia Sustentável</span>
                 </div>
             </div>
-            <nav className="flex items-center space-x-4 sm:space-x-8 text-sm font-medium text-slate-300 shrink-0">
-                {viewMode === 'simulador' ? (
-                  <button onClick={() => setViewMode('historico')} className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white px-4 py-2 rounded-xl transition flex items-center gap-2 font-bold shadow-sm">
-                     <List className="w-4 h-4"/> <span className="hidden sm:block">Meus Orçamentos</span>
-                  </button>
-                ) : (
-                  <button onClick={() => setViewMode('simulador')} className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white px-4 py-2 rounded-xl transition flex items-center gap-2 font-bold shadow-sm">
-                     <ArrowLeft className="w-4 h-4"/> <span className="hidden sm:block">Voltar ao Simulador</span>
-                  </button>
-                )}
-                <button onClick={() => setView('login')} className="hover:text-red-400 transition flex items-center gap-2"><LogOut className="w-5 h-5"/></button>
+            <nav className="flex items-center space-x-4 shrink-0">
+                <div className="hidden sm:flex bg-[#030811] p-1 rounded-xl border border-slate-700/50">
+                    <button onClick={() => setViewMode('simulador')} className={`px-4 py-1.5 text-xs font-bold rounded-lg transition ${viewMode === 'simulador' ? 'bg-amber-500 text-slate-900' : 'text-slate-400 hover:text-white'}`}>Simulador</button>
+                    <button onClick={() => setViewMode('historico')} className={`px-4 py-1.5 text-xs font-bold rounded-lg transition ${viewMode === 'historico' ? 'bg-amber-500 text-slate-900' : 'text-slate-400 hover:text-white'}`}>Meus Orçamentos</button>
+                </div>
+                <button onClick={() => setView('login')} className="text-slate-400 hover:text-red-400 transition p-2 bg-slate-800/50 rounded-lg border border-slate-700/50"><LogOut className="w-5 h-5"/></button>
             </nav>
         </div>
       </header>
 
-      <section className="py-8 sm:py-20 bg-[#0B192C] border-t border-b border-slate-800 relative min-h-[80vh] flex items-center flex-col w-full" style={{ backgroundImage: 'radial-gradient(at 0% 0%, hsla(210,100%,12%,1) 0px, transparent 50%), radial-gradient(at 100% 100%, hsla(38,100%,50%,0.08) 0px, transparent 50%)' }}>
+      {/* Tabs para Mobile */}
+      <div className="sm:hidden flex bg-[#0B192C] border-b border-slate-800 p-2">
+         <div className="w-full flex bg-[#030811] p-1 rounded-xl border border-slate-700/50">
+            <button onClick={() => setViewMode('simulador')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition ${viewMode === 'simulador' ? 'bg-amber-500 text-slate-900' : 'text-slate-400 hover:text-white'}`}>Simulador</button>
+            <button onClick={() => setViewMode('historico')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition ${viewMode === 'historico' ? 'bg-amber-500 text-slate-900' : 'text-slate-400 hover:text-white'}`}>Meus Orçamentos</button>
+         </div>
+      </div>
+
+      <section className="py-8 sm:py-12 bg-[#0B192C] relative min-h-[80vh] flex items-center flex-col w-full" style={{ backgroundImage: 'radial-gradient(at 0% 0%, hsla(210,100%,12%,1) 0px, transparent 50%), radial-gradient(at 100% 100%, hsla(38,100%,50%,0.08) 0px, transparent 50%)' }}>
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(245,166,35,0.04),transparent_50%)] pointer-events-none"></div>
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full">
             
             {viewMode === 'simulador' ? (
-              <>
-                <div className="bg-[#030811] rounded-3xl border border-slate-700/60 shadow-xl mb-12 p-4 sm:p-5 w-full">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-5 gap-3 border-b border-slate-800/80 pb-4 w-full overflow-hidden">
-                    <h2 className="text-xs font-extrabold text-slate-300 uppercase tracking-widest flex items-center gap-2 shrink-0"><Activity className="w-4 h-4 text-amber-500"/> O Meu Desempenho</h2>
-                    <div className="w-full overflow-x-auto pb-2 sm:pb-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
-                      <div className="bg-[#0B192C] rounded-xl p-1 flex text-xs font-bold border border-slate-700 shadow-inner w-max">
-                        <button onClick={() => setTimeFilter('hoje')} className={`px-4 py-1.5 rounded-lg transition ${timeFilter === 'hoje' ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'}`}>Hoje</button>
-                        <button onClick={() => setTimeFilter('semana')} className={`px-4 py-1.5 rounded-lg transition ${timeFilter === 'semana' ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'}`}>Semana</button>
-                        <button onClick={() => setTimeFilter('quinzena')} className={`px-4 py-1.5 rounded-lg transition ${timeFilter === 'quinzena' ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'}`}>Quinzena</button>
-                        <button onClick={() => setTimeFilter('mes')} className={`px-4 py-1.5 rounded-lg transition ${timeFilter === 'mes' ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'}`}>Mês</button>
-                        <button onClick={() => showToast('Abrirá calendário para Mês Específico', 'error')} className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1 text-slate-400 hover:text-white whitespace-nowrap`}><Search className="w-3 h-3"/> Personalizado</button>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
-                     <div className="bg-[#0B192C] p-4 rounded-2xl border border-slate-800/50 shadow-sm text-center sm:text-left"><p className="text-[10px] text-slate-500 uppercase font-extrabold tracking-wider mb-1">Propostas</p><p className="text-2xl font-extrabold text-white">{timeFilter === 'hoje' ? '8' : timeFilter === 'semana' ? '34' : '142'}</p></div>
-                     <div className="bg-[#0B192C] p-4 rounded-2xl border border-slate-800/50 shadow-sm text-center sm:text-left"><p className="text-[10px] text-slate-500 uppercase font-extrabold tracking-wider mb-1">Kits String</p><p className="text-2xl font-extrabold text-blue-400">{timeFilter === 'hoje' ? '5' : timeFilter === 'semana' ? '20' : '90'}</p></div>
-                     <div className="bg-[#0B192C] p-4 rounded-2xl border border-slate-800/50 shadow-sm text-center sm:text-left"><p className="text-[10px] text-slate-500 uppercase font-extrabold tracking-wider mb-1">Kits Micro</p><p className="text-2xl font-extrabold text-emerald-400">{timeFilter === 'hoje' ? '3' : timeFilter === 'semana' ? '14' : '52'}</p></div>
-                     <div className="bg-[#0B192C] p-4 rounded-2xl border border-slate-800/50 shadow-sm flex flex-col justify-center items-center sm:items-start"><p className="text-[10px] text-slate-500 uppercase font-extrabold tracking-wider mb-1">Status Meta</p><span className="text-xs font-bold text-emerald-400 bg-emerald-400/10 px-2.5 py-1 rounded-md flex items-center gap-1 border border-emerald-400/20 mt-1"><CheckCircle className="w-3 h-3"/> No Ritmo</span></div>
-                  </div>
-                </div>
-
-                <div className="text-center max-w-2xl mx-auto mb-8">
-                    <span className="inline-block py-1 px-3 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-sm font-bold tracking-widest uppercase mb-4">NOVO ORÇAMENTO</span>
-                    <p className="text-slate-300 mt-2 text-sm sm:text-base">Insira os dados do cliente, escolha o kit desejado e envie a proposta de forma imediata.</p>
-                </div>
-
+              <div className="max-w-4xl mx-auto">
                 <div className="bg-[#030811] rounded-3xl border border-slate-700/60 shadow-[0_0_25px_rgba(245,166,35,0.1)] overflow-hidden w-full">
                     <form onSubmit={handleSubmit} className="p-5 sm:p-10 space-y-8 sm:space-y-10">
                         <div className="space-y-4 sm:space-y-5">
@@ -1529,7 +1549,7 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
                                     <label className="block text-xs font-semibold text-slate-300 mb-2">1: Kits String *</label>
                                     <select id="kitString" value={formData.kitString} onChange={handleInputChange} className="w-full bg-[#0B192C] border border-slate-700 focus:border-amber-500 rounded-xl py-3.5 pl-11 pr-8 text-sm text-white transition outline-none appearance-none shadow-inner cursor-pointer truncate">
                                       <option value="" disabled>-- Selecione Kit String --</option>
-                                      {kitsString.length === 0 ? <option disabled>Sem kits. Faça Upload no CRM.</option> : kitsString.map((k, i) => <option key={i} value={i}>{k.Kit} - R$ {formatarMoeda(k.Valor)}</option>)}
+                                      {kitsString.length === 0 ? <option disabled>Sem kits. Faça Upload no CRM.</option> : kitsString.map((k, i) => <option key={i} value={i}>{k.Kit} - {formatarMoeda(k.Valor)}</option>)}
                                     </select>
                                     <span className="absolute inset-y-0 right-0 flex items-center pr-3 mt-6 pointer-events-none text-slate-400"><ChevronDown className="w-4 h-4"/></span>
                                 </div>
@@ -1538,7 +1558,7 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
                                     <label className="block text-xs font-semibold text-slate-300 mb-2">2: Kits Micro *</label>
                                     <select id="kitMicro" value={formData.kitMicro} onChange={handleInputChange} className="w-full bg-[#0B192C] border border-slate-700 focus:border-amber-500 rounded-xl py-3.5 pl-11 pr-8 text-sm text-white transition outline-none appearance-none shadow-inner cursor-pointer truncate">
                                       <option value="" disabled>-- Selecione Kit Micro --</option>
-                                      {kitsMicro.length === 0 ? <option disabled>Sem kits. Faça Upload no CRM.</option> : kitsMicro.map((k, i) => <option key={i} value={i}>{k.Kit} - R$ {formatarMoeda(k.Valor)}</option>)}
+                                      {kitsMicro.length === 0 ? <option disabled>Sem kits. Faça Upload no CRM.</option> : kitsMicro.map((k, i) => <option key={i} value={i}>{k.Kit} - {formatarMoeda(k.Valor)}</option>)}
                                     </select>
                                     <span className="absolute inset-y-0 right-0 flex items-center pr-3 mt-6 pointer-events-none text-slate-400"><ChevronDown className="w-4 h-4"/></span>
                                 </div>
@@ -1556,7 +1576,7 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
                                 <div className="space-y-1.5 relative z-10"><span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block flex items-center gap-1.5">Qtd. Placas</span><span className="text-base sm:text-lg font-extrabold text-white block truncate">{activeKit ? activeKit.Placas : '--'}</span></div>
                                 <div className="space-y-1.5 relative z-10"><span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block flex items-center gap-1.5">Inversor</span><span className="text-base sm:text-lg font-extrabold text-white block truncate">{activeKit ? activeKit.Inversor : '--'}</span></div>
                                 <div className="space-y-1.5 relative z-10"><span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block flex items-center gap-1.5">Estrutura</span><span className="text-base sm:text-lg font-extrabold text-white block truncate">{formData.roofStructure || '--'}</span></div>
-                                <div className="space-y-1.5 relative z-10"><span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block flex items-center gap-1.5"><span className="text-emerald-600">Valor do Kit</span></span><span className="text-base sm:text-lg font-extrabold text-emerald-400 block truncate">{activeKit ? `R$ ${formatarMoeda(activeKit.Valor)}` : '--'}</span></div>
+                                <div className="space-y-1.5 relative z-10"><span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block flex items-center gap-1.5"><span className="text-emerald-600">Valor do Kit</span></span><span className="text-base sm:text-lg font-extrabold text-emerald-400 block truncate">{activeKit ? formatarMoeda(activeKit.Valor) : '--'}</span></div>
                             </div>
                         </div>
 
@@ -1605,69 +1625,106 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
                         </div>
                     </form>
                 </div>
-              </>
+              </div>
             ) : (
-              <div className="bg-[#0B192C] border border-slate-800 rounded-3xl overflow-hidden shadow-xl flex flex-col w-full h-[70vh]">
-                 <div className="p-4 sm:p-6 border-b border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-[#0B192C]/80 w-full">
+              <div className="bg-[#0B192C] border border-slate-800 rounded-2xl overflow-hidden shadow-xl flex flex-col h-full w-full">
+                 <div className="p-4 sm:p-6 border-b border-slate-800 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-[#0B192C]/80 w-full">
                    <div>
                      <h3 className="text-xl font-bold text-white flex items-center gap-2"><List className="w-6 h-6 text-amber-500"/> Meus Orçamentos (CRM)</h3>
-                     <p className="text-sm text-slate-400 mt-1">Gira o status das propostas que você enviou aos clientes.</p>
+                     <p className="text-sm text-slate-400 mt-1">Faça a gestão e acompanhamento das suas vendas.</p>
                    </div>
-                   <div className="relative w-full sm:w-48 group">
-                      <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500"><Activity className="w-4 h-4" /></span>
-                      <select value={vendedorStatusFilter} onChange={(e) => setVendedorStatusFilter(e.target.value)} className="w-full bg-[#030811] border border-slate-700 rounded-xl py-2 pl-9 pr-8 text-sm text-white focus:border-amber-500 outline-none shadow-inner appearance-none cursor-pointer transition">
-                         <option value="todos">Todos Status</option>
-                         {statusOptions.map((st, idx) => (
-                            <option key={idx} value={st}>{st}</option>
-                         ))}
-                      </select>
-                      <ChevronDown className="w-4 h-4 absolute right-3 top-2.5 text-slate-500 pointer-events-none" />
+                   <div className="flex flex-col w-full lg:w-auto gap-3">
+                     <div className="flex flex-col sm:flex-row gap-2">
+                         <div className="relative w-full sm:w-48 group">
+                         <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500"><Activity className="w-4 h-4" /></span>
+                         <select value={crmStatusFilter} onChange={(e) => setCrmStatusFilter(e.target.value)} className="w-full bg-[#030811] border border-slate-700 rounded-xl py-2 pl-9 pr-8 text-sm text-white focus:border-amber-500 outline-none shadow-inner appearance-none cursor-pointer transition">
+                             <option value="todos">Todos Status</option>
+                             <option value="Negociando">Negociando</option>
+                             <option value="Fin Aprovado">Fin Aprovado</option>
+                             <option value="Fin Reprovado">Fin Reprovado</option>
+                             <option value="Não Interessou">Não Interessou</option>
+                             <option value="Fechou">Fechou</option>
+                         </select>
+                         <ChevronDown className="w-4 h-4 absolute right-3 top-2.5 text-slate-500 pointer-events-none" />
+                         </div>
+                     </div>
+                     <div className="w-full overflow-x-auto pb-2 sm:pb-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+                       <div className="flex items-center gap-2 w-max">
+                         <div className="flex items-center bg-[#030811] border border-slate-700 rounded-xl p-1 shadow-inner shrink-0">
+                           <button onClick={() => setTimeFilter('hoje')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${timeFilter === 'hoje' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-white'}`}>Hoje</button>
+                           <button onClick={() => setTimeFilter('semana')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${timeFilter === 'semana' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-white'}`}>Semana</button>
+                           <button onClick={() => setTimeFilter('quinzena')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${timeFilter === 'quinzena' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-white'}`}>Quinzena</button>
+                           <button onClick={() => setTimeFilter('mes')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${timeFilter === 'mes' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-white'}`}>Mês</button>
+                           {timeFilter === 'personalizado' ? (
+                               <div className="flex items-center gap-2 ml-1 bg-slate-800 px-2 py-1 rounded-lg border border-amber-500/30">
+                                  <input type="date" value={customStartVend} onChange={(e) => setCustomStartVend(e.target.value)} className="bg-transparent text-xs text-amber-400 outline-none cursor-pointer [color-scheme:dark]" />
+                                  <span className="text-slate-500 text-xs">até</span>
+                                  <input type="date" value={customEndVend} onChange={(e) => setCustomEndVend(e.target.value)} className="bg-transparent text-xs text-amber-400 outline-none cursor-pointer [color-scheme:dark]" />
+                                  <button onClick={() => setTimeFilter('semana')} className="ml-1 text-slate-400 hover:text-red-400 transition" title="Fechar calendário"><X className="w-3 h-3"/></button>
+                               </div>
+                           ) : (
+                               <button onClick={() => setTimeFilter('personalizado')} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 text-slate-500 hover:text-white whitespace-nowrap`}><Calendar className="w-3 h-3"/> Personalizado</button>
+                           )}
+                         </div>
+                       </div>
+                     </div>
                    </div>
                  </div>
-                 <div className="flex-1 overflow-x-auto p-4">
-                   {loadingHistory ? (
+                 <div className="flex-1 overflow-x-auto p-4 max-h-[60vh]">
+                   {loadingCRM ? (
                       <div className="flex justify-center items-center h-32">
                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500"></div>
                       </div>
                    ) : (
                      <table className="w-full text-left text-sm text-slate-300 min-w-max">
                        <thead className="text-[10px] uppercase tracking-widest bg-[#030811] text-slate-500 font-bold border-b border-slate-800 sticky top-0 z-10">
-                         <tr><th className="px-4 py-3 rounded-tl-lg">Data</th><th className="px-4 py-3">Cliente</th><th className="px-4 py-3">WhatsApp</th><th className="px-4 py-3">Kit Oferecido</th><th className="px-4 py-3">Status Atual</th><th className="px-4 py-3 rounded-tr-lg text-right">Valor (R$)</th></tr>
+                         <tr><th className="px-4 py-3 rounded-tl-lg">Data / Hora</th><th className="px-4 py-3">Cliente</th><th className="px-4 py-3">Cidade</th><th className="px-4 py-3">Estrutura</th><th className="px-4 py-3">Inversor</th><th className="px-4 py-3 text-center">Placas</th><th className="px-4 py-3 text-center">Status do Lead</th><th className="px-4 py-3 rounded-tr-lg text-right">Valor (R$)</th></tr>
                        </thead>
                        <tbody className="divide-y divide-slate-800/50">
-                         {orcamentosFiltrados.length === 0 ? (
-                           <tr><td colSpan="6" className="text-center py-8 text-slate-500 font-bold">Nenhum orçamento encontrado no seu histórico.</td></tr>
+                         {orcamentosVendedorFiltrados.length === 0 ? (
+                           <tr><td colSpan="8" className="text-center py-8 text-slate-500 font-bold">Nenhum orçamento encontrado com estes filtros.</td></tr>
                          ) : (
-                           orcamentosFiltrados.map((sim) => {
-                             const currentStatus = sim.status || 'Negociando';
-                             return (
+                           orcamentosVendedorFiltrados.map((sim) => (
                              <tr key={sim.id} className="hover:bg-slate-800/40 transition">
                                <td className="px-4 py-3 text-xs text-slate-400 whitespace-nowrap">{sim.dataVisual}</td>
-                               <td className="px-4 py-3 font-bold text-slate-200 whitespace-nowrap"><div className="truncate max-w-[150px]">{sim.cliente}</div></td>
-                               <td className="px-4 py-3 font-mono text-xs whitespace-nowrap">
-                                  <a 
-                                    href={`https://wa.me/${String(sim.whatsapp).replace(/\D/g, '').length >= 10 && !String(sim.whatsapp).replace(/\D/g, '').startsWith('55') ? '55' + String(sim.whatsapp).replace(/\D/g, '') : String(sim.whatsapp).replace(/\D/g, '')}`} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    className="text-emerald-400 hover:text-emerald-300 flex items-center gap-1 bg-emerald-400/10 px-2 py-0.5 rounded border border-emerald-400/20 transition-colors w-max cursor-pointer"
-                                  >
-                                    <Smartphone className="w-3 h-3"/>
-                                    {sim.whatsapp}
-                                  </a>
-                               </td>
-                               <td className="px-4 py-3 text-xs whitespace-nowrap"><div className="truncate max-w-[150px]">{sim.kit}</div></td>
                                <td className="px-4 py-3 whitespace-nowrap">
+                                  <div className="font-bold text-white">{sim.cliente}</div>
+                                  {sim.whatsapp ? (
+                                     <button 
+                                       onClick={() => window.open(`https://wa.me/${String(sim.whatsapp).replace(/\D/g, '').length >= 10 && !String(sim.whatsapp).replace(/\D/g, '').startsWith('55') ? '55' + String(sim.whatsapp).replace(/\D/g, '') : String(sim.whatsapp).replace(/\D/g, '')}`, '_blank')}
+                                       className="inline-flex items-center gap-1.5 text-[10px] font-bold text-emerald-400 hover:text-emerald-300 transition mt-1 cursor-pointer"
+                                     >
+                                       <MessageSquare className="w-3 h-3" />
+                                       {sim.whatsapp}
+                                     </button>
+                                   ) : (
+                                     <span className="text-[10px] text-slate-600 italic mt-1 block">Sem número</span>
+                                   )}
+                               </td>
+                               <td className="px-4 py-3 text-xs whitespace-nowrap">{sim.cidade}</td>
+                               <td className="px-4 py-3 text-xs whitespace-nowrap">{sim.estrutura || '--'}</td>
+                               <td className="px-4 py-3 text-xs text-amber-500 whitespace-nowrap">{sim.inversor || '--'}</td>
+                               <td className="px-4 py-3 text-sm font-bold text-white text-center whitespace-nowrap">{sim.placas || '--'}</td>
+                               <td className="px-4 py-3 text-center whitespace-nowrap">
                                    <select 
-                                     value={currentStatus}
-                                     onChange={(e) => handleStatusChange(sim.id, e.target.value)}
-                                     className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md outline-none cursor-pointer appearance-none ${statusColors[currentStatus] || statusColors['Negociando']}`}
+                                      value={sim.status || 'Negociando'} 
+                                      onChange={(e) => handleStatusChange(sim.id, e.target.value)}
+                                      className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded outline-none cursor-pointer transition-colors
+                                         ${sim.status === 'Fechou' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 
+                                           sim.status === 'Não Interessou' || sim.status === 'Fin Reprovado' ? 'bg-red-500/10 text-red-400 border border-red-500/20' :
+                                           sim.status === 'Fin Aprovado' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
+                                           'bg-amber-500/10 text-amber-400 border border-amber-500/20'}`}
                                    >
-                                      {statusOptions.map(opt => <option key={opt} value={opt} className="bg-slate-800 text-white">{opt}</option>)}
+                                      <option value="Negociando">Negociando</option>
+                                      <option value="Fin Aprovado">Fin Aprovado</option>
+                                      <option value="Fin Reprovado">Fin Reprovado</option>
+                                      <option value="Não Interessou">Não Interessou</option>
+                                      <option value="Fechou">Fechou</option>
                                    </select>
                                </td>
-                               <td className="px-4 py-3 text-right font-bold text-amber-500 whitespace-nowrap">{sim.valor}</td>
+                               <td className="px-4 py-3 text-right font-bold text-amber-500 whitespace-nowrap">{formatarMoeda(sim.valor)}</td>
                              </tr>
-                           )})
+                           ))
                          )}
                        </tbody>
                      </table>
@@ -1726,24 +1783,12 @@ export default function App() {
           }
         });
         
-        // ORDENAÇÃO: Do Menor para o Maior Valor
-        const ordenarKits = (a, b) => {
-            const parseValor = (val) => {
-                if (!val) return 0;
-                let str = String(val).trim();
-                if (str.includes('.') && str.includes(',')) str = str.replace(/\./g, '').replace(',', '.');
-                else if (str.includes(',')) str = str.replace(',', '.');
-                return parseFloat(str) || 0;
-            };
-            return parseValor(a.Valor) - parseValor(b.Valor);
-        };
-        
         if(strings.length === 0 && micros.length === 0) {
             setKitsString(fallbackKitsString);
             setKitsMicro(fallbackKitsMicro);
         } else {
-            setKitsString(strings.sort(ordenarKits));
-            setKitsMicro(micros.sort(ordenarKits));
+            setKitsString(strings);
+            setKitsMicro(micros);
         }
       }
     });
