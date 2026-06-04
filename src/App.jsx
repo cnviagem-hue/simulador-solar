@@ -839,18 +839,35 @@ const EmpresaView = ({ setView, userData }) => {
       }
       const XLSX = window.XLSX;
 
-      const dadosExcel = orcamentosFiltrados.map(orc => ({
-        'Data da Simulação': orc.dataVisual,
-        'Consultor Comercial': orc.vendedor,
-        'Nome do Cliente': orc.cliente,
-        'WhatsApp Contato': orc.whatsapp,
-        'Cidade / UF': orc.cidade,
-        'Estrutura do Telhado': orc.estrutura || orc.Categoria || orc.tipoKit,
-        'Categoria': orc.tipoKit,
-        'Kit Escolhido': orc.kit,
-        'Valor do Orçamento': orc.valor,
-        'Status Atual': orc.status || 'Negociando'
-      }));
+      const dadosExcel = orcamentosFiltrados.map(orc => {
+        // MÁGICA: Formatação Inteligente Contábil para Excel
+        let valorContabil = orc.valor || '--';
+        if (valorContabil !== '--') {
+            // Remove o R$ para tratar o número puramente
+            let strValor = String(valorContabil).trim().replace(/R\$\s?/gi, '').trim();
+            // Se já tem vírgula, significa que já está no formato PT-BR
+            if (strValor.includes(',')) {
+                valorContabil = `R$ ${strValor}`;
+            } else {
+                // Se não tem vírgula, formata o padrão antigo (americano) para PT-BR
+                let num = parseFloat(strValor);
+                if (!isNaN(num)) valorContabil = `R$ ${num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            }
+        }
+
+        return {
+          'Data da Simulação': orc.dataVisual,
+          'Consultor Comercial': orc.vendedor,
+          'Nome do Cliente': orc.cliente,
+          'WhatsApp Contato': orc.whatsapp,
+          'Cidade / UF': orc.cidade,
+          'Estrutura do Telhado': orc.estrutura || orc.Categoria || orc.tipoKit,
+          'Categoria': orc.tipoKit,
+          'Kit Escolhido': orc.kit,
+          'Valor do Orçamento': valorContabil,
+          'Status Atual': orc.status || 'Negociando'
+        };
+      });
 
       const folha = XLSX.utils.json_to_sheet(dadosExcel);
       const livro = XLSX.utils.book_new();
