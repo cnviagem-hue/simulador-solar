@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, getDocs, writeBatch, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, getDocs, writeBatch, doc, getDoc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { getAuth, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from 'firebase/auth';
-import { Search, Building, Users, Zap, Plus, Settings, AlertCircle, LogOut, CheckCircle, ChevronDown, User, Smartphone, MapPin, Sun, FileText, Clipboard, MessageCircle, BookOpen, Menu, X, Eye, EyeOff, Download, Activity, List, TrendingUp, Calendar, MessageSquare, BarChart3 } from 'lucide-react';
+import { Search, Building, Users, Zap, Plus, Settings, AlertCircle, LogOut, CheckCircle, ChevronDown, User, Smartphone, MapPin, Sun, FileText, Clipboard, MessageCircle, BookOpen, Menu, X, Eye, EyeOff, Download, Activity, List, TrendingUp, Calendar, MessageSquare, BarChart3, Trash2 } from 'lucide-react';
 
 // ==========================================
 // 1. CONFIGURAÇÃO DO FIREBASE (LIMPA E SEGURA)
@@ -295,7 +295,7 @@ const MasterView = ({ setView }) => {
   const [estatisticas, setEstatisticas] = useState({ empresas: 0, vendedores: 0 });
   const [totalSimulacoes, setTotalSimulacoes] = useState(0);
 
-  const [novaEmpresa, setNovaEmpresa] = useState({ nomeFantasia: '', socio: '', whatsapp: '', email: '', plano: 'Free [Teste Ilimitado 14 dias]', senha: '' });
+  const [novaEmpresa, setNovaEmpresa] = useState({ nomeFantasia: '', socio: '', whatsapp: '', email: '', plano: 'FREE [Teste Ilimitado 14 dias]', senha: '' });
   const [empresaLoading, setEmpresaLoading] = useState(false);
 
   const [toast, setToast] = useState(null);
@@ -374,7 +374,7 @@ const MasterView = ({ setView }) => {
       
       await signOut(secondaryAuth); 
       showToast(`Empresa "${novaEmpresa.nomeFantasia}" cadastrada com sucesso!`, 'success');
-      setNovaEmpresa({ nomeFantasia: '', socio: '', whatsapp: '', email: '', plano: 'Free [Teste Ilimitado 14 dias]', senha: '' });
+      setNovaEmpresa({ nomeFantasia: '', socio: '', whatsapp: '', email: '', plano: 'FREE [Teste Ilimitado 14 dias]', senha: '' });
       setIsModalOpen(false);
     } catch (err) {
       console.error(err);
@@ -545,9 +545,10 @@ const MasterView = ({ setView }) => {
                    <div className="relative group">
                      <label className="text-xs font-bold text-slate-400 mb-1 block">Plano Contratado *</label>
                      <select value={novaEmpresa.plano} onChange={(e) => setNovaEmpresa({...novaEmpresa, plano: e.target.value})} className="w-full bg-[#030811] border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-amber-500 appearance-none cursor-pointer">
-                        <option value="Free [Teste Ilimitado 14 dias]">Free [Teste Ilimitado 14 dias]</option>
-                        <option value="Básico até 5 vendedores [R$ 100,00]">Básico até 5 vendedores [R$ 100,00]</option>
-                        <option value="Pró até 10 vendedores [R$ 125,00]">Pró até 10 vendedores [R$ 125,00]</option>
+                        <option value="FREE [Teste Ilimitado 14 dias]">FREE [Teste Ilimitado 14 dias]</option>
+                        <option value="Básico até 3 vendedores [R$ 75,00]">Básico até 3 vendedores [R$ 75,00]</option>
+                        <option value="Pró até 5 vendedores [R$ 100,00]">Pró até 5 vendedores [R$ 100,00]</option>
+                        <option value="Premium até 10 vendedores [R$ 125,00]">Premium até 10 vendedores [R$ 125,00]</option>
                         <option value="Master Ilimitado [R$ 150,00]">Master Ilimitado [R$ 150,00]</option>
                      </select>
                      <span className="absolute inset-y-0 right-0 flex items-center pr-4 pt-5 pointer-events-none text-slate-400"><ChevronDown className="w-4 h-4"/></span>
@@ -576,10 +577,11 @@ const MasterView = ({ setView }) => {
                    </div>
                    <div className="relative group">
                      <label className="text-xs font-bold text-slate-400 mb-1 block">Plano Contratado</label>
-                     <select value={editEmpresaModal.plano || 'Free [Teste Ilimitado 14 dias]'} onChange={(e) => setEditEmpresaModal({...editEmpresaModal, plano: e.target.value})} className="w-full bg-[#030811] border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-amber-500 appearance-none cursor-pointer">
-                        <option value="Free [Teste Ilimitado 14 dias]">Free [Teste Ilimitado 14 dias]</option>
-                        <option value="Básico até 5 vendedores [R$ 100,00]">Básico até 5 vendedores [R$ 100,00]</option>
-                        <option value="Pró até 10 vendedores [R$ 125,00]">Pró até 10 vendedores [R$ 125,00]</option>
+                     <select value={editEmpresaModal.plano || 'FREE [Teste Ilimitado 14 dias]'} onChange={(e) => setEditEmpresaModal({...editEmpresaModal, plano: e.target.value})} className="w-full bg-[#030811] border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-amber-500 appearance-none cursor-pointer">
+                        <option value="FREE [Teste Ilimitado 14 dias]">FREE [Teste Ilimitado 14 dias]</option>
+                        <option value="Básico até 3 vendedores [R$ 75,00]">Básico até 3 vendedores [R$ 75,00]</option>
+                        <option value="Pró até 5 vendedores [R$ 100,00]">Pró até 5 vendedores [R$ 100,00]</option>
+                        <option value="Premium até 10 vendedores [R$ 125,00]">Premium até 10 vendedores [R$ 125,00]</option>
                         <option value="Master Ilimitado [R$ 150,00]">Master Ilimitado [R$ 150,00]</option>
                      </select>
                      <span className="absolute inset-y-0 right-0 flex items-center pr-4 pt-5 pointer-events-none text-slate-400"><ChevronDown className="w-4 h-4"/></span>
@@ -645,6 +647,9 @@ const EmpresaView = ({ setView, userData }) => {
   const [loadingVendedores, setLoadingVendedores] = useState(true);
   const [editVendedorModal, setEditVendedorModal] = useState(null);
 
+  const [vendedorToDelete, setVendedorToDelete] = useState(null);
+  const [showLimitModal, setShowLimitModal] = useState(false);
+
   const [toast, setToast] = useState(null);
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
@@ -704,7 +709,6 @@ const EmpresaView = ({ setView, userData }) => {
 
   const orcamentosFiltrados = orcamentos.filter(orc => {
       if (userData && userData.uid && orc.empresaId && orc.empresaId !== userData.uid) return false;
-
       if (vendedorFilter !== 'todos' && orc.vendedor !== vendedorFilter) return false;
       
       const currentStatus = orc.status || 'Negociando';
@@ -884,6 +888,32 @@ const EmpresaView = ({ setView, userData }) => {
     }
   };
 
+  const confirmDeleteVendedor = async () => {
+    if (!vendedorToDelete) return;
+    try {
+        await deleteDoc(doc(db, 'usuarios', vendedorToDelete.id));
+        showToast(`Vendedor ${vendedorToDelete.nome} excluído com sucesso!`, 'success');
+        setVendedorToDelete(null);
+    } catch (error) {
+        console.error("Erro ao excluir", error);
+        showToast("Erro ao excluir vendedor.", "error");
+    }
+  };
+
+  const handleOpenNovoVendedor = () => {
+      const plano = userData?.plano || '';
+      let limite = Infinity;
+      if (plano.includes('Básico')) limite = 3;
+      else if (plano.includes('Pró')) limite = 5;
+      else if (plano.includes('Premium')) limite = 10;
+      
+      if (vendedoresLista.length >= limite) {
+          setShowLimitModal(true);
+      } else {
+          setIsVendedorModalOpen(true);
+      }
+  };
+
   const handleStatusChange = async (id, newStatus) => {
     try {
         await updateDoc(doc(db, "orcamentos", id), { status: newStatus });
@@ -934,13 +964,13 @@ const EmpresaView = ({ setView, userData }) => {
                   <button onClick={() => setDateFilter('mes')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition ${dateFilter === 'mes' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-white'}`}>Este Mês</button>
                   {dateFilter === 'personalizado' ? (
                       <div className="flex items-center gap-2 ml-1 bg-slate-800 px-2 py-1 rounded-lg border border-amber-500/30">
-                         <input type="date" value={customStartDash} onChange={(e) => setCustomStartDash(e.target.value)} className="bg-transparent text-xs text-amber-400 outline-none cursor-pointer [color-scheme:dark]" />
-                         <span className="text-slate-500 text-xs">até</span>
-                         <input type="date" value={customEndDash} onChange={(e) => setCustomEndDash(e.target.value)} className="bg-transparent text-xs text-amber-400 outline-none cursor-pointer [color-scheme:dark]" />
-                         <button onClick={() => setDateFilter('semana')} className="ml-1 text-slate-400 hover:text-red-400 transition" title="Fechar calendário"><X className="w-3 h-3"/></button>
+                          <input type="date" value={customStartDash} onChange={(e) => setCustomStartDash(e.target.value)} className="bg-transparent text-xs text-amber-400 outline-none cursor-pointer [color-scheme:dark]" />
+                          <span className="text-slate-500 text-xs">até</span>
+                          <input type="date" value={customEndDash} onChange={(e) => setCustomEndDash(e.target.value)} className="bg-transparent text-xs text-amber-400 outline-none cursor-pointer [color-scheme:dark]" />
+                          <button onClick={() => setDateFilter('semana')} className="ml-1 text-slate-400 hover:text-red-400 transition" title="Fechar calendário"><X className="w-3 h-3"/></button>
                       </div>
                   ) : (
-                      <button onClick={() => setDateFilter('personalizado')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 text-slate-500 hover:text-white`}><Calendar className="w-3 h-3"/> Personalizado</button>
+                      <button onClick={() => setDateFilter('personalizado')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 text-slate-500 hover:text-white`}><Search className="w-3 h-3"/> Personalizado</button>
                   )}
                 </div>
              </div>
@@ -995,16 +1025,16 @@ const EmpresaView = ({ setView, userData }) => {
                 <div className="w-full overflow-x-auto pb-2 sm:pb-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
                   <div className="flex items-center gap-2 w-max">
                     <div className="flex items-center bg-[#030811] border border-slate-700 rounded-xl p-1 shadow-inner shrink-0">
-                      <button onClick={() => setResultadosFilter('hoje')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${resultadosFilter === 'hoje' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-white'}`}>Hoje</button>
-                      <button onClick={() => setResultadosFilter('7dias')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${resultadosFilter === '7dias' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-white'}`}>7 Dias</button>
-                      <button onClick={() => setResultadosFilter('15dias')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${resultadosFilter === '15dias' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-white'}`}>15 Dias</button>
-                      <button onClick={() => setResultadosFilter('30dias')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${resultadosFilter === '30dias' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-white'}`}>30 Dias</button>
+                      <button onClick={() => {setResultadosFilter('hoje'); setCustomStartCRM(''); setCustomEndCRM('');}} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${resultadosFilter === 'hoje' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-white'}`}>Hoje</button>
+                      <button onClick={() => {setResultadosFilter('7dias'); setCustomStartCRM(''); setCustomEndCRM('');}} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${resultadosFilter === '7dias' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-white'}`}>7 Dias</button>
+                      <button onClick={() => {setResultadosFilter('15dias'); setCustomStartCRM(''); setCustomEndCRM('');}} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${resultadosFilter === '15dias' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-white'}`}>15 Dias</button>
+                      <button onClick={() => {setResultadosFilter('30dias'); setCustomStartCRM(''); setCustomEndCRM('');}} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${resultadosFilter === '30dias' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-white'}`}>30 Dias</button>
                       {resultadosFilter === 'personalizado' ? (
                           <div className="flex items-center gap-2 ml-1 bg-slate-800 px-2 py-1 rounded-lg border border-amber-500/30">
-                             <input type="date" value={customStartCRM} onChange={(e) => setCustomStartCRM(e.target.value)} className="bg-transparent text-xs text-amber-400 outline-none cursor-pointer [color-scheme:dark]" />
-                             <span className="text-slate-500 text-xs">até</span>
-                             <input type="date" value={customEndCRM} onChange={(e) => setCustomEndCRM(e.target.value)} className="bg-transparent text-xs text-amber-400 outline-none cursor-pointer [color-scheme:dark]" />
-                             <button onClick={() => setResultadosFilter('7dias')} className="ml-1 text-slate-400 hover:text-red-400 transition" title="Fechar calendário"><X className="w-3 h-3"/></button>
+                              <input type="date" value={customStartCRM} onChange={(e) => setCustomStartCRM(e.target.value)} className="bg-transparent text-xs text-amber-400 outline-none cursor-pointer [color-scheme:dark]" />
+                              <span className="text-slate-500 text-xs">até</span>
+                              <input type="date" value={customEndCRM} onChange={(e) => setCustomEndCRM(e.target.value)} className="bg-transparent text-xs text-amber-400 outline-none cursor-pointer [color-scheme:dark]" />
+                              <button onClick={() => setResultadosFilter('7dias')} className="ml-1 text-slate-400 hover:text-red-400 transition" title="Fechar calendário"><X className="w-3 h-3"/></button>
                           </div>
                       ) : (
                           <button onClick={() => setResultadosFilter('personalizado')} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 text-slate-500 hover:text-white whitespace-nowrap`}><Calendar className="w-3 h-3"/> Personalizado</button>
@@ -1087,7 +1117,7 @@ const EmpresaView = ({ setView, userData }) => {
               <h3 className="text-xl font-bold text-white flex items-center gap-2"><Users className="w-6 h-6 text-amber-500"/> Gestão de Equipa</h3>
               <p className="text-sm text-slate-400 mt-1">Controle os acessos e informações dos seus consultores comerciais.</p>
             </div>
-            <button onClick={() => setIsVendedorModalOpen(true)} className="flex items-center justify-center space-x-2 bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-slate-900 font-extrabold px-5 py-2.5 rounded-xl transition shadow-lg w-full sm:w-auto shrink-0"><Plus className="w-4 h-4" /> <span>Novo Vendedor</span></button>
+            <button onClick={handleOpenNovoVendedor} className="flex items-center justify-center space-x-2 bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-slate-900 font-extrabold px-5 py-2.5 rounded-xl transition shadow-lg w-full sm:w-auto shrink-0"><Plus className="w-4 h-4" /> <span>Novo Vendedor</span></button>
           </div>
           
           <div className="overflow-x-auto w-full block min-h-[300px]">
@@ -1142,6 +1172,9 @@ const EmpresaView = ({ setView, userData }) => {
                           <button className="text-slate-400 hover:text-amber-500 transition p-1" title={vend.status === 'Bloqueado' ? 'Desbloquear Acesso' : 'Suspender Acesso'} onClick={() => toggleVendedorStatus(vend)}>
                               {vend.status === 'Bloqueado' ? <CheckCircle className="w-4 h-4 text-emerald-500" /> : <AlertCircle className="w-4 h-4 text-red-500" />}
                           </button>
+                          <button className="text-slate-400 hover:text-red-500 transition p-1" title="Excluir Vendedor" onClick={() => setVendedorToDelete(vend)}>
+                              <Trash2 className="w-4 h-4" />
+                          </button>
                         </td>
                       </tr>
                     ))
@@ -1151,7 +1184,6 @@ const EmpresaView = ({ setView, userData }) => {
             )}
           </div>
 
-          {/* Modal de Edição de Vendedor */}
           {editVendedorModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm text-left">
                <div className="bg-[#0B192C] border border-slate-800 rounded-3xl p-6 w-full max-w-sm shadow-2xl relative">
@@ -1248,6 +1280,37 @@ const EmpresaView = ({ setView, userData }) => {
                      className="w-full bg-gradient-to-r from-amber-400 to-orange-500 text-slate-900 font-extrabold py-3 rounded-xl mt-2 transition disabled:opacity-50">
                      {vendedorLoading ? 'A Registar...' : 'Cadastrar Vendedor'}
                    </button>
+                 </div>
+               </div>
+            </div>
+          )}
+
+          {showLimitModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm text-left">
+               <div className="bg-[#0B192C] border border-amber-900/30 rounded-3xl p-6 w-full max-w-sm shadow-2xl relative">
+                 <button onClick={() => setShowLimitModal(false)} className="absolute top-4 right-4 text-slate-500 hover:text-white transition"><LogOut className="w-5 h-5"/></button>
+                 <div className="text-center pt-2">
+                    <AlertCircle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
+                    <h3 className="text-xl font-extrabold text-white mb-2">Limite de Equipa Atingido</h3>
+                    <p className="text-sm text-slate-400 mb-6">A sua empresa atingiu o limite de vendedores disponível no plano atual <strong>({userData?.plano || 'Free'})</strong>.</p>
+                    <button onClick={() => window.open('https://wa.me/5564981005505?text=Olá,%20gostaria%20de%20fazer%20um%20upgrade%20no%20meu%20plano%20do%20Simulador%20Solar.', '_blank')} className="w-full bg-gradient-to-r from-emerald-400 to-emerald-600 text-white font-extrabold py-3.5 rounded-xl transition hover:scale-[1.02] flex justify-center items-center gap-2">
+                        <MessageCircle className="w-5 h-5" /> Falar com o Suporte
+                    </button>
+                    <p className="text-xs text-slate-500 mt-4 font-medium">(64) 9 8100-5505</p>
+                 </div>
+               </div>
+            </div>
+          )}
+
+          {vendedorToDelete && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm text-left">
+               <div className="bg-[#0B192C] border border-red-900/30 rounded-3xl p-6 w-full max-w-sm shadow-2xl relative">
+                 <h3 className="text-xl font-extrabold text-white mb-2 text-center text-red-400">Excluir Vendedor?</h3>
+                 <p className="text-sm text-slate-300 mb-4 text-center">Tem a certeza que deseja excluir permanentemente o acesso de <strong>{vendedorToDelete.nome}</strong>?</p>
+                 <p className="text-[11px] leading-relaxed text-slate-400 mb-6 text-center bg-red-500/10 p-3 rounded-xl border border-red-500/20"><strong>Importante:</strong> Não se preocupe! O histórico de orçamentos gerados por este vendedor <strong>não será apagado</strong> e continuará disponível para a empresa na aba CRM.</p>
+                 <div className="flex gap-3">
+                     <button onClick={() => setVendedorToDelete(null)} className="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-xl transition">Cancelar</button>
+                     <button onClick={confirmDeleteVendedor} className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl transition">Sim, Excluir</button>
                  </div>
                </div>
             </div>
@@ -1504,7 +1567,7 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
                     <button onClick={() => setViewMode('simulador')} className={`px-4 py-1.5 text-xs font-bold rounded-lg transition ${viewMode === 'simulador' ? 'bg-amber-500 text-slate-900' : 'text-slate-400 hover:text-white'}`}>Simulador</button>
                     <button onClick={() => setViewMode('historico')} className={`px-4 py-1.5 text-xs font-bold rounded-lg transition ${viewMode === 'historico' ? 'bg-amber-500 text-slate-900' : 'text-slate-400 hover:text-white'}`}>Meus Orçamentos</button>
                 </div>
-                <button onClick={() => setView('login')} className="text-slate-400 hover:text-red-400 transition p-2 bg-slate-800/50 rounded-lg border border-slate-700/50"><LogOut className="w-5 h-5"/></button>
+                <button onClick={() => setView('login')} className="text-slate-400 hover:text-red-400 transition p-2 bg-slate-800/50 rounded-lg border border-slate-700/50" title="Sair"><LogOut className="w-5 h-5"/></button>
             </nav>
         </div>
       </header>
@@ -1517,10 +1580,9 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
          </div>
       </div>
 
-      <section className="py-8 sm:py-12 bg-[#0B192C] relative min-h-[80vh] flex items-center flex-col w-full" style={{ backgroundImage: 'radial-gradient(at 0% 0%, hsla(210,100%,12%,1) 0px, transparent 50%), radial-gradient(at 100% 100%, hsla(38,100%,50%,0.08) 0px, transparent 50%)' }}>
+      <section className="py-8 sm:py-20 bg-[#0B192C] border-t border-b border-slate-800 relative min-h-[80vh] flex items-center flex-col w-full" style={{ backgroundImage: 'radial-gradient(at 0% 0%, hsla(210,100%,12%,1) 0px, transparent 50%), radial-gradient(at 100% 100%, hsla(38,100%,50%,0.08) 0px, transparent 50%)' }}>
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(245,166,35,0.04),transparent_50%)] pointer-events-none"></div>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full">
-            
             {viewMode === 'simulador' ? (
               <div className="max-w-4xl mx-auto">
                 <div className="bg-[#030811] rounded-3xl border border-slate-700/60 shadow-[0_0_25px_rgba(245,166,35,0.1)] overflow-hidden w-full">
@@ -1663,7 +1725,7 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
                                   <button onClick={() => setTimeFilter('semana')} className="ml-1 text-slate-400 hover:text-red-400 transition" title="Fechar calendário"><X className="w-3 h-3"/></button>
                                </div>
                            ) : (
-                               <button onClick={() => setTimeFilter('personalizado')} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 text-slate-500 hover:text-white whitespace-nowrap`}><Calendar className="w-3 h-3"/> Personalizado</button>
+                               <button onClick={() => setTimeFilter('personalizado')} className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1 text-slate-400 hover:text-white whitespace-nowrap`}><Calendar className="w-3 h-3"/> Personalizado</button>
                            )}
                          </div>
                        </div>
@@ -1690,16 +1752,16 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
                                <td className="px-4 py-3 whitespace-nowrap">
                                   <div className="font-bold text-white">{sim.cliente}</div>
                                   {sim.whatsapp ? (
-                                     <button 
-                                       onClick={() => window.open(`https://wa.me/${String(sim.whatsapp).replace(/\D/g, '').length >= 10 && !String(sim.whatsapp).replace(/\D/g, '').startsWith('55') ? '55' + String(sim.whatsapp).replace(/\D/g, '') : String(sim.whatsapp).replace(/\D/g, '')}`, '_blank')}
-                                       className="inline-flex items-center gap-1.5 text-[10px] font-bold text-emerald-400 hover:text-emerald-300 transition mt-1 cursor-pointer"
-                                     >
-                                       <MessageSquare className="w-3 h-3" />
-                                       {sim.whatsapp}
-                                     </button>
-                                   ) : (
-                                     <span className="text-[10px] text-slate-600 italic mt-1 block">Sem número</span>
-                                   )}
+                                      <button 
+                                        onClick={() => window.open(`https://wa.me/${String(sim.whatsapp).replace(/\D/g, '').length >= 10 && !String(sim.whatsapp).replace(/\D/g, '').startsWith('55') ? '55' + String(sim.whatsapp).replace(/\D/g, '') : String(sim.whatsapp).replace(/\D/g, '')}`, '_blank')}
+                                        className="inline-flex items-center gap-1.5 text-[10px] font-bold text-emerald-400 hover:text-emerald-300 transition mt-1 cursor-pointer"
+                                      >
+                                        <MessageSquare className="w-3 h-3" />
+                                        {sim.whatsapp}
+                                      </button>
+                                    ) : (
+                                      <span className="text-[10px] text-slate-600 italic mt-1 block">Sem número</span>
+                                    )}
                                </td>
                                <td className="px-4 py-3 text-xs whitespace-nowrap">{sim.cidade}</td>
                                <td className="px-4 py-3 text-xs whitespace-nowrap">{sim.estrutura || '--'}</td>
@@ -1783,12 +1845,19 @@ export default function App() {
           }
         });
         
+        // Função matemática para garantir ordem crescente de preço (do menor para o maior)
+        const sortKits = (a, b) => {
+            const valA = parseFloat(String(a.Valor).replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
+            const valB = parseFloat(String(b.Valor).replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
+            return valA - valB;
+        };
+        
         if(strings.length === 0 && micros.length === 0) {
-            setKitsString(fallbackKitsString);
-            setKitsMicro(fallbackKitsMicro);
+            setKitsString([...fallbackKitsString].sort(sortKits));
+            setKitsMicro([...fallbackKitsMicro].sort(sortKits));
         } else {
-            setKitsString(strings);
-            setKitsMicro(micros);
+            setKitsString(strings.sort(sortKits));
+            setKitsMicro(micros.sort(sortKits));
         }
       }
     });
