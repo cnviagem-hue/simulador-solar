@@ -1307,7 +1307,7 @@ const EmpresaView = ({ setView, userData }) => {
                <div className="bg-[#0B192C] border border-red-900/30 rounded-3xl p-6 w-full max-w-sm shadow-2xl relative">
                  <h3 className="text-xl font-extrabold text-white mb-2 text-center text-red-400">Excluir Vendedor?</h3>
                  <p className="text-sm text-slate-300 mb-4 text-center">Tem a certeza que deseja excluir permanentemente o acesso de <strong>{vendedorToDelete.nome}</strong>?</p>
-                 <p className="text-[11px] leading-relaxed text-slate-400 mb-6 text-center bg-red-500/10 p-3 rounded-xl border border-red-500/20"><strong>Importante:</strong> Não se preocupe! O histórico de orçamentos gerados por este vendedor <strong>não será apagado</strong> e continuará disponível para a empresa na aba CRM.</p>
+                 <p className="text-[11px] leading-relaxed text-slate-400 mb-6 text-center bg-red-500/10 p-3 rounded-xl border border-red-500/20"><strong>Importante:</strong> Não se preocupe! O histórico de orçamentos gerados por este vendedor <strong>não será apagado</strong>. Os dados passarão automaticamente para o nome <strong>"Vendedor - Empresa"</strong> na sua aba CRM.</p>
                  <div className="flex gap-3">
                      <button onClick={() => setVendedorToDelete(null)} className="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-xl transition">Cancelar</button>
                      <button onClick={confirmDeleteVendedor} className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl transition">Sim, Excluir</button>
