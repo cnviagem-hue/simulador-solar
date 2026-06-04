@@ -1012,7 +1012,14 @@ const EmpresaView = ({ setView, userData }) => {
                           <td className="px-4 py-3 whitespace-nowrap">
                              <div className="font-bold text-slate-200">{sim.cliente}</div>
                              <div className="flex items-center gap-2 mt-1">
-                                <span className="font-mono text-xs text-slate-500 flex items-center gap-1"><Smartphone className="w-3 h-3"/>{sim.whatsapp}</span>
+                                <a 
+                                  href={`https://wa.me/${String(sim.whatsapp).replace(/\D/g, '').length >= 10 && !String(sim.whatsapp).replace(/\D/g, '').startsWith('55') ? '55' + String(sim.whatsapp).replace(/\D/g, '') : String(sim.whatsapp).replace(/\D/g, '')}`} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="font-mono text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-1 transition-colors cursor-pointer"
+                                >
+                                  <Smartphone className="w-3 h-3"/>{sim.whatsapp}
+                                </a>
                                 <span className="text-[10px] text-slate-500">{sim.cidade}</span>
                              </div>
                           </td>
