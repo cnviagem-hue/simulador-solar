@@ -873,7 +873,10 @@ const EmpresaView = ({ setView, userData }) => {
         snap.forEach(d => {
             const data = d.data();
             if (data.vendedorUid === vendedorToDelete.id || data.vendedor === vendedorToDelete.nome) {
-                batch.update(doc(db, "orcamentos", d.id), { vendedor: 'Vendedor - Empresa' });
+                batch.update(doc(db, "orcamentos", d.id), { 
+                    vendedor: userData?.nome || 'Empresa',
+                    vendedorUid: userData?.uid || 'padrao'
+                });
             }
         });
         await batch.commit();
