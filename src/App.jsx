@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, getDocs, writeBatch, doc, getDoc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
-import { getAuth, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from 'firebase/auth';
-import { Search, Building, Users, Zap, Plus, Settings, AlertCircle, LogOut, CheckCircle, ChevronDown, User, Smartphone, MapPin, Sun, FileText, Clipboard, MessageCircle, BookOpen, Menu, X, Eye, EyeOff, Download, Activity, List, TrendingUp, Calendar, MessageSquare, BarChart3, Trash2 } from 'lucide-react';
+import { getAuth, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, onAuthStateChanged, signInAnonymously, signInWithCustomToken } from 'firebase/auth';
+import { Search, Building, Users, Zap, Plus, Settings, AlertCircle, LogOut, CheckCircle, ChevronDown, User, Smartphone, MapPin, BarChart3, Sun, FileSpreadsheet, ClipboardList, MessageCircle, BookOpen, Menu, X, Eye, EyeOff, Download, Activity, List, TrendingUp, Calendar, MessageSquare, Trash2 } from 'lucide-react';
 
 // ==========================================
-// 1. CONFIGURAÇÃO DO FIREBASE (LIMPA E SEGURA)
+// 1. CONFIGURAÇÃO DO FIREBASE
 // ==========================================
 const firebaseConfig = {
   apiKey: "AIzaSyD4GqSo-4EjCQ-nJa-gX3S5knTCVcjuYOY",
@@ -17,8 +17,8 @@ const firebaseConfig = {
 };
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+const auth = getAuth(app);
 const db = getFirestore(app);
-const auth = getAuth(app); 
 
 const secondaryApp = getApps().find(a => a.name === "Secondary") || initializeApp(firebaseConfig, "Secondary");
 const secondaryAuth = getAuth(secondaryApp);
@@ -40,7 +40,7 @@ export const formatarMoeda = (valor) => {
 };
 
 // ==========================================
-// 2. KITS DE SEGURANÇA (Caso a nuvem esteja vazia)
+// 2. KITS DE SEGURANÇA
 // ==========================================
 const fallbackKitsString = [
   { Kit: 'KIT 370kWh (Padrão)', Placas: '5', Modulo: '590W', Inversor: 'AUXSOL 3K', Valor: '9335.68' },
@@ -52,11 +52,6 @@ const fallbackKitsMicro = [
   { Kit: 'KIT MICRO 230KWh (Padrão)', Placas: '3', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX2250', Valor: '7725.81' },
   { Kit: 'KIT MICRO 540KWh (Padrão)', Placas: '7', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '12679.71' },
   { Kit: 'KIT MICRO 1000KWh (Padrão)', Placas: '13', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '20136.94' }
-];
-
-const chartData = [
-  { name: 'Seg', propostas: 12, height: '40%' }, { name: 'Ter', propostas: 19, height: '65%' }, { name: 'Qua', propostas: 15, height: '50%' },
-  { name: 'Qui', propostas: 22, height: '80%' }, { name: 'Sex', propostas: 28, height: '100%' }, { name: 'Sáb', propostas: 9, height: '30%' }, { name: 'Dom', propostas: 4, height: '15%' }
 ];
 
 // ==========================================
@@ -86,7 +81,7 @@ const DashboardLayout = ({ children, title, setView, role, currentTab, setCurren
           </div>
           <nav className="p-4 space-y-2 overflow-y-auto">
             <button onClick={() => handleTabChange('dashboard')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition font-medium ${currentTab === 'dashboard' ? 'bg-slate-800 text-white border-l-2 border-amber-500' : 'text-slate-400 hover:bg-slate-900/50 hover:text-white'}`}>
-              <Activity className={`w-5 h-5 ${currentTab === 'dashboard' ? 'text-amber-500' : ''}`} /> <span>Dashboard Central</span>
+              <BarChart3 className={`w-5 h-5 ${currentTab === 'dashboard' ? 'text-amber-500' : ''}`} /> <span>Dashboard Central</span>
             </button>
             {role === 'master' && (
               <button onClick={() => handleTabChange('empresas')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition font-medium ${currentTab === 'empresas' ? 'bg-slate-800 text-white border-l-2 border-amber-500' : 'text-slate-400 hover:bg-slate-900/50 hover:text-white'}`}>
@@ -96,7 +91,7 @@ const DashboardLayout = ({ children, title, setView, role, currentTab, setCurren
             {role === 'empresa' && (
               <>
                 <button onClick={() => handleTabChange('resultados')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition font-medium ${currentTab === 'resultados' ? 'bg-slate-800 text-white border-l-2 border-amber-500' : 'text-slate-400 hover:bg-slate-900/50 hover:text-white'}`}>
-                  <Clipboard className={`w-5 h-5 ${currentTab === 'resultados' ? 'text-amber-500' : ''}`} /> <span>Resultados (CRM)</span>
+                  <ClipboardList className={`w-5 h-5 ${currentTab === 'resultados' ? 'text-amber-500' : ''}`} /> <span>Resultados (CRM)</span>
                 </button>
                 <button onClick={() => handleTabChange('vendedores')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition font-medium ${currentTab === 'vendedores' ? 'bg-slate-800 text-white border-l-2 border-amber-500' : 'text-slate-400 hover:bg-slate-900/50 hover:text-white'}`}>
                   <Users className={`w-5 h-5 ${currentTab === 'vendedores' ? 'text-amber-500' : ''}`} /> <span>Meus Vendedores</span>
@@ -108,7 +103,7 @@ const DashboardLayout = ({ children, title, setView, role, currentTab, setCurren
                   <button onClick={() => handleTabChange('tutorial')} className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition font-medium ${currentTab === 'tutorial' ? 'bg-slate-800 text-white border-l-2 border-amber-500' : 'text-slate-400 hover:bg-slate-900/50 hover:text-white'}`}>
                     <BookOpen className={`w-5 h-5 ${currentTab === 'tutorial' ? 'text-amber-500' : ''}`} /> <span>Tutorial do Sistema</span>
                   </button>
-                  <button onClick={() => window.open('https://wa.me/5562999999999?text=Olá', '_blank')} className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition font-medium text-slate-400 hover:bg-emerald-500/10 hover:text-emerald-400">
+                  <button onClick={() => window.open('https://wa.me/5564981005505?text=Olá', '_blank')} className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition font-medium text-slate-400 hover:bg-emerald-500/10 hover:text-emerald-400">
                     <MessageCircle className="w-5 h-5" /> <span>Suporte</span>
                   </button>
                 </div>
@@ -151,23 +146,18 @@ const DashboardLayout = ({ children, title, setView, role, currentTab, setCurren
 const LoginView = ({ setView, setUserData }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [toast, setToast] = useState(null);
-
-  const showToast = (message, type = 'error') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 4000);
-  };
+  const [error, setError] = useState('');
 
   const handleLogin = async (e) => {
     e.preventDefault();
     if (!email || !password) {
-      showToast('Por favor, preencha o seu e-mail e senha.', 'error');
+      setError('Por favor, preencha o seu e-mail e senha.');
       return;
     }
 
     setLoading(true);
+    setError('');
 
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
@@ -183,7 +173,7 @@ const LoginView = ({ setView, setUserData }) => {
           
           if (data.status === 'Bloqueado' || data.status === 'Bloqueada') {
               await signOut(auth);
-              showToast('Acesso negado. Favor entrar em contato com a Empresa para ativar seu acesso.', 'error');
+              setError('Acesso negado. Favor entrar em contato com a Empresa para ativar seu acesso.');
               setLoading(false);
               return;
           }
@@ -201,7 +191,7 @@ const LoginView = ({ setView, setUserData }) => {
       }
     } catch (err) {
       console.error(err);
-      showToast('Credenciais inválidas. Verifique o seu e-mail e senha.', 'error');
+      setError('Credenciais inválidas. Verifique o seu e-mail e senha.');
     } finally {
       setLoading(false);
     }
@@ -209,22 +199,22 @@ const LoginView = ({ setView, setUserData }) => {
 
   return (
     <div className="min-h-screen bg-[#030811] flex flex-col justify-center items-center p-4 relative overflow-hidden select-none">
-      {toast && (
-        <div className={`fixed top-10 flex items-center space-x-3 px-5 py-4 rounded-xl shadow-2xl transition-all duration-300 ${toast.type === 'error' ? 'bg-red-500' : 'bg-emerald-500'} text-white border border-white/10 z-50`}>
-          {toast.type === 'error' ? <AlertCircle className="w-5 h-5 flex-shrink-0" /> : <CheckCircle className="w-5 h-5 flex-shrink-0" />}
-          <span className="text-sm font-medium leading-snug">{toast.message}</span>
-        </div>
-      )}
-
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(245,166,35,0.08),transparent_70%)] pointer-events-none"></div>
       <div className="relative z-10 w-full max-w-md bg-[#0B192C]/80 backdrop-blur-xl border border-slate-800 rounded-3xl p-8 shadow-2xl">
         <div className="text-center mb-8">
           <div className="inline-flex bg-gradient-to-br from-amber-400 to-orange-500 p-3 rounded-2xl mb-4 shadow-lg shadow-orange-500/20"><Sun className="w-8 h-8 text-[#0B192C]" /></div>
-          <h2 className="text-2xl font-extrabold text-white">LD <span className="text-amber-500">SIMULADOR</span></h2>
+          <h2 className="text-2xl font-extrabold text-white">LD <span className="text-amber-500">SIMULADOR SOLAR</span></h2>
           <p className="text-slate-400 text-sm mt-1">Acesso Restrito ao Sistema</p>
         </div>
         
         <form onSubmit={handleLogin} className="space-y-4">
+          {error && (
+            <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm p-3 rounded-xl flex items-center gap-2 animate-pulse">
+              <AlertCircle className="w-5 h-5 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+          
           <div>
             <label className="text-xs font-semibold text-slate-400 mb-1 block">E-mail de Acesso</label>
             <input 
@@ -236,25 +226,14 @@ const LoginView = ({ setView, setUserData }) => {
             />
           </div>
           <div>
-            <div className="flex justify-between items-center mb-1">
-              <label className="text-xs font-semibold text-slate-400 block">Senha Segura</label>
-            </div>
-            <div className="relative group">
-              <input 
-                type={showPassword ? "text" : "password"} 
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••" 
-                className="w-full bg-[#030811] border border-slate-700 focus:border-amber-500 rounded-xl py-3 pl-4 pr-12 text-white text-sm outline-none transition" 
-              />
-              <button 
-                type="button" 
-                onClick={() => setShowPassword(!showPassword)} 
-                className="absolute inset-y-0 right-0 flex items-center pr-4 text-slate-500 hover:text-amber-500 focus:outline-none transition-colors"
-              >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            </div>
+            <label className="text-xs font-semibold text-slate-400 mb-1 block">Senha Segura</label>
+            <input 
+              type="password" 
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••" 
+              className="w-full bg-[#030811] border border-slate-700 focus:border-amber-500 rounded-xl px-4 py-3 text-white text-sm outline-none transition" 
+            />
           </div>
           <button 
             type="submit" 
@@ -264,20 +243,8 @@ const LoginView = ({ setView, setUserData }) => {
           </button>
         </form>
 
-        <div className="mt-4 text-center">
-            <button 
-                onClick={(e) => {
-                    e.preventDefault();
-                    if (!email) {
-                        showToast("Preencha o seu e-mail acima e clique aqui novamente para recuperar a senha.", 'error');
-                        return;
-                    }
-                    showToast(`Um e-mail de recuperação será enviado para: ${email} (Fase 5)`, 'success');
-                }} 
-                className="text-xs font-semibold text-slate-400 hover:text-amber-400 transition-colors"
-            >
-                Esqueci a minha senha
-            </button>
+        <div className="mt-8 pt-6 border-t border-slate-800/50 text-center">
+           <p className="text-[10px] text-slate-600 uppercase tracking-widest font-bold">Ambiente Protegido por Firebase Auth</p>
         </div>
       </div>
     </div>
@@ -300,14 +267,8 @@ const MasterView = ({ setView }) => {
   const [estatisticas, setEstatisticas] = useState({ empresas: 0, vendedores: 0 });
   const [totalSimulacoes, setTotalSimulacoes] = useState(0);
 
-  const [novaEmpresa, setNovaEmpresa] = useState({ nomeFantasia: '', socio: '', whatsapp: '', email: '', plano: 'FREE [Teste Ilimitado 14 dias]', senha: '' });
+  const [novaEmpresa, setNovaEmpresa] = useState({ nomeFantasia: '', socio: '', whatsapp: '', email: '', plano: 'Free [Teste Ilimitado 14 dias]', senha: '' });
   const [empresaLoading, setEmpresaLoading] = useState(false);
-
-  const [toast, setToast] = useState(null);
-  const showToast = (message, type = 'success') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 4000);
-  };
 
   useEffect(() => {
     const q = query(collection(db, "usuarios"));
@@ -360,7 +321,7 @@ const MasterView = ({ setView }) => {
 
   const handleCreateEmpresa = async () => {
     if(!novaEmpresa.nomeFantasia || !novaEmpresa.email || novaEmpresa.senha.length < 6) {
-      return showToast('Preencha os campos obrigatórios e use uma senha com pelo menos 6 caracteres.', 'error');
+      return alert('Preencha todos os campos obrigatórios e use uma senha com pelo menos 6 caracteres.');
     }
     
     setEmpresaLoading(true);
@@ -378,12 +339,13 @@ const MasterView = ({ setView }) => {
       });
       
       await signOut(secondaryAuth); 
-      showToast(`Empresa "${novaEmpresa.nomeFantasia}" cadastrada com sucesso!`, 'success');
-      setNovaEmpresa({ nomeFantasia: '', socio: '', whatsapp: '', email: '', plano: 'FREE [Teste Ilimitado 14 dias]', senha: '' });
+      alert(`Empresa "${novaEmpresa.nomeFantasia}" cadastrada com sucesso!`);
+      
+      setNovaEmpresa({ nomeFantasia: '', socio: '', whatsapp: '', email: '', plano: 'Free [Teste Ilimitado 14 dias]', senha: '' });
       setIsModalOpen(false);
     } catch (err) {
       console.error(err);
-      showToast('Erro ao criar a empresa: ' + err.message, 'error');
+      alert('Erro ao criar a empresa: ' + err.message);
     } finally {
       setEmpresaLoading(false);
     }
@@ -393,22 +355,15 @@ const MasterView = ({ setView }) => {
     const novoStatus = empresa.status === 'Bloqueada' ? 'Ativa' : 'Bloqueada';
     try {
         await updateDoc(doc(db, 'usuarios', empresa.id), { status: novoStatus });
-        showToast(`Acesso de ${empresa.nome} foi ${novoStatus === 'Bloqueada' ? 'bloqueado' : 'desbloqueado'}.`, 'success');
+        alert(`Acesso de ${empresa.nome} foi ${novoStatus === 'Bloqueada' ? 'bloqueado' : 'desbloqueado'}.`);
     } catch (err) {
         console.error("Erro ao alterar status:", err);
-        showToast("Erro ao alterar o status da empresa.", "error");
+        alert("Erro ao alterar o status da empresa.");
     }
   };
 
   return (
     <DashboardLayout title="Visão Master (LD Negócios)" setView={setView} role="master" currentTab={currentTab} setCurrentTab={setCurrentTab}>
-      {toast && (
-        <div className={`fixed top-24 right-5 z-[100] flex items-center space-x-3 px-5 py-4 rounded-xl shadow-2xl transition-all duration-300 ${toast.type === 'error' ? 'bg-red-500' : 'bg-emerald-500'} text-white border border-white/10`}>
-          {toast.type === 'error' ? <AlertCircle className="w-5 h-5 flex-shrink-0" /> : <CheckCircle className="w-5 h-5 flex-shrink-0" />}
-          <span className="text-sm font-medium leading-snug">{toast.message}</span>
-        </div>
-      )}
-
       {currentTab === 'dashboard' && (
         <div className="space-y-6">
            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -435,7 +390,7 @@ const MasterView = ({ setView }) => {
               </div>
            </div>
            <div className="bg-[#0B192C] border border-slate-800 rounded-2xl p-12 text-center shadow-sm">
-              <Activity className="w-16 h-16 mx-auto mb-4 text-slate-700" />
+              <BarChart3 className="w-16 h-16 mx-auto mb-4 text-slate-700" />
               <h3 className="text-xl font-bold text-white mb-2">Resumo de Crescimento</h3>
               <p className="text-slate-400 text-sm max-w-md mx-auto">Vá para a aba "Gestão de Empresas" no menu lateral para visualizar, filtrar, adicionar ou bloquear clientes do sistema SaaS.</p>
               <button onClick={() => setCurrentTab('empresas')} className="mt-6 bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 px-6 py-3 rounded-xl font-bold transition">Ir para Gestão de Empresas</button>
@@ -452,9 +407,9 @@ const MasterView = ({ setView }) => {
                 <input type="text" placeholder="Buscar empresa por nome ou email..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-[#030811] border border-slate-700 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white focus:border-amber-500 outline-none shadow-inner transition" />
               </div>
               <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="w-full sm:w-48 bg-[#030811] border border-slate-700 rounded-xl py-2.5 px-4 text-sm text-white focus:border-amber-500 outline-none shadow-inner transition cursor-pointer appearance-none">
-                  <option value="all">Todos os Status</option>
-                  <option value="Ativa">Ativas</option>
-                  <option value="Bloqueada">Bloqueadas</option>
+                  <option value="all" className="bg-[#0B192C] text-white">Todos os Status</option>
+                  <option value="Ativa" className="bg-[#0B192C] text-white">Ativas</option>
+                  <option value="Bloqueada" className="bg-[#0B192C] text-white">Bloqueadas</option>
               </select>
             </div>
             <button onClick={() => setIsModalOpen(true)} className="flex items-center justify-center space-x-2 bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-slate-900 font-extrabold px-5 py-2.5 rounded-xl transition shadow-lg w-full lg:w-auto shrink-0"><Plus className="w-4 h-4" /> <span>Nova Empresa</span></button>
@@ -468,28 +423,15 @@ const MasterView = ({ setView }) => {
             ) : (
               <table className="w-full text-left text-sm text-slate-300 min-w-max">
                 <thead className="text-[10px] uppercase tracking-widest bg-[#030811] text-slate-500 font-bold border-b border-slate-800 sticky top-0">
-                  <tr><th className="px-6 py-4">Empresa / Contato</th><th className="px-6 py-4">WhatsApp</th><th className="px-6 py-4 text-center">Plano</th><th className="px-6 py-4 text-center">Status</th><th className="px-6 py-4 text-right">Ações</th></tr>
+                  <tr><th className="px-6 py-4">Empresa / Contato</th><th className="px-6 py-4 text-center">Plano</th><th className="px-6 py-4 text-center">Status</th><th className="px-6 py-4 text-right">Ações</th></tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/50">
                   {empresasFiltradas.length === 0 ? (
-                    <tr><td colSpan="5" className="text-center py-8 text-slate-500 font-bold">Nenhuma empresa encontrada com estes filtros.</td></tr>
+                    <tr><td colSpan="4" className="text-center py-8 text-slate-500 font-bold">Nenhuma empresa encontrada com estes filtros.</td></tr>
                   ) : (
                     empresasFiltradas.map((item) => (
                       <tr key={item.id} className="hover:bg-slate-800/40 transition">
                         <td className="px-6 py-4"><div className="font-extrabold text-white text-base">{item.nome}</div><div className="text-xs text-slate-500 mt-0.5">{item.email}</div></td>
-                        <td className="px-6 py-4">
-                          {item.whatsapp ? (
-                            <button 
-                              onClick={() => window.open(`https://wa.me/${String(item.whatsapp).replace(/\D/g, '').length >= 10 && !String(item.whatsapp).replace(/\D/g, '').startsWith('55') ? '55' + String(item.whatsapp).replace(/\D/g, '') : String(item.whatsapp).replace(/\D/g, '')}`, '_blank')}
-                              className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400 hover:text-emerald-300 transition bg-emerald-400/10 hover:bg-emerald-400/20 px-3 py-1.5 rounded-lg border border-emerald-400/20 cursor-pointer"
-                            >
-                              <MessageCircle className="w-4 h-4" />
-                              {item.whatsapp}
-                            </button>
-                          ) : (
-                            <span className="text-xs text-slate-600 italic">Sem número</span>
-                          )}
-                        </td>
                         <td className="px-6 py-4 text-center"><span className="bg-slate-800 px-3 py-1 rounded-md text-xs font-medium border border-slate-700">{item.plano}</span><div className="text-xs text-slate-500 mt-1">{item.equipa} vendedores ativos</div></td>
                         <td className="px-6 py-4 text-center">
                           <span className={`inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider mx-auto ${item.status === 'Ativa' ? 'text-emerald-400 bg-emerald-400/10 border border-emerald-400/20' : 'text-red-400 bg-red-400/10 border border-red-400/20'}`}>
@@ -529,14 +471,7 @@ const MasterView = ({ setView }) => {
                       </div>
                       <div>
                         <label className="text-xs font-bold text-slate-400 mb-1 block">WhatsApp</label>
-                        <input type="tel" value={novaEmpresa.whatsapp} onChange={(e) => {
-                          let val = e.target.value.replace(/\D/g, '');
-                          if (val.length > 11) val = val.substring(0, 11);
-                          let formatted = val.length > 0 ? '(' + val.substring(0, 2) : '';
-                          if (val.length > 2) formatted += ') ' + val.substring(2, 7);
-                          if (val.length > 7) formatted += '-' + val.substring(7, 11);
-                          setNovaEmpresa({...novaEmpresa, whatsapp: formatted});
-                        }} placeholder="(00) 00000-0000" className="w-full bg-[#030811] border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-amber-500"/>
+                        <input type="text" value={novaEmpresa.whatsapp} onChange={(e) => setNovaEmpresa({...novaEmpresa, whatsapp: e.target.value})} placeholder="(00) 00000-0000" className="w-full bg-[#030811] border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-amber-500"/>
                       </div>
                    </div>
                    <div>
@@ -550,11 +485,10 @@ const MasterView = ({ setView }) => {
                    <div className="relative group">
                      <label className="text-xs font-bold text-slate-400 mb-1 block">Plano Contratado *</label>
                      <select value={novaEmpresa.plano} onChange={(e) => setNovaEmpresa({...novaEmpresa, plano: e.target.value})} className="w-full bg-[#030811] border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-amber-500 appearance-none cursor-pointer">
-                        <option value="FREE [Teste Ilimitado 14 dias]">FREE [Teste Ilimitado 14 dias]</option>
-                        <option value="Básico até 3 vendedores [R$ 75,00]">Básico até 3 vendedores [R$ 75,00]</option>
-                        <option value="Pró até 5 vendedores [R$ 100,00]">Pró até 5 vendedores [R$ 100,00]</option>
-                        <option value="Premium até 10 vendedores [R$ 125,00]">Premium até 10 vendedores [R$ 125,00]</option>
-                        <option value="Master Ilimitado [R$ 150,00]">Master Ilimitado [R$ 150,00]</option>
+                        <option value="Free [Teste Ilimitado 14 dias]" className="bg-[#0B192C] text-white">Free [Teste Ilimitado 14 dias]</option>
+                        <option value="Básico até 5 vendedores [R$ 100,00]" className="bg-[#0B192C] text-white">Básico até 5 vendedores [R$ 100,00]</option>
+                        <option value="Pró até 10 vendedores [R$ 125,00]" className="bg-[#0B192C] text-white">Pró até 10 vendedores [R$ 125,00]</option>
+                        <option value="Master Ilimitado [R$ 150,00]" className="bg-[#0B192C] text-white">Master Ilimitado [R$ 150,00]</option>
                      </select>
                      <span className="absolute inset-y-0 right-0 flex items-center pr-4 pt-5 pointer-events-none text-slate-400"><ChevronDown className="w-4 h-4"/></span>
                    </div>
@@ -582,12 +516,11 @@ const MasterView = ({ setView }) => {
                    </div>
                    <div className="relative group">
                      <label className="text-xs font-bold text-slate-400 mb-1 block">Plano Contratado</label>
-                     <select value={editEmpresaModal.plano || 'FREE [Teste Ilimitado 14 dias]'} onChange={(e) => setEditEmpresaModal({...editEmpresaModal, plano: e.target.value})} className="w-full bg-[#030811] border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-amber-500 appearance-none cursor-pointer">
-                        <option value="FREE [Teste Ilimitado 14 dias]">FREE [Teste Ilimitado 14 dias]</option>
-                        <option value="Básico até 3 vendedores [R$ 75,00]">Básico até 3 vendedores [R$ 75,00]</option>
-                        <option value="Pró até 5 vendedores [R$ 100,00]">Pró até 5 vendedores [R$ 100,00]</option>
-                        <option value="Premium até 10 vendedores [R$ 125,00]">Premium até 10 vendedores [R$ 125,00]</option>
-                        <option value="Master Ilimitado [R$ 150,00]">Master Ilimitado [R$ 150,00]</option>
+                     <select value={editEmpresaModal.plano || 'Free [Teste Ilimitado 14 dias]'} onChange={(e) => setEditEmpresaModal({...editEmpresaModal, plano: e.target.value})} className="w-full bg-[#030811] border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-amber-500 appearance-none cursor-pointer">
+                        <option value="Free [Teste Ilimitado 14 dias]" className="bg-[#0B192C] text-white">Free [Teste Ilimitado 14 dias]</option>
+                        <option value="Básico até 5 vendedores [R$ 100,00]" className="bg-[#0B192C] text-white">Básico até 5 vendedores [R$ 100,00]</option>
+                        <option value="Pró até 10 vendedores [R$ 125,00]" className="bg-[#0B192C] text-white">Pró até 10 vendedores [R$ 125,00]</option>
+                        <option value="Master Ilimitado [R$ 150,00]" className="bg-[#0B192C] text-white">Master Ilimitado [R$ 150,00]</option>
                      </select>
                      <span className="absolute inset-y-0 right-0 flex items-center pr-4 pt-5 pointer-events-none text-slate-400"><ChevronDown className="w-4 h-4"/></span>
                    </div>
@@ -598,14 +531,14 @@ const MasterView = ({ setView }) => {
                    </div>
                    <button 
                      onClick={async () => {
-                        if(!editEmpresaModal.nome) return showToast('O nome é obrigatório.', 'error');
+                        if(!editEmpresaModal.nome) return alert('O nome é obrigatório.');
                         try {
                             await updateDoc(doc(db, 'usuarios', editEmpresaModal.id), { nome: editEmpresaModal.nome, plano: editEmpresaModal.plano });
                             setEditEmpresaModal(null);
-                            showToast('Empresa atualizada com sucesso!', 'success');
+                            alert('Empresa atualizada com sucesso!');
                         } catch (err) {
                             console.error(err);
-                            showToast('Erro ao atualizar empresa.', 'error');
+                            alert('Erro ao atualizar empresa.');
                         }
                      }} 
                      className="w-full bg-gradient-to-r from-amber-400 to-orange-500 text-slate-900 font-extrabold py-3 rounded-xl mt-2 transition hover:scale-[1.02]">
@@ -622,11 +555,10 @@ const MasterView = ({ setView }) => {
 };
 
 // ==========================================
-// 6. VISÃO EMPRESA (O CRM Vivo com Upload Seguro)
+// 6. VISÃO EMPRESA (O CRM Vivo com Upload e Exportação)
 // ==========================================
 const EmpresaView = ({ setView, userData }) => {
   const [currentTab, setCurrentTab] = useState('resultados');
-  
   const [dateFilter, setDateFilter] = useState('semana');
   const [customStartDash, setCustomStartDash] = useState('');
   const [customEndDash, setCustomEndDash] = useState('');
@@ -634,33 +566,32 @@ const EmpresaView = ({ setView, userData }) => {
   const [resultadosFilter, setResultadosFilter] = useState('7dias');
   const [customStartCRM, setCustomStartCRM] = useState('');
   const [customEndCRM, setCustomEndCRM] = useState('');
-  
   const [vendedorFilter, setVendedorFilter] = useState('todos');
-  const [crmStatusFilter, setCrmStatusFilter] = useState('todos'); 
-
-  const [isVendedorModalOpen, setIsVendedorModalOpen] = useState(false);
+  const [crmStatusFilter, setCrmStatusFilter] = useState('todos');
+  
+  // Modais e Estados de Gestão de Equipa
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [uploadStatus, setUploadStatus] = useState('idle');
   
-  const [novoVendedor, setNovoVendedor] = useState({ nome: '', whatsapp: '', email: '', senha: '' });
+  const [vendedoresLista, setVendedoresLista] = useState([]);
+  const [loadingVendedores, setLoadingVendedores] = useState(true);
+  const [isVendedorModalOpen, setIsVendedorModalOpen] = useState(false);
+  const [editVendedorModal, setEditVendedorModal] = useState(null);
+  const [vendedorToDelete, setVendedorToDelete] = useState(null);
+  const [showLimitModal, setShowLimitModal] = useState(false);
+  const [novoVendedor, setNovoVendedor] = useState({ nome: '', email: '', whatsapp: '', senha: '' });
   const [vendedorLoading, setVendedorLoading] = useState(false);
 
   const [orcamentos, setOrcamentos] = useState([]);
   const [loadingCRM, setLoadingCRM] = useState(true);
-
-  const [vendedoresLista, setVendedoresLista] = useState([]);
-  const [loadingVendedores, setLoadingVendedores] = useState(true);
-  const [editVendedorModal, setEditVendedorModal] = useState(null);
-
-  const [vendedorToDelete, setVendedorToDelete] = useState(null);
-  const [showLimitModal, setShowLimitModal] = useState(false);
-
   const [toast, setToast] = useState(null);
+
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
   };
 
+  // Carregar Orçamentos da Nuvem
   useEffect(() => {
     const q = query(collection(db, "orcamentos"), orderBy("timestamp", "desc"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -692,6 +623,7 @@ const EmpresaView = ({ setView, userData }) => {
     return () => unsubscribe();
   }, []);
 
+  // Carregar Vendedores da Empresa
   useEffect(() => {
     if (!userData || !userData.uid) return;
     const q = query(collection(db, "usuarios"));
@@ -715,46 +647,117 @@ const EmpresaView = ({ setView, userData }) => {
   const orcamentosFiltrados = orcamentos.filter(orc => {
       if (userData && userData.uid && orc.empresaId && orc.empresaId !== userData.uid) return false;
       if (vendedorFilter !== 'todos' && orc.vendedor !== vendedorFilter) return false;
-      
+
       const currentStatus = orc.status || 'Negociando';
       if (crmStatusFilter !== 'todos' && currentStatus !== crmStatusFilter) return false;
 
-      const hojeIncio = new Date();
-      hojeIncio.setHours(0, 0, 0, 0);
-      const hojeMs = hojeIncio.getTime();
+      const hojeMs = new Date().getTime();
       const umDiaMs = 24 * 60 * 60 * 1000;
-      
-      let aprovadoData = true;
+      let limiteMs = 0;
+
       if (resultadosFilter === 'hoje') {
-          if (!orc.msTimestamp || orc.msTimestamp < hojeMs) aprovadoData = false;
-      } else if (resultadosFilter === '7dias') {
-          if (!orc.msTimestamp || orc.msTimestamp < (hojeMs - 7 * umDiaMs)) aprovadoData = false;
-      } else if (resultadosFilter === '15dias') {
-          if (!orc.msTimestamp || orc.msTimestamp < (hojeMs - 15 * umDiaMs)) aprovadoData = false;
-      } else if (resultadosFilter === '30dias') {
-          if (!orc.msTimestamp || orc.msTimestamp < (hojeMs - 30 * umDiaMs)) aprovadoData = false;
-      } else if (resultadosFilter === 'personalizado') {
-          if (customStartCRM) {
-              const start = new Date(customStartCRM + 'T00:00:00').getTime();
-              if (!orc.msTimestamp || orc.msTimestamp < start) aprovadoData = false;
-          }
-          if (customEndCRM) {
-              const end = new Date(customEndCRM + 'T23:59:59').getTime();
-              if (!orc.msTimestamp || orc.msTimestamp > end) aprovadoData = false;
-          }
+          const inicioHoje = new Date();
+          inicioHoje.setHours(0,0,0,0);
+          limiteMs = inicioHoje.getTime();
+      } else if (resultadosFilter === '7dias') limiteMs = hojeMs - (7 * umDiaMs);
+      else if (resultadosFilter === '15dias') limiteMs = hojeMs - (15 * umDiaMs);
+      else if (resultadosFilter === '30dias') limiteMs = hojeMs - (30 * umDiaMs);
+      else if (resultadosFilter === 'personalizado' && customStartCRM && customEndCRM) {
+          const startMs = new Date(customStartCRM + 'T00:00:00').getTime();
+          const endMs = new Date(customEndCRM + 'T23:59:59').getTime();
+          if (orc.msTimestamp < startMs || orc.msTimestamp > endMs) return false;
       }
 
-      if (!aprovadoData) return false;
+      if (limiteMs > 0 && orc.msTimestamp && orc.msTimestamp < limiteMs) return false;
       return true;
   });
 
   const vendedoresUnicos = [...new Set(orcamentos.map(orc => orc.vendedor))].filter(Boolean);
 
-  const handleSimulateUpload = async (e) => {
+  const hojeIncioDash = new Date();
+  hojeIncioDash.setHours(0, 0, 0, 0);
+  const hojeMsDash = hojeIncioDash.getTime();
+  const umDiaMsDash = 24 * 60 * 60 * 1000;
+
+  const simulacoesHoje = orcamentos.filter(orc => {
+      if (userData && userData.uid && orc.empresaId && orc.empresaId !== userData.uid) return false;
+      return orc.msTimestamp && orc.msTimestamp >= hojeMsDash;
+  }).length;
+
+  const simulacoesSemana = orcamentos.filter(orc => {
+      if (userData && userData.uid && orc.empresaId && orc.empresaId !== userData.uid) return false;
+      return orc.msTimestamp && orc.msTimestamp >= (hojeMsDash - 7 * umDiaMsDash);
+  }).length;
+
+  const diasSemanaMap = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'];
+  const dynamicChartData = [];
+  let maxVendas = 0;
+  for (let i = 6; i >= 0; i--) {
+      const dataAlvo = new Date(hojeIncioDash);
+      dataAlvo.setDate(hojeIncioDash.getDate() - i);
+      const startMs = dataAlvo.getTime();
+      const endMs = startMs + 24 * 60 * 60 * 1000;
+      
+      const qtd = orcamentos.filter(orc => {
+          if (userData && userData.uid && orc.empresaId && orc.empresaId !== userData.uid) return false;
+          return orc.msTimestamp >= startMs && orc.msTimestamp < endMs;
+      }).length;
+
+      if (qtd > maxVendas) maxVendas = qtd;
+      dynamicChartData.push({ name: diasSemanaMap[dataAlvo.getDay()], propostas: qtd, height: '0%' });
+  }
+  dynamicChartData.forEach(d => {
+      d.height = maxVendas === 0 ? '5%' : `${Math.max((d.propostas / maxVendas) * 100, 5)}%`;
+  });
+
+  const handleExportExcel = async () => {
+    if (orcamentosFiltrados.length === 0) {
+      showToast("Não há dados para exportar com os filtros atuais.", "error");
+      return;
+    }
+
+    try {
+      if (typeof window.XLSX === 'undefined') {
+        await new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+          script.onload = resolve;
+          script.onerror = reject;
+          document.head.appendChild(script);
+        });
+      }
+      const XLSX = window.XLSX;
+
+      const dadosExcel = orcamentosFiltrados.map(orc => ({
+        'Data da Simulação': orc.dataVisual,
+        'Consultor Comercial': orc.vendedor,
+        'Nome do Cliente': orc.cliente,
+        'WhatsApp Contato': orc.whatsapp,
+        'Cidade / UF': orc.cidade,
+        'Estrutura do Telhado': orc.estrutura,
+        'Categoria': orc.tipoKit,
+        'Kit Escolhido': orc.kit,
+        'Valor do Orçamento': formatarMoeda(orc.valor)
+      }));
+
+      const folha = XLSX.utils.json_to_sheet(dadosExcel);
+      const livro = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(livro, folha, "Relatório de Vendas");
+
+      const dataAtual = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
+      XLSX.writeFile(livro, `Relatorio_SaaS_${dataAtual}.xlsx`);
+    } catch (err) {
+      console.error("Erro ao exportar Excel", err);
+      showToast("Erro ao gerar o ficheiro Excel.", "error");
+    }
+  };
+
+  const handleRealUpload = async (e) => {
     const file = e.target.files[0];
     if(!file) return;
     
     setUploadStatus('deleting');
+
     try {
       if (typeof window.XLSX === 'undefined') {
         await new Promise((resolve, reject) => {
@@ -777,7 +780,7 @@ const EmpresaView = ({ setView, userData }) => {
           const jsonKits = XLSX.utils.sheet_to_json(worksheet);
 
           if(jsonKits.length === 0) {
-             showToast("A planilha parece estar vazia ou não tem o formato correto.", "error");
+             alert("A planilha parece estar vazia ou não tem o formato correto.");
              setUploadStatus('idle');
              return;
           }
@@ -811,70 +814,25 @@ const EmpresaView = ({ setView, userData }) => {
           await batch.commit();
           
           setUploadStatus('success');
-          setTimeout(() => { setUploadStatus('idle'); setIsUploadModalOpen(false); showToast("Kits atualizados com sucesso!", "success"); }, 3000);
+          setTimeout(() => { setUploadStatus('idle'); setIsUploadModalOpen(false); }, 3000);
 
         } catch (error) {
            console.error("Erro interno na leitura do Excel", error);
-           showToast("Ocorreu um erro ao processar a planilha. Verifique as colunas.", "error");
+           alert("Ocorreu um erro ao processar a planilha. Verifique as colunas.");
            setUploadStatus('idle');
         }
       };
       reader.readAsArrayBuffer(file);
     } catch(err) {
       console.error("Erro ao carregar motor Excel", err);
-      showToast("Erro ao conectar à biblioteca de Excel.", "error");
+      alert("Erro ao conectar à biblioteca de Excel.");
       setUploadStatus('idle');
-    }
-  };
-
-  const handleExportExcel = async () => {
-    if (orcamentosFiltrados.length === 0) {
-      showToast("Não há dados para exportar com os filtros atuais.", "error");
-      return;
-    }
-
-    try {
-      if (typeof window.XLSX === 'undefined') {
-        await new Promise((resolve, reject) => {
-          const script = document.createElement('script');
-          script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
-          script.onload = resolve;
-          script.onerror = reject;
-          document.head.appendChild(script);
-        });
-      }
-      const XLSX = window.XLSX;
-
-      const dadosExcel = orcamentosFiltrados.map(orc => ({
-        'Data da Simulação': orc.dataVisual,
-        'Consultor Comercial': orc.vendedor,
-        'Nome do Cliente': orc.cliente,
-        'WhatsApp Contato': orc.whatsapp,
-        'Cidade / UF': orc.cidade,
-        'Estrutura do Telhado': orc.estrutura || '--',
-        'Inversor': orc.inversor || '--',
-        'Qtd. Placas': orc.placas || '--',
-        'Categoria': orc.tipoKit,
-        'Kit Escolhido': orc.kit,
-        'Valor do Orçamento': formatarMoeda(orc.valor),
-        'Status Atual': orc.status || 'Negociando'
-      }));
-
-      const folha = XLSX.utils.json_to_sheet(dadosExcel);
-      const livro = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(livro, folha, "Relatório de Vendas");
-
-      const dataAtual = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
-      XLSX.writeFile(livro, `Relatorio_SaaS_${dataAtual}.xlsx`);
-    } catch (err) {
-      console.error("Erro ao exportar Excel", err);
-      showToast("Erro ao gerar o ficheiro Excel.", "error");
     }
   };
 
   const downloadTemplate = (e) => {
     e.preventDefault();
-    const csvContent = "data:text/csv;charset=utf-8,%EF%BB%BFKit;Placas;Modulo;Inversor;Valor;Tipo\nKIT 500kWh;6;590W;AUXSOL 3K;10000.00;String\nKIT MICRO 300kWh;4;620W;TSUNESS;8500.00;Micro";
+    const csvContent = "data:text/csv;charset=utf-8,Kit,Placas,Modulo,Inversor,Valor,Tipo\nKIT 500kWh,6,590W,AUXSOL 3K,10000.00,String\nKIT MICRO 300kWh,4,620W,TSUNESS,8500.00,Micro";
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
@@ -884,6 +842,17 @@ const EmpresaView = ({ setView, userData }) => {
     document.body.removeChild(link);
   };
 
+  const handleStatusChange = async (id, newStatus) => {
+    try {
+        await updateDoc(doc(db, "orcamentos", id), { status: newStatus });
+        showToast('Status atualizado com sucesso!', 'success');
+    } catch (error) {
+        console.error("Erro ao atualizar status", error);
+        showToast('Erro ao atualizar status do lead.', 'error');
+    }
+  };
+
+  // Funções de Gestão de Vendedores
   const toggleVendedorStatus = async (vendedor) => {
     const novoStatus = vendedor.status === 'Bloqueado' ? 'Ativo' : 'Bloqueado';
     try {
@@ -921,9 +890,8 @@ const EmpresaView = ({ setView, userData }) => {
   const handleOpenNovoVendedor = () => {
       const plano = userData?.plano || '';
       let limite = Infinity;
-      if (plano.includes('Básico')) limite = 3;
-      else if (plano.includes('Pró')) limite = 5;
-      else if (plano.includes('Premium')) limite = 10;
+      if (plano.includes('Básico')) limite = 5;
+      else if (plano.includes('Pró')) limite = 10;
       
       if (vendedoresLista.length >= limite) {
           setShowLimitModal(true);
@@ -931,22 +899,12 @@ const EmpresaView = ({ setView, userData }) => {
           setIsVendedorModalOpen(true);
       }
   };
-
-  const handleStatusChange = async (id, newStatus) => {
-    try {
-        await updateDoc(doc(db, "orcamentos", id), { status: newStatus });
-    } catch (error) {
-        console.error("Erro ao atualizar status", error);
-        showToast('Erro ao atualizar status do lead.', 'error');
-    }
-  };
   
   return (
-    <DashboardLayout title="Painel da Empresa (SolarTech)" setView={setView} role="empresa" currentTab={currentTab} setCurrentTab={setCurrentTab}>
+    <DashboardLayout title={`Painel da Empresa (${userData?.nome || 'SolarTech'})`} setView={setView} role="empresa" currentTab={currentTab} setCurrentTab={setCurrentTab}>
       {toast && (
         <div className={`fixed top-24 right-5 z-[100] flex items-center space-x-3 px-5 py-4 rounded-xl shadow-2xl transition-all duration-300 ${toast.type === 'error' ? 'bg-red-500' : 'bg-emerald-500'} text-white border border-white/10`}>
-          {toast.type === 'error' ? <AlertCircle className="w-5 h-5 flex-shrink-0" /> : <CheckCircle className="w-5 h-5 flex-shrink-0" />}
-          <span className="text-sm font-medium leading-snug">{toast.message}</span>
+          <AlertCircle className="w-5 h-5 flex-shrink-0" /> <span className="text-sm font-medium leading-snug">{toast.message}</span>
         </div>
       )}
 
@@ -955,13 +913,13 @@ const EmpresaView = ({ setView, userData }) => {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="bg-[#0B192C] border border-slate-800 rounded-2xl p-6 shadow-sm">
               <p className="text-xs uppercase font-bold tracking-wider text-slate-500 mb-2">Simulações (Hoje)</p>
-              <h3 className="text-4xl font-extrabold text-white mb-1">42</h3>
-              <p className="text-xs font-medium text-emerald-400 bg-emerald-400/10 w-max px-2 py-0.5 rounded flex items-center gap-1">+12% vs ontem</p>
+              <h3 className="text-4xl font-extrabold text-white mb-1">{simulacoesHoje}</h3>
+              <p className="text-[10px] text-slate-500 font-medium mt-1">Orçamentos gerados hoje</p>
             </div>
             <div className="bg-[#0B192C] border border-slate-800 rounded-2xl p-6 shadow-sm">
               <p className="text-xs uppercase font-bold tracking-wider text-slate-500 mb-2">Simulações (Semana)</p>
-              <h3 className="text-4xl font-extrabold text-white mb-1">156</h3>
-              <p className="text-xs font-medium text-emerald-400 bg-emerald-400/10 w-max px-2 py-0.5 rounded flex items-center gap-1">+5% vs semana ant.</p>
+              <h3 className="text-4xl font-extrabold text-white mb-1">{simulacoesSemana}</h3>
+              <p className="text-[10px] text-slate-500 font-medium mt-1">Nos últimos 7 dias</p>
             </div>
             <div className="bg-[#0B192C] border border-slate-800 rounded-2xl p-6 shadow-sm md:col-span-2 flex flex-col justify-center">
               <div className="flex justify-between items-start mb-4">
@@ -982,18 +940,18 @@ const EmpresaView = ({ setView, userData }) => {
                   <button onClick={() => setDateFilter('mes')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition ${dateFilter === 'mes' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-white'}`}>Este Mês</button>
                   {dateFilter === 'personalizado' ? (
                       <div className="flex items-center gap-2 ml-1 bg-slate-800 px-2 py-1 rounded-lg border border-amber-500/30">
-                          <input type="date" value={customStartDash} onChange={(e) => setCustomStartDash(e.target.value)} className="bg-transparent text-xs text-amber-400 outline-none cursor-pointer [color-scheme:dark]" />
+                          <input type="date" value={customStartDash} onChange={(e) => setCustomStartDash(e.target.value)} className="bg-transparent text-xs text-white outline-none [&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:invert" />
                           <span className="text-slate-500 text-xs">até</span>
-                          <input type="date" value={customEndDash} onChange={(e) => setCustomEndDash(e.target.value)} className="bg-transparent text-xs text-amber-400 outline-none cursor-pointer [color-scheme:dark]" />
-                          <button onClick={() => setDateFilter('semana')} className="ml-1 text-slate-400 hover:text-red-400 transition" title="Fechar calendário"><X className="w-3 h-3"/></button>
+                          <input type="date" value={customEndDash} onChange={(e) => setCustomEndDash(e.target.value)} className="bg-transparent text-xs text-white outline-none [&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:invert" />
+                          <button onClick={() => setDateFilter('semana')} className="text-slate-500 hover:text-red-400 ml-1"><X className="w-3 h-3"/></button>
                       </div>
                   ) : (
-                      <button onClick={() => setDateFilter('personalizado')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 text-slate-500 hover:text-white`}><Search className="w-3 h-3"/> Personalizado</button>
+                      <button onClick={() => setDateFilter('personalizado')} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 text-slate-500 hover:text-white whitespace-nowrap`}><Calendar className="w-3 h-3"/> Personalizado</button>
                   )}
                 </div>
              </div>
              <div className="h-64 w-full flex items-end justify-between gap-2 sm:gap-4 pt-6">
-               {chartData.map((data, index) => (
+               {dynamicChartData.map((data, index) => (
                  <div key={index} className="flex flex-col items-center w-full group">
                    <div className="w-full relative flex items-end justify-center h-48 bg-[#030811] rounded-t-md border border-slate-800 border-b-0">
                      <div className="w-full bg-gradient-to-t from-amber-500 to-orange-500 rounded-t-sm transition-all duration-500 group-hover:opacity-80 relative cursor-pointer" style={{ height: data.height }}>
@@ -1012,7 +970,7 @@ const EmpresaView = ({ setView, userData }) => {
          <div className="bg-[#0B192C] border border-slate-800 rounded-2xl overflow-hidden shadow-xl flex flex-col h-full w-full">
             <div className="p-4 sm:p-6 border-b border-slate-800 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-[#0B192C]/80 w-full">
               <div>
-                <h3 className="text-xl font-bold text-white flex items-center gap-2"><List className="w-6 h-6 text-amber-500"/> Histórico de Orçamentos</h3>
+                <h3 className="text-xl font-bold text-white flex items-center gap-2"><ClipboardList className="w-6 h-6 text-amber-500"/> Histórico de Orçamentos</h3>
                 <p className="text-sm text-slate-400 mt-1">Acompanhe e gira todas as propostas enviadas pela sua equipa.</p>
               </div>
               <div className="flex flex-col w-full lg:w-auto gap-3">
@@ -1020,9 +978,9 @@ const EmpresaView = ({ setView, userData }) => {
                     <div className="relative w-full sm:w-48 group">
                     <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500"><User className="w-4 h-4" /></span>
                     <select value={vendedorFilter} onChange={(e) => setVendedorFilter(e.target.value)} className="w-full bg-[#030811] border border-slate-700 rounded-xl py-2 pl-9 pr-8 text-sm text-white focus:border-amber-500 outline-none shadow-inner appearance-none cursor-pointer transition">
-                        <option value="todos">Todos Vendedores</option>
+                        <option value="todos" className="bg-[#0B192C] text-white">Todos Vendedores</option>
                         {vendedoresUnicos.map((vend, idx) => (
-                            <option key={idx} value={vend}>{vend}</option>
+                            <option key={idx} value={vend} className="bg-[#0B192C] text-white">{vend}</option>
                         ))}
                     </select>
                     <ChevronDown className="w-4 h-4 absolute right-3 top-2.5 text-slate-500 pointer-events-none" />
@@ -1030,12 +988,12 @@ const EmpresaView = ({ setView, userData }) => {
                     <div className="relative w-full sm:w-48 group">
                     <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500"><Activity className="w-4 h-4" /></span>
                     <select value={crmStatusFilter} onChange={(e) => setCrmStatusFilter(e.target.value)} className="w-full bg-[#030811] border border-slate-700 rounded-xl py-2 pl-9 pr-8 text-sm text-white focus:border-amber-500 outline-none shadow-inner appearance-none cursor-pointer transition">
-                        <option value="todos">Todos Status</option>
-                        <option value="Negociando">Negociando</option>
-                        <option value="Fin Aprovado">Fin Aprovado</option>
-                        <option value="Fin Reprovado">Fin Reprovado</option>
-                        <option value="Não Interessou">Não Interessou</option>
-                        <option value="Fechou">Fechou</option>
+                        <option value="todos" className="bg-[#0B192C] text-white">Todos Status</option>
+                        <option value="Negociando" className="bg-[#0B192C] text-white">Negociando</option>
+                        <option value="Fin Aprovado" className="bg-[#0B192C] text-white">Fin Aprovado</option>
+                        <option value="Fin Reprovado" className="bg-[#0B192C] text-white">Fin Reprovado</option>
+                        <option value="Não Interessou" className="bg-[#0B192C] text-white">Não Interessou</option>
+                        <option value="Fechou" className="bg-[#0B192C] text-white">Fechou</option>
                     </select>
                     <ChevronDown className="w-4 h-4 absolute right-3 top-2.5 text-slate-500 pointer-events-none" />
                     </div>
@@ -1043,22 +1001,22 @@ const EmpresaView = ({ setView, userData }) => {
                 <div className="w-full overflow-x-auto pb-2 sm:pb-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
                   <div className="flex items-center gap-2 w-max">
                     <div className="flex items-center bg-[#030811] border border-slate-700 rounded-xl p-1 shadow-inner shrink-0">
-                      <button onClick={() => {setResultadosFilter('hoje'); setCustomStartCRM(''); setCustomEndCRM('');}} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${resultadosFilter === 'hoje' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-white'}`}>Hoje</button>
+                      <button onClick={() => {setResultadosFilter('hoje'); setCustomStartCRM(''); setCustomEndCRM('');}} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${resultadosFilter === 'hoje' ? 'bg-amber-500 text-slate-900 shadow-sm' : 'text-slate-400 hover:text-white'}`}>Hoje</button>
                       <button onClick={() => {setResultadosFilter('7dias'); setCustomStartCRM(''); setCustomEndCRM('');}} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${resultadosFilter === '7dias' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-white'}`}>7 Dias</button>
                       <button onClick={() => {setResultadosFilter('15dias'); setCustomStartCRM(''); setCustomEndCRM('');}} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${resultadosFilter === '15dias' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-white'}`}>15 Dias</button>
                       <button onClick={() => {setResultadosFilter('30dias'); setCustomStartCRM(''); setCustomEndCRM('');}} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${resultadosFilter === '30dias' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-white'}`}>30 Dias</button>
                       {resultadosFilter === 'personalizado' ? (
                           <div className="flex items-center gap-2 ml-1 bg-slate-800 px-2 py-1 rounded-lg border border-amber-500/30">
-                              <input type="date" value={customStartCRM} onChange={(e) => setCustomStartCRM(e.target.value)} className="bg-transparent text-xs text-amber-400 outline-none cursor-pointer [color-scheme:dark]" />
+                              <input type="date" value={customStartCRM} onChange={(e) => setCustomStartCRM(e.target.value)} className="bg-transparent text-xs text-white outline-none [&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:invert" />
                               <span className="text-slate-500 text-xs">até</span>
-                              <input type="date" value={customEndCRM} onChange={(e) => setCustomEndCRM(e.target.value)} className="bg-transparent text-xs text-amber-400 outline-none cursor-pointer [color-scheme:dark]" />
-                              <button onClick={() => setResultadosFilter('7dias')} className="ml-1 text-slate-400 hover:text-red-400 transition" title="Fechar calendário"><X className="w-3 h-3"/></button>
+                              <input type="date" value={customEndCRM} onChange={(e) => setCustomEndCRM(e.target.value)} className="bg-transparent text-xs text-white outline-none [&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:invert" />
+                              <button onClick={() => setResultadosFilter('7dias')} className="text-slate-500 hover:text-red-400 ml-1"><X className="w-3 h-3"/></button>
                           </div>
                       ) : (
                           <button onClick={() => setResultadosFilter('personalizado')} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 text-slate-500 hover:text-white whitespace-nowrap`}><Calendar className="w-3 h-3"/> Personalizado</button>
                       )}
                     </div>
-                    <button onClick={handleExportExcel} className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 whitespace-nowrap"><Download className="w-3.5 h-3.5"/> Exportar Excel</button>
+                    <button onClick={handleExportExcel} className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 whitespace-nowrap"><FileSpreadsheet className="w-3.5 h-3.5"/> Exportar Excel</button>
                   </div>
                 </div>
               </div>
@@ -1071,7 +1029,7 @@ const EmpresaView = ({ setView, userData }) => {
               ) : (
                 <table className="w-full text-left text-sm text-slate-300 min-w-max">
                   <thead className="text-[10px] uppercase tracking-widest bg-[#030811] text-slate-500 font-bold border-b border-slate-800 sticky top-0 z-10">
-                    <tr><th className="px-4 py-3 rounded-tl-lg">Data / Hora</th><th className="px-4 py-3">Vendedor</th><th className="px-4 py-3">Cliente</th><th className="px-4 py-3">Cidade</th><th className="px-4 py-3">Estrutura</th><th className="px-4 py-3">Inversor</th><th className="px-4 py-3 text-center">Placas</th><th className="px-4 py-3">Tipo</th><th className="px-4 py-3 text-center">Status do Lead</th><th className="px-4 py-3 rounded-tr-lg text-right">Valor (R$)</th></tr>
+                    <tr><th className="px-4 py-3 rounded-tl-lg">Data / Hora</th><th className="px-4 py-3">Vendedor</th><th className="px-4 py-3">Cliente</th><th className="px-4 py-3">WhatsApp</th><th className="px-4 py-3">Cidade</th><th className="px-4 py-3">Estrutura</th><th className="px-4 py-3">Tipo</th><th className="px-4 py-3">Kit Solar</th><th className="px-4 py-3 text-center">Status</th><th className="px-4 py-3 rounded-tr-lg text-right">Valor (R$)</th></tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/50">
                     {orcamentosFiltrados.length === 0 ? (
@@ -1081,25 +1039,12 @@ const EmpresaView = ({ setView, userData }) => {
                         <tr key={sim.id} className="hover:bg-slate-800/40 transition">
                           <td className="px-4 py-3 text-xs text-slate-400 whitespace-nowrap">{sim.dataVisual}</td>
                           <td className="px-4 py-3 font-medium text-white whitespace-nowrap">{sim.vendedor}</td>
-                          <td className="px-4 py-3 whitespace-nowrap">
-                             <div className="font-bold text-white">{sim.cliente}</div>
-                             {sim.whatsapp ? (
-                                <button 
-                                  onClick={() => window.open(`https://wa.me/${String(sim.whatsapp).replace(/\D/g, '').length >= 10 && !String(sim.whatsapp).replace(/\D/g, '').startsWith('55') ? '55' + String(sim.whatsapp).replace(/\D/g, '') : String(sim.whatsapp).replace(/\D/g, '')}`, '_blank')}
-                                  className="inline-flex items-center gap-1.5 text-[10px] font-bold text-emerald-400 hover:text-emerald-300 transition mt-1 cursor-pointer"
-                                >
-                                  <MessageSquare className="w-3 h-3" />
-                                  {sim.whatsapp}
-                                </button>
-                              ) : (
-                                <span className="text-[10px] text-slate-600 italic mt-1 block">Sem número</span>
-                              )}
-                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap">{sim.cliente}</td>
+                          <td className="px-4 py-3 font-mono text-xs whitespace-nowrap">{sim.whatsapp}</td>
                           <td className="px-4 py-3 text-xs whitespace-nowrap">{sim.cidade}</td>
-                          <td className="px-4 py-3 text-xs whitespace-nowrap">{sim.estrutura || '--'}</td>
-                          <td className="px-4 py-3 text-xs text-amber-500 whitespace-nowrap">{sim.inversor || '--'}</td>
-                          <td className="px-4 py-3 text-sm font-bold text-white text-center whitespace-nowrap">{sim.placas || '--'}</td>
+                          <td className="px-4 py-3 text-xs whitespace-nowrap">{sim.estrutura}</td>
                           <td className="px-4 py-3 whitespace-nowrap"><span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${sim.tipoKit === 'String' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'}`}>{sim.tipoKit}</span></td>
+                          <td className="px-4 py-3 text-xs font-semibold whitespace-nowrap">{sim.kit}</td>
                           <td className="px-4 py-3 text-center whitespace-nowrap">
                               <select 
                                  value={sim.status || 'Negociando'} 
@@ -1110,11 +1055,11 @@ const EmpresaView = ({ setView, userData }) => {
                                       sim.status === 'Fin Aprovado' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
                                       'bg-amber-500/10 text-amber-400 border border-amber-500/20'}`}
                               >
-                                 <option value="Negociando">Negociando</option>
-                                 <option value="Fin Aprovado">Fin Aprovado</option>
-                                 <option value="Fin Reprovado">Fin Reprovado</option>
-                                 <option value="Não Interessou">Não Interessou</option>
-                                 <option value="Fechou">Fechou</option>
+                                 <option value="Negociando" className="bg-[#0B192C] text-white">Negociando</option>
+                                 <option value="Fin Aprovado" className="bg-[#0B192C] text-white">Fin Aprovado</option>
+                                 <option value="Fin Reprovado" className="bg-[#0B192C] text-white">Fin Reprovado</option>
+                                 <option value="Não Interessou" className="bg-[#0B192C] text-white">Não Interessou</option>
+                                 <option value="Fechou" className="bg-[#0B192C] text-white">Fechou</option>
                               </select>
                           </td>
                           <td className="px-4 py-3 text-right font-bold text-amber-500 whitespace-nowrap">{formatarMoeda(sim.valor)}</td>
@@ -1360,7 +1305,7 @@ const EmpresaView = ({ setView, userData }) => {
                         </div>
                         <label className="border-2 border-dashed border-slate-700 rounded-2xl p-8 flex flex-col items-center justify-center hover:bg-slate-800/50 transition cursor-pointer group">
                             <input type="file" className="hidden" accept=".xlsx, .csv, .xls" onChange={handleSimulateUpload} />
-                            <FileText className="w-10 h-10 text-slate-500 group-hover:text-amber-500 mb-2 transition" />
+                            <FileSpreadsheet className="w-10 h-10 text-slate-500 group-hover:text-amber-500 mb-2 transition" />
                             <p className="text-sm font-bold text-slate-300">Clique para selecionar a planilha</p>
                         </label>
                         <button onClick={() => setIsUploadModalOpen(false)} className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-xl mt-4 border border-slate-700 transition">Cancelar</button>
@@ -1395,26 +1340,19 @@ const EmpresaView = ({ setView, userData }) => {
 };
 
 // ==========================================
-// 7. VISÃO VENDEDOR (Formulário e Histórico Pessoal)
+// 7. VISÃO VENDEDOR (Agora com dados da Nuvem)
 // ==========================================
-const VendedorView = ({ setView, userData }) => {
-  const [viewMode, setViewMode] = useState('simulador'); // 'simulador' | 'historico'
-  
+const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
+  const [viewMode, setViewMode] = useState('simulador');
   const [formData, setFormData] = useState({ sellerName: userData?.nome || '', kitString: '', kitMicro: '', roofStructure: '', clientName: '', clientWhatsapp: '', clientCity: '' });
-  
   const [timeFilter, setTimeFilter] = useState('hoje');
   const [customStartVend, setCustomStartVend] = useState('');
   const [customEndVend, setCustomEndVend] = useState('');
-
   const [toast, setToast] = useState(null);
   
   const [orcamentos, setOrcamentos] = useState([]);
   const [loadingCRM, setLoadingCRM] = useState(true);
   const [crmStatusFilter, setCrmStatusFilter] = useState('todos'); 
-
-  const [kitsString, setKitsString] = useState([]);
-  const [kitsMicro, setKitsMicro] = useState([]);
-  const [nomeEmpresa, setNomeEmpresa] = useState("Energia Solar ☀️");
 
   const showToast = (message, type = 'error') => {
     setToast({ message, type });
@@ -1422,87 +1360,36 @@ const VendedorView = ({ setView, userData }) => {
   };
 
   useEffect(() => {
-    const q = query(collection(db, 'kits'));
+    if (!userData || !userData.uid) return;
+    const q = query(collection(db, "orcamentos"), orderBy("timestamp", "desc"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      if (!querySnapshot.empty) {
-        const strings = [];
-        const micros = [];
-        const targetEmpresaId = userData?.role === 'vendedor' ? userData?.empresaId : userData?.uid;
-        
-        querySnapshot.forEach((docSnap) => {
-          const kit = docSnap.data();
-          if (targetEmpresaId && kit.empresaId && kit.empresaId !== targetEmpresaId) return;
-
-          if (kit.Tipo === 'Micro' || (kit.Kit && String(kit.Kit).toUpperCase().includes('MICRO'))) {
-            micros.push(kit);
-          } else {
-            strings.push(kit);
-          }
-        });
-        
-        const sortKits = (arr) => arr.sort((a,b) => parseFloat(String(a.Valor).replace(/[^\d.,]/g, '').replace(',', '.')) - parseFloat(String(b.Valor).replace(/[^\d.,]/g, '').replace(',', '.')));
-
-        if(strings.length === 0 && micros.length === 0) {
-            setKitsString(fallbackKitsString);
-            setKitsMicro(fallbackKitsMicro);
-        } else {
-            setKitsString(sortKits(strings));
-            setKitsMicro(sortKits(micros));
-        }
-      } else {
-            setKitsString(fallbackKitsString);
-            setKitsMicro(fallbackKitsMicro);
-      }
-    }, err => console.error("Kits fetch erro:", err));
-    return () => unsubscribe();
-  }, [userData]);
-
-  useEffect(() => {
-    if (!userData?.nome) return;
-    const q = query(collection(db, 'orcamentos'));
-    const unsub = onSnapshot(q, snap => {
       const docs = [];
-      snap.forEach(d => {
-         const data = d.data();
-         if (data.vendedorUid === userData.uid || data.vendedor === userData.nome) {
-             let dataFormatada = 'Sem Data';
-             let msTimestamp = 0;
-             if (data.msTimestamp) {
-                 msTimestamp = data.msTimestamp;
-                 dataFormatada = new Date(msTimestamp).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
-             } else if (data.timestamp) {
-                const date = data.timestamp?.toDate();
-                if (date) {
-                    msTimestamp = date.getTime();
-                    dataFormatada = date.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
-                }
-             } else if (data.data) {
-                dataFormatada = data.data;
-                const [dataPart, timePart] = data.data.split(' ');
-                if(dataPart && timePart) {
-                    const [day, month, year] = dataPart.split('/');
-                    const [hour, min] = timePart.split(':');
-                    msTimestamp = new Date(year, month - 1, day, hour, min).getTime();
-                }
-             }
-             docs.push({ id: d.id, ...data, dataVisual: dataFormatada, msTimestamp });
-         }
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        if (data.vendedorUid === userData.uid || data.vendedor === userData.nome) {
+            let dataFormatada = 'Sem Data';
+            let msTimestamp = 0;
+            if (data.timestamp) {
+               const date = data.timestamp.toDate();
+               msTimestamp = date.getTime();
+               dataFormatada = date.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+            } else if (data.data) {
+               dataFormatada = data.data;
+               const [dataPart, timePart] = data.data.split(' ');
+               if(dataPart && timePart) {
+                   const [day, month, year] = dataPart.split('/');
+                   const [hour, min] = timePart.split(':');
+                   msTimestamp = new Date(year, month - 1, day, hour, min).getTime();
+               }
+            }
+            docs.push({ id: doc.id, ...data, dataVisual: dataFormatada, msTimestamp });
+        }
       });
       docs.sort((a, b) => b.msTimestamp - a.msTimestamp);
       setOrcamentos(docs);
       setLoadingCRM(false);
-    }, err => console.error("Orcamentos vendedor erro:", err));
-    return () => unsub();
-  }, [userData]);
-
-  useEffect(() => {
-     if(userData && userData.empresaId && userData.empresaId !== 'padrao') {
-         getDoc(doc(db, 'usuarios', userData.empresaId)).then(docSnap => {
-             if(docSnap.exists()) {
-                 setNomeEmpresa(docSnap.data().nome + " ☀️");
-             }
-         }).catch(err => console.log("Erro ao buscar nome empresa:", err));
-     }
+    });
+    return () => unsubscribe();
   }, [userData]);
 
   const handleInputChange = (e) => {
@@ -1514,6 +1401,18 @@ const VendedorView = ({ setView, userData }) => {
   };
 
   const activeKit = formData.kitString !== '' ? kitsString[formData.kitString] : formData.kitMicro !== '' ? kitsMicro[formData.kitMicro] : null;
+
+  const [nomeEmpresa, setNomeEmpresa] = useState("Energia Solar ☀️");
+  
+  useEffect(() => {
+     if(userData && userData.empresaId && userData.empresaId !== 'padrao') {
+         getDoc(doc(db, 'usuarios', userData.empresaId)).then(docSnap => {
+             if(docSnap.exists()) {
+                 setNomeEmpresa(docSnap.data().nome + " ☀️");
+             }
+         }).catch(err => console.log("Erro ao buscar nome empresa:", err));
+     }
+  }, [userData]);
 
   const buildMessage = () => {
     const clientName = formData.clientName.trim() || '[Nome do Cliente]';
@@ -1551,22 +1450,22 @@ const VendedorView = ({ setView, userData }) => {
         whatsapp: formData.clientWhatsapp, 
         cidade: formData.clientCity,
         estrutura: formData.roofStructure, 
-        inversor: activeKit.Inversor,
-        placas: activeKit.Placas,
         tipoKit: formData.kitString !== '' ? 'String' : 'Micro', 
         kit: activeKit.Kit, 
         valor: activeKit.Valor, 
-        status: 'Negociando', // Status inicial
         timestamp: serverTimestamp(),
         msTimestamp: dateNow.getTime(),
         empresaId: userData?.empresaId || 'padrao', 
-        vendedorUid: userData?.uid || 'padrao'
+        vendedorUid: userData?.uid || 'padrao',
+        status: 'Negociando'
       });
       const textMessage = buildMessage();
       const encodedText = encodeURIComponent(textMessage);
       const waUrl = `https://wa.me/${cleanPhone}?text=${encodedText}`;
       window.location.href = waUrl;
-    } catch (error) { showToast('Erro ao gravar na nuvem.', 'error'); }
+    } catch (error) {
+      showToast('Erro ao gravar na nuvem.', 'error');
+    }
   };
 
   const handleStatusChange = async (id, newStatus) => {
@@ -1607,7 +1506,7 @@ const VendedorView = ({ setView, userData }) => {
     }
     return true;
   });
-
+  
   return (
     <div className="min-h-screen bg-[#030811] text-slate-100 font-sans selection:bg-amber-500 overflow-x-hidden relative">
       {toast && (
@@ -1648,6 +1547,26 @@ const VendedorView = ({ setView, userData }) => {
             
             {viewMode === 'simulador' ? (
               <div className="max-w-4xl mx-auto">
+                <div className="bg-[#030811] rounded-3xl border border-slate-700/60 shadow-xl mb-12 p-4 sm:p-5 w-full">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-5 gap-3 border-b border-slate-800/80 pb-4 w-full overflow-hidden">
+                    <h2 className="text-xs font-extrabold text-slate-300 uppercase tracking-widest flex items-center gap-2 shrink-0"><BarChart3 className="w-4 h-4 text-amber-500"/> O Meu Desempenho</h2>
+                    <div className="w-full overflow-x-auto pb-2 sm:pb-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+                      <div className="bg-[#0B192C] rounded-xl p-1 flex text-xs font-bold border border-slate-700 shadow-inner w-max">
+                        <button onClick={() => setTimeFilter('hoje')} className={`px-4 py-1.5 rounded-lg transition ${timeFilter === 'hoje' ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'}`}>Hoje</button>
+                        <button onClick={() => setTimeFilter('semana')} className={`px-4 py-1.5 rounded-lg transition ${timeFilter === 'semana' ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'}`}>Semana</button>
+                        <button onClick={() => setTimeFilter('quinzena')} className={`px-4 py-1.5 rounded-lg transition ${timeFilter === 'quinzena' ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'}`}>Quinzena</button>
+                        <button onClick={() => setTimeFilter('mes')} className={`px-4 py-1.5 rounded-lg transition ${timeFilter === 'mes' ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-white'}`}>Mês</button>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
+                     <div className="bg-[#0B192C] p-4 rounded-2xl border border-slate-800/50 shadow-sm text-center sm:text-left"><p className="text-[10px] text-slate-500 uppercase font-extrabold tracking-wider mb-1">Propostas</p><p className="text-2xl font-extrabold text-white">{orcamentosVendedorFiltrados.length}</p></div>
+                     <div className="bg-[#0B192C] p-4 rounded-2xl border border-slate-800/50 shadow-sm text-center sm:text-left"><p className="text-[10px] text-slate-500 uppercase font-extrabold tracking-wider mb-1">Kits String</p><p className="text-2xl font-extrabold text-blue-400">{orcamentosVendedorFiltrados.filter(o => o.tipoKit === 'String').length}</p></div>
+                     <div className="bg-[#0B192C] p-4 rounded-2xl border border-slate-800/50 shadow-sm text-center sm:text-left"><p className="text-[10px] text-slate-500 uppercase font-extrabold tracking-wider mb-1">Kits Micro</p><p className="text-2xl font-extrabold text-emerald-400">{orcamentosVendedorFiltrados.filter(o => o.tipoKit === 'Micro').length}</p></div>
+                     <div className="bg-[#0B192C] p-4 rounded-2xl border border-slate-800/50 shadow-sm flex flex-col justify-center items-center sm:items-start"><p className="text-[10px] text-slate-500 uppercase font-extrabold tracking-wider mb-1">Status Meta</p><span className="text-xs font-bold text-emerald-400 bg-emerald-400/10 px-2.5 py-1 rounded-md flex items-center gap-1 border border-emerald-400/20 mt-1"><CheckCircle className="w-3 h-3"/> No Ritmo</span></div>
+                  </div>
+                </div>
+
                 <div className="bg-[#030811] rounded-3xl border border-slate-700/60 shadow-[0_0_25px_rgba(245,166,35,0.1)] overflow-hidden w-full">
                     <form onSubmit={handleSubmit} className="p-5 sm:p-10 space-y-8 sm:space-y-10">
                         <div className="space-y-4 sm:space-y-5">
@@ -1763,12 +1682,12 @@ const VendedorView = ({ setView, userData }) => {
                          <div className="relative w-full sm:w-48 group">
                          <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500"><Activity className="w-4 h-4" /></span>
                          <select value={crmStatusFilter} onChange={(e) => setCrmStatusFilter(e.target.value)} className="w-full bg-[#030811] border border-slate-700 rounded-xl py-2 pl-9 pr-8 text-sm text-white focus:border-amber-500 outline-none shadow-inner appearance-none cursor-pointer transition">
-                             <option value="todos">Todos Status</option>
-                             <option value="Negociando">Negociando</option>
-                             <option value="Fin Aprovado">Fin Aprovado</option>
-                             <option value="Fin Reprovado">Fin Reprovado</option>
-                             <option value="Não Interessou">Não Interessou</option>
-                             <option value="Fechou">Fechou</option>
+                             <option value="todos" className="bg-[#0B192C] text-white">Todos Status</option>
+                             <option value="Negociando" className="bg-[#0B192C] text-white">Negociando</option>
+                             <option value="Fin Aprovado" className="bg-[#0B192C] text-white">Fin Aprovado</option>
+                             <option value="Fin Reprovado" className="bg-[#0B192C] text-white">Fin Reprovado</option>
+                             <option value="Não Interessou" className="bg-[#0B192C] text-white">Não Interessou</option>
+                             <option value="Fechou" className="bg-[#0B192C] text-white">Fechou</option>
                          </select>
                          <ChevronDown className="w-4 h-4 absolute right-3 top-2.5 text-slate-500 pointer-events-none" />
                          </div>
@@ -1776,19 +1695,19 @@ const VendedorView = ({ setView, userData }) => {
                      <div className="w-full overflow-x-auto pb-2 sm:pb-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
                        <div className="flex items-center gap-2 w-max">
                          <div className="flex items-center bg-[#030811] border border-slate-700 rounded-xl p-1 shadow-inner shrink-0">
-                           <button onClick={() => setTimeFilter('hoje')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${timeFilter === 'hoje' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-white'}`}>Hoje</button>
-                           <button onClick={() => setTimeFilter('semana')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${timeFilter === 'semana' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-white'}`}>Semana</button>
-                           <button onClick={() => setTimeFilter('quinzena')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${timeFilter === 'quinzena' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-white'}`}>Quinzena</button>
-                           <button onClick={() => setTimeFilter('mes')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${timeFilter === 'mes' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-white'}`}>Mês</button>
+                           <button onClick={() => {setTimeFilter('hoje'); setCustomStartVend(''); setCustomEndVend('');}} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${timeFilter === 'hoje' ? 'bg-amber-500 text-slate-900 shadow-sm' : 'text-slate-400 hover:text-white'}`}>Hoje</button>
+                           <button onClick={() => {setTimeFilter('semana'); setCustomStartVend(''); setCustomEndVend('');}} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${timeFilter === 'semana' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-white'}`}>Semana</button>
+                           <button onClick={() => {setTimeFilter('quinzena'); setCustomStartVend(''); setCustomEndVend('');}} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${timeFilter === 'quinzena' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-white'}`}>Quinzena</button>
+                           <button onClick={() => {setTimeFilter('mes'); setCustomStartVend(''); setCustomEndVend('');}} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${timeFilter === 'mes' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-white'}`}>Mês</button>
                            {timeFilter === 'personalizado' ? (
                                <div className="flex items-center gap-2 ml-1 bg-slate-800 px-2 py-1 rounded-lg border border-amber-500/30">
-                                  <input type="date" value={customStartVend} onChange={(e) => setCustomStartVend(e.target.value)} className="bg-transparent text-xs text-amber-400 outline-none cursor-pointer [color-scheme:dark]" />
+                                  <input type="date" value={customStartVend} onChange={(e) => setCustomStartVend(e.target.value)} className="bg-transparent text-xs text-white outline-none [&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:invert" />
                                   <span className="text-slate-500 text-xs">até</span>
-                                  <input type="date" value={customEndVend} onChange={(e) => setCustomEndVend(e.target.value)} className="bg-transparent text-xs text-amber-400 outline-none cursor-pointer [color-scheme:dark]" />
-                                  <button onClick={() => setTimeFilter('semana')} className="ml-1 text-slate-400 hover:text-red-400 transition" title="Fechar calendário"><X className="w-3 h-3"/></button>
+                                  <input type="date" value={customEndVend} onChange={(e) => setCustomEndVend(e.target.value)} className="bg-transparent text-xs text-white outline-none [&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:invert" />
+                                  <button onClick={() => setTimeFilter('semana')} className="text-slate-500 hover:text-red-400 ml-1"><X className="w-3 h-3"/></button>
                                </div>
                            ) : (
-                               <button onClick={() => setTimeFilter('personalizado')} className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1 text-slate-400 hover:text-white whitespace-nowrap`}><Calendar className="w-3 h-3"/> Personalizado</button>
+                               <button onClick={() => setTimeFilter('personalizado')} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 text-slate-500 hover:text-white whitespace-nowrap`}><Calendar className="w-3 h-3"/> Personalizado</button>
                            )}
                          </div>
                        </div>
@@ -1803,7 +1722,7 @@ const VendedorView = ({ setView, userData }) => {
                    ) : (
                      <table className="w-full text-left text-sm text-slate-300 min-w-max">
                        <thead className="text-[10px] uppercase tracking-widest bg-[#030811] text-slate-500 font-bold border-b border-slate-800 sticky top-0 z-10">
-                         <tr><th className="px-4 py-3 rounded-tl-lg">Data / Hora</th><th className="px-4 py-3">Cliente</th><th className="px-4 py-3">Cidade</th><th className="px-4 py-3">Estrutura</th><th className="px-4 py-3">Inversor</th><th className="px-4 py-3 text-center">Placas</th><th className="px-4 py-3 text-center">Status do Lead</th><th className="px-4 py-3 rounded-tr-lg text-right">Valor (R$)</th></tr>
+                         <tr><th className="px-4 py-3 rounded-tl-lg">Data / Hora</th><th className="px-4 py-3">Cliente</th><th className="px-4 py-3">WhatsApp</th><th className="px-4 py-3">Cidade</th><th className="px-4 py-3">Estrutura</th><th className="px-4 py-3">Kit Solar</th><th className="px-4 py-3 text-center">Status</th><th className="px-4 py-3 rounded-tr-lg text-right">Valor (R$)</th></tr>
                        </thead>
                        <tbody className="divide-y divide-slate-800/50">
                          {orcamentosVendedorFiltrados.length === 0 ? (
@@ -1812,24 +1731,11 @@ const VendedorView = ({ setView, userData }) => {
                            orcamentosVendedorFiltrados.map((sim) => (
                              <tr key={sim.id} className="hover:bg-slate-800/40 transition">
                                <td className="px-4 py-3 text-xs text-slate-400 whitespace-nowrap">{sim.dataVisual}</td>
-                               <td className="px-4 py-3 whitespace-nowrap">
-                                  <div className="font-bold text-white">{sim.cliente}</div>
-                                  {sim.whatsapp ? (
-                                      <button 
-                                        onClick={() => window.open(`https://wa.me/${String(sim.whatsapp).replace(/\D/g, '').length >= 10 && !String(sim.whatsapp).replace(/\D/g, '').startsWith('55') ? '55' + String(sim.whatsapp).replace(/\D/g, '') : String(sim.whatsapp).replace(/\D/g, '')}`, '_blank')}
-                                        className="inline-flex items-center gap-1.5 text-[10px] font-bold text-emerald-400 hover:text-emerald-300 transition mt-1 cursor-pointer"
-                                      >
-                                        <MessageSquare className="w-3 h-3" />
-                                        {sim.whatsapp}
-                                      </button>
-                                    ) : (
-                                      <span className="text-[10px] text-slate-600 italic mt-1 block">Sem número</span>
-                                    )}
-                               </td>
+                               <td className="px-4 py-3 whitespace-nowrap"><div className="font-bold text-white">{sim.cliente}</div></td>
+                               <td className="px-4 py-3 font-mono text-xs whitespace-nowrap">{sim.whatsapp}</td>
                                <td className="px-4 py-3 text-xs whitespace-nowrap">{sim.cidade}</td>
-                               <td className="px-4 py-3 text-xs whitespace-nowrap">{sim.estrutura || '--'}</td>
-                               <td className="px-4 py-3 text-xs text-amber-500 whitespace-nowrap">{sim.inversor || '--'}</td>
-                               <td className="px-4 py-3 text-sm font-bold text-white text-center whitespace-nowrap">{sim.placas || '--'}</td>
+                               <td className="px-4 py-3 text-xs whitespace-nowrap">{sim.estrutura}</td>
+                               <td className="px-4 py-3 text-xs font-semibold whitespace-nowrap"><span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider mr-2 ${sim.tipoKit === 'String' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'}`}>{sim.tipoKit}</span>{sim.kit}</td>
                                <td className="px-4 py-3 text-center whitespace-nowrap">
                                    <select 
                                       value={sim.status || 'Negociando'} 
@@ -1840,11 +1746,11 @@ const VendedorView = ({ setView, userData }) => {
                                            sim.status === 'Fin Aprovado' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
                                            'bg-amber-500/10 text-amber-400 border border-amber-500/20'}`}
                                    >
-                                      <option value="Negociando">Negociando</option>
-                                      <option value="Fin Aprovado">Fin Aprovado</option>
-                                      <option value="Fin Reprovado">Fin Reprovado</option>
-                                      <option value="Não Interessou">Não Interessou</option>
-                                      <option value="Fechou">Fechou</option>
+                                      <option value="Negociando" className="bg-[#0B192C] text-white">Negociando</option>
+                                      <option value="Fin Aprovado" className="bg-[#0B192C] text-white">Fin Aprovado</option>
+                                      <option value="Fin Reprovado" className="bg-[#0B192C] text-white">Fin Reprovado</option>
+                                      <option value="Não Interessou" className="bg-[#0B192C] text-white">Não Interessou</option>
+                                      <option value="Fechou" className="bg-[#0B192C] text-white">Fechou</option>
                                    </select>
                                </td>
                                <td className="px-4 py-3 text-right font-bold text-amber-500 whitespace-nowrap">{formatarMoeda(sim.valor)}</td>
@@ -1909,8 +1815,8 @@ export default function App() {
         });
         
         const sortKits = (a, b) => {
-            const valA = parseFloat(String(a.Valor).replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
-            const valB = parseFloat(String(b.Valor).replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
+            const valA = parseFloat(String(a.Valor).replace(/[^\d.,-]/g, '').replace(',', '.')) || 0;
+            const valB = parseFloat(String(b.Valor).replace(/[^\d.,-]/g, '').replace(',', '.')) || 0;
             return valA - valB;
         };
 
