@@ -261,6 +261,7 @@ const MasterView = ({ setView }) => {
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editEmpresaModal, setEditEmpresaModal] = useState(null);
+  const [empresaToDelete, setEmpresaToDelete] = useState(null);
   
   const [empresas, setEmpresas] = useState([]);
   const [loadingEmpresas, setLoadingEmpresas] = useState(true);
@@ -269,6 +270,12 @@ const MasterView = ({ setView }) => {
 
   const [novaEmpresa, setNovaEmpresa] = useState({ nomeFantasia: '', socio: '', whatsapp: '', email: '', plano: 'Free [Teste Ilimitado 14 dias]', senha: '' });
   const [empresaLoading, setEmpresaLoading] = useState(false);
+
+  const [toast, setToast] = useState(null);
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
 
   useEffect(() => {
     const q = query(collection(db, "usuarios"));
@@ -321,7 +328,7 @@ const MasterView = ({ setView }) => {
 
   const handleCreateEmpresa = async () => {
     if(!novaEmpresa.nomeFantasia || !novaEmpresa.email || novaEmpresa.senha.length < 6) {
-      return alert('Preencha todos os campos obrigatórios e use uma senha com pelo menos 6 caracteres.');
+      return showToast('Preencha os campos obrigatórios e use uma senha com pelo menos 6 caracteres.', 'error');
     }
     
     setEmpresaLoading(true);
@@ -339,13 +346,13 @@ const MasterView = ({ setView }) => {
       });
       
       await signOut(secondaryAuth); 
-      alert(`Empresa "${novaEmpresa.nomeFantasia}" cadastrada com sucesso!`);
+      showToast(`Empresa "${novaEmpresa.nomeFantasia}" cadastrada com sucesso!`, 'success');
       
       setNovaEmpresa({ nomeFantasia: '', socio: '', whatsapp: '', email: '', plano: 'Free [Teste Ilimitado 14 dias]', senha: '' });
       setIsModalOpen(false);
     } catch (err) {
       console.error(err);
-      alert('Erro ao criar a empresa: ' + err.message);
+      showToast('Erro ao criar a empresa: ' + err.message, 'error');
     } finally {
       setEmpresaLoading(false);
     }
@@ -355,15 +362,51 @@ const MasterView = ({ setView }) => {
     const novoStatus = empresa.status === 'Bloqueada' ? 'Ativa' : 'Bloqueada';
     try {
         await updateDoc(doc(db, 'usuarios', empresa.id), { status: novoStatus });
-        alert(`Acesso de ${empresa.nome} foi ${novoStatus === 'Bloqueada' ? 'bloqueado' : 'desbloqueado'}.`);
+        showToast(`Acesso de ${empresa.nome} foi ${novoStatus === 'Bloqueada' ? 'bloqueado' : 'desbloqueado'}.`, 'success');
     } catch (err) {
         console.error("Erro ao alterar status:", err);
-        alert("Erro ao alterar o status da empresa.");
+        showToast("Erro ao alterar o status da empresa.", "error");
+    }
+  };
+
+  const confirmDeleteEmpresa = async () => {
+    if (!empresaToDelete) return;
+    try {
+        const batch = writeBatch(db);
+
+        // 1. Apaga todos os Orcamentos desta empresa
+        const snapOrc = await getDocs(query(collection(db, "orcamentos")));
+        snapOrc.forEach(d => { if (d.data().empresaId === empresaToDelete.id) batch.delete(doc(db, "orcamentos", d.id)); });
+
+        // 2. Apaga todos os Kits desta empresa
+        const snapKits = await getDocs(query(collection(db, "kits")));
+        snapKits.forEach(d => { if (d.data().empresaId === empresaToDelete.id) batch.delete(doc(db, "kits", d.id)); });
+
+        // 3. Apaga todos os Vendedores vinculados a esta empresa
+        const snapUsers = await getDocs(query(collection(db, "usuarios")));
+        snapUsers.forEach(d => { if (d.data().empresaId === empresaToDelete.id && d.data().role === 'vendedor') batch.delete(doc(db, "usuarios", d.id)); });
+
+        // 4. Apaga a conta da Empresa
+        batch.delete(doc(db, "usuarios", empresaToDelete.id));
+
+        await batch.commit();
+        showToast(`Empresa e todos os seus dados excluídos com sucesso!`, 'success');
+        setEmpresaToDelete(null);
+    } catch (error) {
+        console.error("Erro ao excluir", error);
+        showToast("Erro ao excluir a empresa e seus dados.", "error");
     }
   };
 
   return (
     <DashboardLayout title="Visão Master (LD Negócios)" setView={setView} role="master" currentTab={currentTab} setCurrentTab={setCurrentTab}>
+      {toast && (
+        <div className={`fixed top-24 right-5 z-[100] flex items-center space-x-3 px-5 py-4 rounded-xl shadow-2xl transition-all duration-300 ${toast.type === 'error' ? 'bg-red-500' : 'bg-emerald-500'} text-white border border-white/10`}>
+          {toast.type === 'error' ? <AlertCircle className="w-5 h-5 flex-shrink-0" /> : <CheckCircle className="w-5 h-5 flex-shrink-0" />}
+          <span className="text-sm font-medium leading-snug">{toast.message}</span>
+        </div>
+      )}
+
       {currentTab === 'dashboard' && (
         <div className="space-y-6">
            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -443,6 +486,9 @@ const MasterView = ({ setView }) => {
                           <button className="text-slate-400 hover:text-white transition p-1" title="Editar Empresa" onClick={() => setEditEmpresaModal(item)}><Settings className="w-4 h-4" /></button>
                           <button className="text-slate-400 hover:text-amber-500 transition p-1" title={item.status === 'Bloqueada' ? 'Desbloquear Acesso' : 'Suspender Acesso'} onClick={() => toggleEmpresaStatus(item)}>
                               {item.status === 'Bloqueada' ? <CheckCircle className="w-4 h-4 text-emerald-500" /> : <AlertCircle className="w-4 h-4 text-red-500" />}
+                          </button>
+                          <button className="text-slate-400 hover:text-red-500 transition p-1" title="Excluir Empresa" onClick={() => setEmpresaToDelete(item)}>
+                              <Trash2 className="w-4 h-4" />
                           </button>
                         </td>
                       </tr>
@@ -531,19 +577,33 @@ const MasterView = ({ setView }) => {
                    </div>
                    <button 
                      onClick={async () => {
-                        if(!editEmpresaModal.nome) return alert('O nome é obrigatório.');
+                        if(!editEmpresaModal.nome) return showToast('O nome é obrigatório.', 'error');
                         try {
                             await updateDoc(doc(db, 'usuarios', editEmpresaModal.id), { nome: editEmpresaModal.nome, plano: editEmpresaModal.plano });
                             setEditEmpresaModal(null);
-                            alert('Empresa atualizada com sucesso!');
+                            showToast('Empresa atualizada com sucesso!', 'success');
                         } catch (err) {
                             console.error(err);
-                            alert('Erro ao atualizar empresa.');
+                            showToast('Erro ao atualizar empresa.', 'error');
                         }
                      }} 
                      className="w-full bg-gradient-to-r from-amber-400 to-orange-500 text-slate-900 font-extrabold py-3 rounded-xl mt-2 transition hover:scale-[1.02]">
                      Salvar Alterações
                    </button>
+                 </div>
+               </div>
+            </div>
+          )}
+
+          {empresaToDelete && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm text-left">
+               <div className="bg-[#0B192C] border border-red-900/30 rounded-3xl p-6 w-full max-w-sm shadow-2xl relative">
+                 <h3 className="text-xl font-extrabold text-white mb-2 text-center text-red-400">Excluir Empresa?</h3>
+                 <p className="text-sm text-slate-300 mb-4 text-center">Tem a certeza que deseja excluir permanentemente <strong>{empresaToDelete.nome}</strong>?</p>
+                 <p className="text-[11px] leading-relaxed text-slate-400 mb-6 text-center bg-red-500/10 p-3 rounded-xl border border-red-500/20"><strong>Atenção Absoluta:</strong> Esta ação apagará TODOS os vendedores, TODOS os orçamentos e TODOS os kits desta empresa para sempre. Não é possível desfazer.</p>
+                 <div className="flex gap-3">
+                     <button onClick={() => setEmpresaToDelete(null)} className="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-xl transition">Cancelar</button>
+                     <button onClick={confirmDeleteEmpresa} className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl transition">Sim, Excluir Tudo</button>
                  </div>
                </div>
             </div>
@@ -852,7 +912,6 @@ const EmpresaView = ({ setView, userData }) => {
     }
   };
 
-  // Funções de Gestão de Vendedores
   const toggleVendedorStatus = async (vendedor) => {
     const novoStatus = vendedor.status === 'Bloqueado' ? 'Ativo' : 'Bloqueado';
     try {
@@ -1233,7 +1292,7 @@ const EmpresaView = ({ setView, userData }) => {
                           });
                           await signOut(secondaryAuth);
                           showToast('Vendedor cadastrado com sucesso e já pode fazer login!', 'success');
-                          setNovoVendedor({ nome: '', whatsapp: '', email: '', senha: '' });
+                          setNovoVendedor({ nome: '', email: '', whatsapp: '', senha: '' });
                           setIsVendedorModalOpen(false);
                         } catch (err) {
                           console.error(err);
@@ -1307,7 +1366,7 @@ const EmpresaView = ({ setView, userData }) => {
                             </ol>
                         </div>
                         <label className="border-2 border-dashed border-slate-700 rounded-2xl p-8 flex flex-col items-center justify-center hover:bg-slate-800/50 transition cursor-pointer group">
-                            <input type="file" className="hidden" accept=".xlsx, .csv, .xls" onChange={handleSimulateUpload} />
+                            <input type="file" className="hidden" accept=".xlsx, .csv, .xls" onChange={handleRealUpload} />
                             <FileSpreadsheet className="w-10 h-10 text-slate-500 group-hover:text-amber-500 mb-2 transition" />
                             <p className="text-sm font-bold text-slate-300">Clique para selecionar a planilha</p>
                         </label>
@@ -1596,7 +1655,7 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
                                     <label className="block text-xs font-semibold text-slate-300 mb-2">1: Kits String *</label>
                                     <select id="kitString" value={formData.kitString} onChange={handleInputChange} className="w-full bg-[#0B192C] border border-slate-700 focus:border-amber-500 rounded-xl py-3.5 pl-11 pr-8 text-sm text-white transition outline-none appearance-none shadow-inner cursor-pointer truncate">
                                       <option value="" disabled>-- Selecione Kit String --</option>
-                                      {kitsString.length === 0 ? <option disabled>Sem kits. Faça Upload no CRM.</option> : kitsString.map((k, i) => <option key={i} value={i}>{k.Kit} - {formatarMoeda(k.Valor)}</option>)}
+                                      {kitsString.length === 0 ? <option disabled>Sem kits. Faça Upload no CRM.</option> : kitsString.map((k, i) => <option key={i} value={i} className="bg-[#0B192C] text-white">{k.Kit} - {formatarMoeda(k.Valor)}</option>)}
                                     </select>
                                     <span className="absolute inset-y-0 right-0 flex items-center pr-3 mt-6 pointer-events-none text-slate-400"><ChevronDown className="w-4 h-4"/></span>
                                 </div>
@@ -1605,7 +1664,7 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
                                     <label className="block text-xs font-semibold text-slate-300 mb-2">2: Kits Micro *</label>
                                     <select id="kitMicro" value={formData.kitMicro} onChange={handleInputChange} className="w-full bg-[#0B192C] border border-slate-700 focus:border-amber-500 rounded-xl py-3.5 pl-11 pr-8 text-sm text-white transition outline-none appearance-none shadow-inner cursor-pointer truncate">
                                       <option value="" disabled>-- Selecione Kit Micro --</option>
-                                      {kitsMicro.length === 0 ? <option disabled>Sem kits. Faça Upload no CRM.</option> : kitsMicro.map((k, i) => <option key={i} value={i}>{k.Kit} - {formatarMoeda(k.Valor)}</option>)}
+                                      {kitsMicro.length === 0 ? <option disabled>Sem kits. Faça Upload no CRM.</option> : kitsMicro.map((k, i) => <option key={i} value={i} className="bg-[#0B192C] text-white">{k.Kit} - {formatarMoeda(k.Valor)}</option>)}
                                     </select>
                                     <span className="absolute inset-y-0 right-0 flex items-center pr-3 mt-6 pointer-events-none text-slate-400"><ChevronDown className="w-4 h-4"/></span>
                                 </div>
@@ -1614,7 +1673,11 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
                                 <div className="relative group">
                                     <label className="block text-xs font-semibold text-slate-300 mb-2">Estrutura do Telhado *</label>
                                     <span className="absolute inset-y-0 left-0 flex items-center pl-4 mt-6 text-slate-400 group-focus-within:text-amber-400 transition-colors"><Building className="w-4 h-4"/></span>
-                                    <select id="roofStructure" value={formData.roofStructure} onChange={handleInputChange} className="w-full bg-[#0B192C] border border-slate-700 focus:border-amber-500 rounded-xl py-3.5 pl-11 pr-8 text-sm text-white transition outline-none appearance-none shadow-inner cursor-pointer truncate"><option value="" disabled>-- Selecione a Estrutura --</option><option value="Madeira">1: Madeira</option><option value="Ferro">2: Ferro</option></select>
+                                    <select id="roofStructure" value={formData.roofStructure} onChange={handleInputChange} className="w-full bg-[#0B192C] border border-slate-700 focus:border-amber-500 rounded-xl py-3.5 pl-11 pr-8 text-sm text-white transition outline-none appearance-none shadow-inner cursor-pointer truncate">
+                                      <option value="" disabled>-- Selecione a Estrutura --</option>
+                                      <option value="Madeira" className="bg-[#0B192C] text-white">1: Madeira</option>
+                                      <option value="Ferro" className="bg-[#0B192C] text-white">2: Ferro</option>
+                                    </select>
                                     <span className="absolute inset-y-0 right-0 flex items-center pr-3 mt-6 pointer-events-none text-slate-400"><ChevronDown className="w-4 h-4"/></span>
                                 </div>
                             </div>
@@ -1680,89 +1743,48 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
                      <h3 className="text-xl font-bold text-white flex items-center gap-2"><List className="w-6 h-6 text-amber-500"/> Meus Orçamentos (CRM)</h3>
                      <p className="text-sm text-slate-400 mt-1">Faça a gestão e acompanhamento das suas vendas.</p>
                    </div>
-                   <div className="flex flex-col w-full lg:w-auto gap-3">
-                     <div className="flex flex-col sm:flex-row gap-2">
-                         <div className="relative w-full sm:w-48 group">
-                         <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500"><Activity className="w-4 h-4" /></span>
-                         <select value={crmStatusFilter} onChange={(e) => setCrmStatusFilter(e.target.value)} className="w-full bg-[#030811] border border-slate-700 rounded-xl py-2 pl-9 pr-8 text-sm text-white focus:border-amber-500 outline-none shadow-inner appearance-none cursor-pointer transition">
-                             <option value="todos" className="bg-[#0B192C] text-white">Todos Status</option>
-                             <option value="Negociando" className="bg-[#0B192C] text-white">Negociando</option>
-                             <option value="Fin Aprovado" className="bg-[#0B192C] text-white">Fin Aprovado</option>
-                             <option value="Fin Reprovado" className="bg-[#0B192C] text-white">Fin Reprovado</option>
-                             <option value="Não Interessou" className="bg-[#0B192C] text-white">Não Interessou</option>
-                             <option value="Fechou" className="bg-[#0B192C] text-white">Fechou</option>
-                         </select>
-                         <ChevronDown className="w-4 h-4 absolute right-3 top-2.5 text-slate-500 pointer-events-none" />
-                         </div>
-                     </div>
-                     <div className="w-full overflow-x-auto pb-2 sm:pb-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
-                       <div className="flex items-center gap-2 w-max">
-                         <div className="flex items-center bg-[#030811] border border-slate-700 rounded-xl p-1 shadow-inner shrink-0">
-                           <button onClick={() => {setTimeFilter('hoje'); setCustomStartVend(''); setCustomEndVend('');}} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${timeFilter === 'hoje' ? 'bg-amber-500 text-slate-900 shadow-sm' : 'text-slate-400 hover:text-white'}`}>Hoje</button>
-                           <button onClick={() => {setTimeFilter('semana'); setCustomStartVend(''); setCustomEndVend('');}} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${timeFilter === 'semana' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-white'}`}>Semana</button>
-                           <button onClick={() => {setTimeFilter('quinzena'); setCustomStartVend(''); setCustomEndVend('');}} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${timeFilter === 'quinzena' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-white'}`}>Quinzena</button>
-                           <button onClick={() => {setTimeFilter('mes'); setCustomStartVend(''); setCustomEndVend('');}} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${timeFilter === 'mes' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-white'}`}>Mês</button>
-                           {timeFilter === 'personalizado' ? (
-                               <div className="flex items-center gap-2 ml-1 bg-slate-800 px-2 py-1 rounded-lg border border-amber-500/30">
-                                  <input type="date" value={customStartVend} onChange={(e) => setCustomStartVend(e.target.value)} className="bg-transparent text-xs text-white outline-none [&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:invert" />
-                                  <span className="text-slate-500 text-xs">até</span>
-                                  <input type="date" value={customEndVend} onChange={(e) => setCustomEndVend(e.target.value)} className="bg-transparent text-xs text-white outline-none [&::-webkit-calendar-picker-indicator]:filter [&::-webkit-calendar-picker-indicator]:invert" />
-                                  <button onClick={() => setTimeFilter('semana')} className="text-slate-500 hover:text-red-400 ml-1"><X className="w-3 h-3"/></button>
-                               </div>
-                           ) : (
-                               <button onClick={() => setTimeFilter('personalizado')} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 text-slate-500 hover:text-white whitespace-nowrap`}><Calendar className="w-3 h-3"/> Personalizado</button>
-                           )}
-                         </div>
-                       </div>
-                     </div>
-                   </div>
                  </div>
                  <div className="flex-1 overflow-x-auto p-4 max-h-[60vh]">
-                   {loadingCRM ? (
-                      <div className="flex justify-center items-center h-32">
-                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500"></div>
-                      </div>
-                   ) : (
-                     <table className="w-full text-left text-sm text-slate-300 min-w-max">
-                       <thead className="text-[10px] uppercase tracking-widest bg-[#030811] text-slate-500 font-bold border-b border-slate-800 sticky top-0 z-10">
-                         <tr><th className="px-4 py-3 rounded-tl-lg">Data / Hora</th><th className="px-4 py-3">Cliente</th><th className="px-4 py-3">WhatsApp</th><th className="px-4 py-3">Cidade</th><th className="px-4 py-3">Estrutura</th><th className="px-4 py-3">Kit Solar</th><th className="px-4 py-3 text-center">Status</th><th className="px-4 py-3 rounded-tr-lg text-right">Valor (R$)</th></tr>
-                       </thead>
-                       <tbody className="divide-y divide-slate-800/50">
-                         {orcamentosVendedorFiltrados.length === 0 ? (
-                           <tr><td colSpan="8" className="text-center py-8 text-slate-500 font-bold">Nenhum orçamento encontrado com estes filtros.</td></tr>
-                         ) : (
-                           orcamentosVendedorFiltrados.map((sim) => (
-                             <tr key={sim.id} className="hover:bg-slate-800/40 transition">
-                               <td className="px-4 py-3 text-xs text-slate-400 whitespace-nowrap">{sim.dataVisual}</td>
-                               <td className="px-4 py-3 whitespace-nowrap"><div className="font-bold text-white">{sim.cliente}</div></td>
-                               <td className="px-4 py-3 font-mono text-xs whitespace-nowrap">{sim.whatsapp}</td>
-                               <td className="px-4 py-3 text-xs whitespace-nowrap">{sim.cidade}</td>
-                               <td className="px-4 py-3 text-xs whitespace-nowrap">{sim.estrutura}</td>
-                               <td className="px-4 py-3 text-xs font-semibold whitespace-nowrap"><span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider mr-2 ${sim.tipoKit === 'String' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'}`}>{sim.tipoKit}</span>{sim.kit}</td>
-                               <td className="px-4 py-3 text-center whitespace-nowrap">
-                                   <select 
-                                      value={sim.status || 'Negociando'} 
-                                      onChange={(e) => handleStatusChange(sim.id, e.target.value)}
-                                      className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded outline-none cursor-pointer transition-colors
-                                         ${sim.status === 'Fechou' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 
-                                           sim.status === 'Não Interessou' || sim.status === 'Fin Reprovado' ? 'bg-red-500/10 text-red-400 border border-red-500/20' :
-                                           sim.status === 'Fin Aprovado' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
-                                           'bg-amber-500/10 text-amber-400 border border-amber-500/20'}`}
-                                   >
-                                      <option value="Negociando" className="bg-[#0B192C] text-white">Negociando</option>
-                                      <option value="Fin Aprovado" className="bg-[#0B192C] text-white">Fin Aprovado</option>
-                                      <option value="Fin Reprovado" className="bg-[#0B192C] text-white">Fin Reprovado</option>
-                                      <option value="Não Interessou" className="bg-[#0B192C] text-white">Não Interessou</option>
-                                      <option value="Fechou" className="bg-[#0B192C] text-white">Fechou</option>
-                                   </select>
-                               </td>
-                               <td className="px-4 py-3 text-right font-bold text-amber-500 whitespace-nowrap">{formatarMoeda(sim.valor)}</td>
-                             </tr>
-                           ))
-                         )}
-                       </tbody>
-                     </table>
-                   )}
+                   <table className="w-full text-left text-sm text-slate-300 min-w-max">
+                     <thead className="text-[10px] uppercase tracking-widest bg-[#030811] text-slate-500 font-bold border-b border-slate-800 sticky top-0 z-10">
+                       <tr><th className="px-4 py-3 rounded-tl-lg">Data / Hora</th><th className="px-4 py-3">Cliente</th><th className="px-4 py-3">WhatsApp</th><th className="px-4 py-3">Cidade</th><th className="px-4 py-3">Estrutura</th><th className="px-4 py-3">Tipo</th><th className="px-4 py-3">Kit Solar</th><th className="px-4 py-3 text-center">Status</th><th className="px-4 py-3 rounded-tr-lg text-right">Valor (R$)</th></tr>
+                     </thead>
+                     <tbody className="divide-y divide-slate-800/50">
+                       {orcamentosVendedorFiltrados.length === 0 ? (
+                         <tr><td colSpan="9" className="text-center py-8 text-slate-500 font-bold">Nenhum orçamento encontrado com estes filtros.</td></tr>
+                       ) : (
+                         orcamentosVendedorFiltrados.map((sim) => (
+                           <tr key={sim.id} className="hover:bg-slate-800/40 transition">
+                             <td className="px-4 py-3 text-xs text-slate-400 whitespace-nowrap">{sim.dataVisual}</td>
+                             <td className="px-4 py-3 whitespace-nowrap"><div className="font-bold text-white">{sim.cliente}</div></td>
+                             <td className="px-4 py-3 font-mono text-xs whitespace-nowrap">{sim.whatsapp}</td>
+                             <td className="px-4 py-3 text-xs whitespace-nowrap">{sim.cidade}</td>
+                             <td className="px-4 py-3 text-xs whitespace-nowrap">{sim.estrutura}</td>
+                             <td className="px-4 py-3 whitespace-nowrap"><span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${sim.tipoKit === 'String' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'}`}>{sim.tipoKit}</span></td>
+                             <td className="px-4 py-3 text-xs font-semibold whitespace-nowrap">{sim.kit}</td>
+                             <td className="px-4 py-3 text-center whitespace-nowrap">
+                                 <select 
+                                    value={sim.status || 'Negociando'} 
+                                    onChange={(e) => handleStatusChange(sim.id, e.target.value)}
+                                    className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded outline-none cursor-pointer transition-colors
+                                       ${sim.status === 'Fechou' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 
+                                         sim.status === 'Não Interessou' || sim.status === 'Fin Reprovado' ? 'bg-red-500/10 text-red-400 border border-red-500/20' :
+                                         sim.status === 'Fin Aprovado' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
+                                         'bg-amber-500/10 text-amber-400 border border-amber-500/20'}`}
+                                 >
+                                    <option value="Negociando" className="bg-[#0B192C] text-white">Negociando</option>
+                                    <option value="Fin Aprovado" className="bg-[#0B192C] text-white">Fin Aprovado</option>
+                                    <option value="Fin Reprovado" className="bg-[#0B192C] text-white">Fin Reprovado</option>
+                                    <option value="Não Interessou" className="bg-[#0B192C] text-white">Não Interessou</option>
+                                    <option value="Fechou" className="bg-[#0B192C] text-white">Fechou</option>
+                                 </select>
+                             </td>
+                             <td className="px-4 py-3 text-right font-bold text-amber-500 whitespace-nowrap">{formatarMoeda(sim.valor)}</td>
+                           </tr>
+                         ))
+                       )}
+                     </tbody>
+                   </table>
                  </div>
               </div>
             )}
