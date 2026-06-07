@@ -54,6 +54,11 @@ const fallbackKitsMicro = [
   { Kit: 'KIT MICRO 1000KWh (Padrão)', Placas: '13', Modulo: '620W', Inversor: 'TSUNESS TSOL-MX3000D', Valor: '20136.94' }
 ];
 
+const chartData = [
+  { name: 'Seg', propostas: 12, height: '40%' }, { name: 'Ter', propostas: 19, height: '65%' }, { name: 'Qua', propostas: 15, height: '50%' },
+  { name: 'Qui', propostas: 22, height: '80%' }, { name: 'Sex', propostas: 28, height: '100%' }, { name: 'Sáb', propostas: 9, height: '30%' }, { name: 'Dom', propostas: 4, height: '15%' }
+];
+
 // ==========================================
 // 3. LAYOUT BASE DO SAAS 
 // ==========================================
@@ -268,7 +273,7 @@ const MasterView = ({ setView }) => {
   const [estatisticas, setEstatisticas] = useState({ empresas: 0, vendedores: 0 });
   const [totalSimulacoes, setTotalSimulacoes] = useState(0);
 
-  const [novaEmpresa, setNovaEmpresa] = useState({ nomeFantasia: '', socio: '', whatsapp: '', email: '', plano: 'Free [Teste Ilimitado 14 dias]', senha: '' });
+  const [novaEmpresa, setNovaEmpresa] = useState({ nomeFantasia: '', socio: '', whatsapp: '', email: '', plano: 'Free teste Ilimitado 14 dias grátis', senha: '' });
   const [empresaLoading, setEmpresaLoading] = useState(false);
 
   const [toast, setToast] = useState(null);
@@ -348,7 +353,7 @@ const MasterView = ({ setView }) => {
       await signOut(secondaryAuth); 
       showToast(`Empresa "${novaEmpresa.nomeFantasia}" cadastrada com sucesso!`, 'success');
       
-      setNovaEmpresa({ nomeFantasia: '', socio: '', whatsapp: '', email: '', plano: 'Free [Teste Ilimitado 14 dias]', senha: '' });
+      setNovaEmpresa({ nomeFantasia: '', socio: '', whatsapp: '', email: '', plano: 'Free teste Ilimitado 14 dias grátis', senha: '' });
       setIsModalOpen(false);
     } catch (err) {
       console.error(err);
@@ -531,10 +536,11 @@ const MasterView = ({ setView }) => {
                    <div className="relative group">
                      <label className="text-xs font-bold text-slate-400 mb-1 block">Plano Contratado *</label>
                      <select value={novaEmpresa.plano} onChange={(e) => setNovaEmpresa({...novaEmpresa, plano: e.target.value})} className="w-full bg-[#030811] border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-amber-500 appearance-none cursor-pointer">
-                        <option value="Free [Teste Ilimitado 14 dias]" className="bg-[#0B192C] text-white">Free [Teste Ilimitado 14 dias]</option>
-                        <option value="Básico até 5 vendedores [R$ 100,00]" className="bg-[#0B192C] text-white">Básico até 5 vendedores [R$ 100,00]</option>
-                        <option value="Pró até 10 vendedores [R$ 125,00]" className="bg-[#0B192C] text-white">Pró até 10 vendedores [R$ 125,00]</option>
-                        <option value="Master Ilimitado [R$ 150,00]" className="bg-[#0B192C] text-white">Master Ilimitado [R$ 150,00]</option>
+                        <option value="Free teste Ilimitado 14 dias grátis" className="bg-[#0B192C] text-white">Free teste Ilimitado 14 dias grátis</option>
+                        <option value="Bronze até 3 vendedores R$ 75,00" className="bg-[#0B192C] text-white">Bronze até 3 vendedores R$ 75,00</option>
+                        <option value="Prata até 5 vendedores R$ 100,00" className="bg-[#0B192C] text-white">Prata até 5 vendedores R$ 100,00</option>
+                        <option value="Ouro até 10 vendedores R$ 125,00" className="bg-[#0B192C] text-white">Ouro até 10 vendedores R$ 125,00</option>
+                        <option value="Pró Usuários Ilimitados R$ 150,00" className="bg-[#0B192C] text-white">Pró Usuários Ilimitados R$ 150,00</option>
                      </select>
                      <span className="absolute inset-y-0 right-0 flex items-center pr-4 pt-5 pointer-events-none text-slate-400"><ChevronDown className="w-4 h-4"/></span>
                    </div>
@@ -562,11 +568,12 @@ const MasterView = ({ setView }) => {
                    </div>
                    <div className="relative group">
                      <label className="text-xs font-bold text-slate-400 mb-1 block">Plano Contratado</label>
-                     <select value={editEmpresaModal.plano || 'Free [Teste Ilimitado 14 dias]'} onChange={(e) => setEditEmpresaModal({...editEmpresaModal, plano: e.target.value})} className="w-full bg-[#030811] border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-amber-500 appearance-none cursor-pointer">
-                        <option value="Free [Teste Ilimitado 14 dias]" className="bg-[#0B192C] text-white">Free [Teste Ilimitado 14 dias]</option>
-                        <option value="Básico até 5 vendedores [R$ 100,00]" className="bg-[#0B192C] text-white">Básico até 5 vendedores [R$ 100,00]</option>
-                        <option value="Pró até 10 vendedores [R$ 125,00]" className="bg-[#0B192C] text-white">Pró até 10 vendedores [R$ 125,00]</option>
-                        <option value="Master Ilimitado [R$ 150,00]" className="bg-[#0B192C] text-white">Master Ilimitado [R$ 150,00]</option>
+                     <select value={editEmpresaModal.plano || 'Free teste Ilimitado 14 dias grátis'} onChange={(e) => setEditEmpresaModal({...editEmpresaModal, plano: e.target.value})} className="w-full bg-[#030811] border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-amber-500 appearance-none cursor-pointer">
+                        <option value="Free teste Ilimitado 14 dias grátis" className="bg-[#0B192C] text-white">Free teste Ilimitado 14 dias grátis</option>
+                        <option value="Bronze até 3 vendedores R$ 75,00" className="bg-[#0B192C] text-white">Bronze até 3 vendedores R$ 75,00</option>
+                        <option value="Prata até 5 vendedores R$ 100,00" className="bg-[#0B192C] text-white">Prata até 5 vendedores R$ 100,00</option>
+                        <option value="Ouro até 10 vendedores R$ 125,00" className="bg-[#0B192C] text-white">Ouro até 10 vendedores R$ 125,00</option>
+                        <option value="Pró Usuários Ilimitados R$ 150,00" className="bg-[#0B192C] text-white">Pró Usuários Ilimitados R$ 150,00</option>
                      </select>
                      <span className="absolute inset-y-0 right-0 flex items-center pr-4 pt-5 pointer-events-none text-slate-400"><ChevronDown className="w-4 h-4"/></span>
                    </div>
@@ -952,8 +959,9 @@ const EmpresaView = ({ setView, userData }) => {
   const handleOpenNovoVendedor = () => {
       const plano = userData?.plano || '';
       let limite = Infinity;
-      if (plano.includes('Básico')) limite = 5;
-      else if (plano.includes('Pró')) limite = 10;
+      if (plano.includes('Bronze')) limite = 3;
+      else if (plano.includes('Prata')) limite = 5;
+      else if (plano.includes('Ouro')) limite = 10;
       
       if (vendedoresLista.length >= limite) {
           setShowLimitModal(true);
@@ -1655,7 +1663,7 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
                                     <label className="block text-xs font-semibold text-slate-300 mb-2">1: Kits String *</label>
                                     <select id="kitString" value={formData.kitString} onChange={handleInputChange} className="w-full bg-[#0B192C] border border-slate-700 focus:border-amber-500 rounded-xl py-3.5 pl-11 pr-8 text-sm text-white transition outline-none appearance-none shadow-inner cursor-pointer truncate">
                                       <option value="" disabled>-- Selecione Kit String --</option>
-                                      {kitsString.length === 0 ? <option disabled>Sem kits. Faça Upload no CRM.</option> : kitsString.map((k, i) => <option key={i} value={i} className="bg-[#0B192C] text-white">{k.Kit} - {formatarMoeda(k.Valor)}</option>)}
+                                      {kitsString.length === 0 ? <option disabled>Sem kits. Faça Upload no CRM.</option> : kitsString.map((k, i) => <option key={i} value={i} className="bg-[#0B192C] text-white">{k.Kit} - R$ {k.Valor}</option>)}
                                     </select>
                                     <span className="absolute inset-y-0 right-0 flex items-center pr-3 mt-6 pointer-events-none text-slate-400"><ChevronDown className="w-4 h-4"/></span>
                                 </div>
@@ -1664,7 +1672,7 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
                                     <label className="block text-xs font-semibold text-slate-300 mb-2">2: Kits Micro *</label>
                                     <select id="kitMicro" value={formData.kitMicro} onChange={handleInputChange} className="w-full bg-[#0B192C] border border-slate-700 focus:border-amber-500 rounded-xl py-3.5 pl-11 pr-8 text-sm text-white transition outline-none appearance-none shadow-inner cursor-pointer truncate">
                                       <option value="" disabled>-- Selecione Kit Micro --</option>
-                                      {kitsMicro.length === 0 ? <option disabled>Sem kits. Faça Upload no CRM.</option> : kitsMicro.map((k, i) => <option key={i} value={i} className="bg-[#0B192C] text-white">{k.Kit} - {formatarMoeda(k.Valor)}</option>)}
+                                      {kitsMicro.length === 0 ? <option disabled>Sem kits. Faça Upload no CRM.</option> : kitsMicro.map((k, i) => <option key={i} value={i} className="bg-[#0B192C] text-white">{k.Kit} - R$ {k.Valor}</option>)}
                                     </select>
                                     <span className="absolute inset-y-0 right-0 flex items-center pr-3 mt-6 pointer-events-none text-slate-400"><ChevronDown className="w-4 h-4"/></span>
                                 </div>
@@ -1684,9 +1692,9 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
                             <div className="bg-gradient-to-br from-[#0B192C] to-slate-900 border border-slate-700/80 rounded-2xl p-5 sm:p-6 mt-2 grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 relative overflow-hidden shadow-lg">
                                 <div className="absolute -right-8 -bottom-8 text-slate-800/40 pointer-events-none transform rotate-12"><Sun className="w-48 h-48"/></div>
                                 <div className="space-y-1.5 relative z-10"><span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block flex items-center gap-1.5">Qtd. Placas</span><span className="text-base sm:text-lg font-extrabold text-white block truncate">{activeKit ? activeKit.Placas : '--'}</span></div>
+                                <div className="space-y-1.5 relative z-10"><span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block flex items-center gap-1.5">Potência</span><span className="text-base sm:text-lg font-extrabold text-white block truncate">{activeKit ? activeKit.Modulo.replace(/Módulo\s*/gi, '').trim() : '--'}</span></div>
                                 <div className="space-y-1.5 relative z-10"><span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block flex items-center gap-1.5">Inversor</span><span className="text-base sm:text-lg font-extrabold text-white block truncate">{activeKit ? activeKit.Inversor : '--'}</span></div>
-                                <div className="space-y-1.5 relative z-10"><span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block flex items-center gap-1.5">Estrutura</span><span className="text-base sm:text-lg font-extrabold text-white block truncate">{formData.roofStructure || '--'}</span></div>
-                                <div className="space-y-1.5 relative z-10"><span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block flex items-center gap-1.5"><span className="text-emerald-600">Valor do Kit</span></span><span className="text-base sm:text-lg font-extrabold text-emerald-400 block truncate">{activeKit ? formatarMoeda(activeKit.Valor) : '--'}</span></div>
+                                <div className="space-y-1.5 relative z-10"><span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block flex items-center gap-1.5"><span className="text-emerald-600">Valor do Kit</span></span><span className="text-base sm:text-lg font-extrabold text-emerald-400 block truncate">{activeKit ? `R$ ${activeKit.Valor}` : '--'}</span></div>
                             </div>
                         </div>
 
@@ -1760,7 +1768,7 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
                              <td className="px-4 py-3 font-mono text-xs whitespace-nowrap">{sim.whatsapp}</td>
                              <td className="px-4 py-3 text-xs whitespace-nowrap">{sim.cidade}</td>
                              <td className="px-4 py-3 text-xs whitespace-nowrap">{sim.estrutura}</td>
-                             <td className="px-4 py-3 whitespace-nowrap"><span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${sim.tipoKit === 'String' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'}`}>{sim.tipoKit}</span></td>
+                             <td className="px-4 py-3 whitespace-nowrap"><span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider mr-2 ${sim.tipoKit === 'String' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'}`}>{sim.tipoKit}</span></td>
                              <td className="px-4 py-3 text-xs font-semibold whitespace-nowrap">{sim.kit}</td>
                              <td className="px-4 py-3 text-center whitespace-nowrap">
                                  <select 
