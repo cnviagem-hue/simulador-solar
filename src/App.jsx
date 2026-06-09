@@ -151,6 +151,7 @@ const DashboardLayout = ({ children, title, setView, role, currentTab, setCurren
 const LoginView = ({ setView, setUserData }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -232,13 +233,22 @@ const LoginView = ({ setView, setUserData }) => {
           </div>
           <div>
             <label className="text-xs font-semibold text-slate-400 mb-1 block">Senha Segura</label>
-            <input 
-              type="password" 
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••" 
-              className="w-full bg-[#030811] border border-slate-700 focus:border-amber-500 rounded-xl px-4 py-3 text-white text-sm outline-none transition" 
-            />
+            <div className="relative">
+              <input 
+                type={showPassword ? "text" : "password"} 
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••" 
+                className="w-full bg-[#030811] border border-slate-700 focus:border-amber-500 rounded-xl px-4 py-3 pr-10 text-white text-sm outline-none transition" 
+              />
+              <button 
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-amber-500 transition-colors"
+              >
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
           </div>
           <button 
             type="submit" 
@@ -302,8 +312,8 @@ const MasterView = ({ setView }) => {
       });
 
       empresasComEquipa.sort((a, b) => {
-        const timeA = a.dataCriacao?.toMillis() || 0;
-        const timeB = b.dataCriacao?.toMillis() || 0;
+        const timeA = typeof a.dataCriacao?.toMillis === 'function' ? a.dataCriacao.toMillis() : 0;
+        const timeB = typeof b.dataCriacao?.toMillis === 'function' ? b.dataCriacao.toMillis() : 0;
         return timeB - timeA;
       });
 
@@ -325,9 +335,17 @@ const MasterView = ({ setView }) => {
     return () => unsubscribe();
   }, []);
 
+  // PROTEÇÃO CONTRA TELA BRANCA NO FILTRO (BLINDAGEM)
   const empresasFiltradas = empresas.filter(emp => {
-      const matchesSearch = emp.nome?.toLowerCase().includes(searchTerm.toLowerCase()) || emp.email?.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesStatus = statusFilter === 'all' || emp.status?.toLowerCase() === statusFilter.toLowerCase();
+      const nomeStr = String(emp.nome || '').toLowerCase();
+      const emailStr = String(emp.email || '').toLowerCase();
+      const searchStr = String(searchTerm || '').toLowerCase();
+      const matchesSearch = nomeStr.includes(searchStr) || emailStr.includes(searchStr);
+      
+      const statusStr = String(emp.status || '').toLowerCase();
+      const filterStatusStr = String(statusFilter || '').toLowerCase();
+      const matchesStatus = statusFilter === 'all' || statusStr === filterStatusStr;
+      
       return matchesSearch && matchesStatus;
   });
 
@@ -641,7 +659,10 @@ const EmpresaView = ({ setView, userData }) => {
   const [uploadStatus, setUploadStatus] = useState('idle');
   
   const [vendedoresLista, setVendedoresLista] = useState([]);
+  const [vendedorSearchTerm, setVendedorSearchTerm] = useState('');
+  const [vendedorStatusFilter, setVendedorStatusFilter] = useState('all');
   const [loadingVendedores, setLoadingVendedores] = useState(true);
+  
   const [isVendedorModalOpen, setIsVendedorModalOpen] = useState(false);
   const [editVendedorModal, setEditVendedorModal] = useState(null);
   const [vendedorToDelete, setVendedorToDelete] = useState(null);
@@ -653,6 +674,13 @@ const EmpresaView = ({ setView, userData }) => {
   const [loadingCRM, setLoadingCRM] = useState(true);
   const [toast, setToast] = useState(null);
 
+  // NOVO: Estado para armazenar e filtrar os kits da empresa
+  const [meusKits, setMeusKits] = useState([]);
+  const [loadingKits, setLoadingKits] = useState(true);
+  const [kitSearchTerm, setKitSearchTerm] = useState('');
+  const [kitTypeFilter, setKitTypeFilter] = useState('todos');
+  const [editKitModal, setEditKitModal] = useState(null);
+
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
@@ -660,20 +688,22 @@ const EmpresaView = ({ setView, userData }) => {
 
   // Carregar Orçamentos da Nuvem
   useEffect(() => {
+    if (!userData || !userData.uid) return;
     const q = query(collection(db, "orcamentos"), orderBy("timestamp", "desc"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const docs = [];
       querySnapshot.forEach((doc) => {
         const data = doc.data();
+        if (data.empresaId !== userData.uid) return; // BLOQUEIO ABSOLUTO: Impede que empresas vejam orçamentos de outras
         let dataFormatada = 'Sem Data';
         let msTimestamp = 0;
-        if (data.timestamp) {
+        if (data.timestamp && typeof data.timestamp.toDate === 'function') {
            const date = data.timestamp.toDate();
            msTimestamp = date.getTime();
            dataFormatada = date.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
         } else if (data.data) {
-           dataFormatada = data.data;
-           const [dataPart, timePart] = data.data.split(' ');
+           dataFormatada = String(data.data);
+           const [dataPart, timePart] = dataFormatada.split(' ');
            if(dataPart && timePart) {
                const [day, month, year] = dataPart.split('/');
                const [hour, min] = timePart.split(':');
@@ -688,7 +718,7 @@ const EmpresaView = ({ setView, userData }) => {
       setLoadingCRM(false);
     });
     return () => unsubscribe();
-  }, []);
+  }, [userData]);
 
   // Carregar Vendedores da Empresa
   useEffect(() => {
@@ -711,11 +741,37 @@ const EmpresaView = ({ setView, userData }) => {
     return () => unsubscribe();
   }, [userData]);
 
+  // Carregar Kits da Empresa
+  useEffect(() => {
+    if (!userData || !userData.uid) return;
+    const q = query(collection(db, "kits"));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const k = [];
+      querySnapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        if (data.empresaId === userData.uid) {
+          k.push({ id: docSnap.id, ...data });
+        }
+      });
+      k.sort((a, b) => {
+          const valA = parseFloat(String(a.Valor).replace(/[^\d.,-]/g, '').replace(',', '.')) || 0;
+          const valB = parseFloat(String(b.Valor).replace(/[^\d.,-]/g, '').replace(',', '.')) || 0;
+          return valA - valB;
+      });
+      setMeusKits(k);
+      setLoadingKits(false);
+    }, (error) => {
+      console.error(error);
+      setLoadingKits(false);
+    });
+    return () => unsubscribe();
+  }, [userData]);
+
   const orcamentosFiltrados = orcamentos.filter(orc => {
       if (userData && userData.uid && orc.empresaId && orc.empresaId !== userData.uid) return false;
       if (vendedorFilter !== 'todos' && orc.vendedor !== vendedorFilter) return false;
 
-      const currentStatus = orc.status || 'Negociando';
+      const currentStatus = String(orc.status || 'Negociando');
       if (crmStatusFilter !== 'todos' && currentStatus !== crmStatusFilter) return false;
 
       const hojeMs = new Date().getTime();
@@ -857,7 +913,9 @@ const EmpresaView = ({ setView, userData }) => {
           const batch = writeBatch(db);
           
           snapshot.docs.forEach((docSnap) => {
-              batch.delete(doc(db, "kits", docSnap.id));
+              if (docSnap.data().empresaId === userData.uid) {
+                  batch.delete(doc(db, "kits", docSnap.id));
+              }
           });
           
           setUploadStatus('saving');
@@ -899,7 +957,7 @@ const EmpresaView = ({ setView, userData }) => {
 
   const downloadTemplate = (e) => {
     e.preventDefault();
-    const csvContent = "data:text/csv;charset=utf-8,Kit,Placas,Modulo,Inversor,Valor,Tipo\nKIT 500kWh,6,590W,AUXSOL 3K,10000.00,String\nKIT MICRO 300kWh,4,620W,TSUNESS,8500.00,Micro";
+    const csvContent = "data:text/csv;charset=utf-8,Kit;Placas;Modulo;Inversor;Valor;Tipo\n";
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
@@ -957,7 +1015,7 @@ const EmpresaView = ({ setView, userData }) => {
   };
 
   const handleOpenNovoVendedor = () => {
-      const plano = userData?.plano || '';
+      const plano = String(userData?.plano || '');
       let limite = Infinity;
       if (plano.includes('Bronze')) limite = 3;
       else if (plano.includes('Prata')) limite = 5;
@@ -970,6 +1028,32 @@ const EmpresaView = ({ setView, userData }) => {
       }
   };
   
+  // PROTEÇÃO CONTRA TELA BRANCA NO FILTRO (BLINDAGEM)
+  const vendedoresFiltrados = vendedoresLista.filter(vend => {
+      const nomeStr = String(vend.nome || '').toLowerCase();
+      const emailStr = String(vend.email || '').toLowerCase();
+      const searchStr = String(vendedorSearchTerm || '').toLowerCase();
+      const matchesSearch = nomeStr.includes(searchStr) || emailStr.includes(searchStr);
+      
+      const statusStr = String(vend.status || '').toLowerCase();
+      const filterStatusStr = String(vendedorStatusFilter || '').toLowerCase();
+      const matchesStatus = vendedorStatusFilter === 'all' || statusStr === filterStatusStr;
+      
+      return matchesSearch && matchesStatus;
+  });
+
+  // FILTRO E BLINDAGEM DA LISTA DE KITS
+  const kitsFiltrados = meusKits.filter(kit => {
+      const kitNameStr = String(kit.Kit || '').toLowerCase();
+      const searchStr = String(kitSearchTerm || '').toLowerCase();
+      const matchesSearch = kitNameStr.includes(searchStr);
+      
+      const tipoStr = String(kit.Tipo || '');
+      const matchesType = kitTypeFilter === 'todos' || tipoStr === kitTypeFilter;
+      
+      return matchesSearch && matchesType;
+  });
+
   return (
     <DashboardLayout title={`Painel da Empresa (${userData?.nome || 'SolarTech'})`} setView={setView} role="empresa" currentTab={currentTab} setCurrentTab={setCurrentTab}>
       {toast && (
@@ -1113,7 +1197,7 @@ const EmpresaView = ({ setView, userData }) => {
                           <td className="px-4 py-3 font-mono text-xs whitespace-nowrap">{sim.whatsapp}</td>
                           <td className="px-4 py-3 text-xs whitespace-nowrap">{sim.cidade}</td>
                           <td className="px-4 py-3 text-xs whitespace-nowrap">{sim.estrutura}</td>
-                          <td className="px-4 py-3 whitespace-nowrap"><span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${sim.tipoKit === 'String' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'}`}>{sim.tipoKit}</span></td>
+                          <td className="px-4 py-3 whitespace-nowrap"><span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider mr-2 ${sim.tipoKit === 'String' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'}`}>{sim.tipoKit}</span></td>
                           <td className="px-4 py-3 text-xs font-semibold whitespace-nowrap">{sim.kit}</td>
                           <td className="px-4 py-3 text-center whitespace-nowrap">
                               <select 
@@ -1145,12 +1229,26 @@ const EmpresaView = ({ setView, userData }) => {
 
       {currentTab === 'vendedores' && (
         <div className="bg-[#0B192C] border border-slate-800 rounded-2xl overflow-hidden shadow-xl relative w-full">
-          <div className="p-4 sm:p-5 border-b border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-[#0B192C]/50 w-full">
-            <div>
-              <h3 className="text-xl font-bold text-white flex items-center gap-2"><Users className="w-6 h-6 text-amber-500"/> Gestão de Equipa</h3>
-              <p className="text-sm text-slate-400 mt-1">Controle os acessos e informações dos seus consultores comerciais.</p>
+          <div className="p-4 sm:p-5 border-b border-slate-800 flex flex-col gap-4 bg-[#0B192C]/50 w-full">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <h3 className="text-xl font-bold text-white flex items-center gap-2"><Users className="w-6 h-6 text-amber-500"/> Gestão de Equipa</h3>
+                <p className="text-sm text-slate-400 mt-1">Controle os acessos e informações dos seus consultores comerciais.</p>
+              </div>
+              <button onClick={handleOpenNovoVendedor} className="flex items-center justify-center space-x-2 bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-slate-900 font-extrabold px-5 py-2.5 rounded-xl transition shadow-lg w-full sm:w-auto shrink-0"><Plus className="w-4 h-4" /> <span>Novo Vendedor</span></button>
             </div>
-            <button onClick={handleOpenNovoVendedor} className="flex items-center justify-center space-x-2 bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-slate-900 font-extrabold px-5 py-2.5 rounded-xl transition shadow-lg w-full sm:w-auto shrink-0"><Plus className="w-4 h-4" /> <span>Novo Vendedor</span></button>
+            
+            <div className="w-full flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1 group w-full">
+                <Search className="w-4 h-4 absolute left-3.5 top-3 text-slate-500 group-focus-within:text-amber-500" />
+                <input type="text" placeholder="Buscar consultor por nome ou e-mail..." value={vendedorSearchTerm} onChange={(e) => setVendedorSearchTerm(e.target.value)} className="w-full bg-[#030811] border border-slate-700 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white focus:border-amber-500 outline-none shadow-inner transition" />
+              </div>
+              <select value={vendedorStatusFilter} onChange={(e) => setVendedorStatusFilter(e.target.value)} className="w-full sm:w-48 bg-[#030811] border border-slate-700 rounded-xl py-2.5 px-4 text-sm text-white focus:border-amber-500 outline-none shadow-inner transition cursor-pointer appearance-none">
+                  <option value="all" className="bg-[#0B192C] text-white">Todos os Status</option>
+                  <option value="Ativo" className="bg-[#0B192C] text-white">Ativos</option>
+                  <option value="Bloqueado" className="bg-[#0B192C] text-white">Bloqueados</option>
+              </select>
+            </div>
           </div>
           
           <div className="overflow-x-auto w-full block min-h-[300px]">
@@ -1169,16 +1267,15 @@ const EmpresaView = ({ setView, userData }) => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/50">
-                  {vendedoresLista.length === 0 ? (
+                  {vendedoresFiltrados.length === 0 ? (
                     <tr>
                       <td colSpan="4" className="text-center py-16">
                         <Users className="w-12 h-12 text-slate-700 mx-auto mb-3" />
-                        <p className="text-slate-500 font-bold">Nenhum vendedor cadastrado na sua equipa.</p>
-                        <p className="text-xs text-slate-600 mt-1">Clique em "Novo Vendedor" para adicionar o seu primeiro consultor.</p>
+                        <p className="text-slate-500 font-bold">Nenhum vendedor encontrado com estes filtros.</p>
                       </td>
                     </tr>
                   ) : (
-                    vendedoresLista.map((vend) => (
+                    vendedoresFiltrados.map((vend) => (
                       <tr key={vend.id} className="hover:bg-slate-800/40 transition">
                         <td className="px-6 py-4"><div className="font-extrabold text-white text-base">{vend.nome}</div><div className="text-xs text-slate-500 mt-0.5">{vend.email}</div></td>
                         <td className="px-6 py-4">
@@ -1352,12 +1449,158 @@ const EmpresaView = ({ setView, userData }) => {
       )}
 
       {currentTab === 'kits' && (
-        <div className="bg-[#0B192C] border border-slate-800 rounded-2xl p-12 text-center shadow-sm relative">
-          <Zap className="w-16 h-16 mx-auto mb-4 text-slate-700" />
-          <h3 className="text-xl font-bold text-white mb-2">Tabela de Preços e Kits (Nuvem)</h3>
-          <p className="text-slate-400 text-sm max-w-md mx-auto mb-6">Ao fazer upload de uma planilha, os preços nos telemóveis de todos os seus vendedores na rua são atualizados no mesmo segundo!</p>
-          <button onClick={() => setIsUploadModalOpen(true)} className="bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 px-6 py-3 rounded-xl font-bold transition">Fazer Upload de Planilha</button>
-          
+        <div className="space-y-6">
+          <div className="bg-[#0B192C] border border-slate-800 rounded-2xl p-8 sm:p-12 text-center shadow-sm relative">
+            <Zap className="w-16 h-16 mx-auto mb-4 text-slate-700" />
+            <h3 className="text-xl font-bold text-white mb-2">Tabela de Preços e Kits (Nuvem)</h3>
+            <p className="text-slate-400 text-sm max-w-md mx-auto mb-6">Ao fazer upload de uma planilha, os preços nos telemóveis de todos os seus vendedores na rua são atualizados no mesmo segundo!</p>
+            <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
+                <button onClick={() => setIsUploadModalOpen(true)} className="bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 px-6 py-3 rounded-xl font-bold transition flex items-center gap-2">
+                    <FileSpreadsheet className="w-5 h-5"/> Fazer Upload de Planilha
+                </button>
+                <button onClick={downloadTemplate} className="text-amber-500 hover:text-amber-400 font-bold transition flex items-center gap-2 text-sm">
+                    <Download className="w-4 h-4"/> Baixar Modelo (Virgem)
+                </button>
+            </div>
+          </div>
+
+          <div className="bg-[#0B192C] border border-slate-800 rounded-2xl overflow-hidden shadow-xl w-full">
+            <div className="p-4 sm:p-6 border-b border-slate-800 bg-[#0B192C]/80">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                        <h3 className="text-lg font-bold text-white flex items-center gap-2"><Zap className="w-5 h-5 text-amber-500"/> Kits Cadastrados</h3>
+                        <p className="text-xs text-slate-400 mt-1">Consulte abaixo os kits que estão ativos para os seus vendedores.</p>
+                    </div>
+                </div>
+                
+                {/* Filtros da Tabela de Kits */}
+                <div className="w-full flex flex-col sm:flex-row gap-3 mt-4">
+                    <div className="relative flex-1 group w-full">
+                        <Search className="w-4 h-4 absolute left-3.5 top-3 text-slate-500 group-focus-within:text-amber-500" />
+                        <input type="text" placeholder="Pesquisar kit pelo nome..." value={kitSearchTerm} onChange={(e) => setKitSearchTerm(e.target.value)} className="w-full bg-[#030811] border border-slate-700 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white focus:border-amber-500 outline-none shadow-inner transition" />
+                    </div>
+                    <select value={kitTypeFilter} onChange={(e) => setKitTypeFilter(e.target.value)} className="w-full sm:w-48 bg-[#030811] border border-slate-700 rounded-xl py-2.5 px-4 text-sm text-white focus:border-amber-500 outline-none shadow-inner transition cursor-pointer appearance-none">
+                        <option value="todos" className="bg-[#0B192C] text-white">Todos os Tipos</option>
+                        <option value="String" className="bg-[#0B192C] text-white">String</option>
+                        <option value="Micro" className="bg-[#0B192C] text-white">Micro</option>
+                    </select>
+                </div>
+            </div>
+
+            <div className="overflow-x-auto w-full max-h-[400px] overflow-y-auto">
+              {loadingKits ? (
+                 <div className="flex justify-center items-center h-32">
+                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500"></div>
+                 </div>
+              ) : (
+                <table className="w-full text-left text-sm text-slate-300 min-w-max relative">
+                  <thead className="text-[10px] uppercase tracking-widest bg-[#030811] text-slate-500 font-bold border-b border-slate-800 sticky top-0 z-10 shadow-sm">
+                    <tr>
+                      <th className="px-6 py-4">Nome do Kit</th>
+                      <th className="px-6 py-4 text-center">Tipo</th>
+                      <th className="px-6 py-4 text-center">Placas</th>
+                      <th className="px-6 py-4">Módulo</th>
+                      <th className="px-6 py-4">Inversor</th>
+                      <th className="px-6 py-4 text-right">Valor Final</th>
+                      <th className="px-6 py-4 text-center">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/50">
+                    {kitsFiltrados.length === 0 ? (
+                      <tr>
+                        <td colSpan="7" className="text-center py-12 text-slate-500 font-bold">Nenhum kit encontrado.</td>
+                      </tr>
+                    ) : (
+                      kitsFiltrados.map((kit) => (
+                        <tr key={kit.id} className="hover:bg-slate-800/40 transition">
+                          <td className="px-6 py-4 font-extrabold text-white">{kit.Kit}</td>
+                          <td className="px-6 py-4 text-center">
+                              <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${kit.Tipo === 'String' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'}`}>{kit.Tipo}</span>
+                          </td>
+                          <td className="px-6 py-4 text-center">{kit.Placas}</td>
+                          <td className="px-6 py-4 text-xs">{kit.Modulo}</td>
+                          <td className="px-6 py-4 text-xs">{kit.Inversor}</td>
+                          <td className="px-6 py-4 text-right font-bold text-amber-500">{formatarMoeda(kit.Valor)}</td>
+                          <td className="px-6 py-4 text-center">
+                              <button onClick={() => setEditKitModal(kit)} className="text-slate-400 hover:text-white transition p-1" title="Editar este Kit">
+                                  <Settings className="w-4 h-4 mx-auto" />
+                              </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+
+          {/* MODAL DE EDIÇÃO DE KITS */}
+          {editKitModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm text-left">
+               <div className="bg-[#0B192C] border border-slate-800 rounded-3xl p-6 w-full max-w-md shadow-2xl relative">
+                 <button onClick={() => setEditKitModal(null)} className="absolute top-4 right-4 text-slate-500 hover:text-white transition"><LogOut className="w-5 h-5"/></button>
+                 <h3 className="text-xl font-extrabold text-white mb-1">Editar Kit</h3>
+                 <p className="text-xs text-slate-400 mb-4">Atualize os valores e informações deste kit rapidamente.</p>
+                 
+                 <div className="space-y-4">
+                   <div>
+                     <label className="text-xs font-bold text-slate-400 mb-1 block">Nome do Kit</label>
+                     <input type="text" value={editKitModal.Kit} onChange={(e) => setEditKitModal({...editKitModal, Kit: e.target.value})} className="w-full bg-[#030811] border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-amber-500"/>
+                   </div>
+                   
+                   <div className="grid grid-cols-2 gap-4">
+                       <div className="relative">
+                         <label className="text-xs font-bold text-slate-400 mb-1 block">Tipo do Kit</label>
+                         <select value={editKitModal.Tipo} onChange={(e) => setEditKitModal({...editKitModal, Tipo: e.target.value})} className="w-full bg-[#030811] border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-amber-500 appearance-none cursor-pointer">
+                             <option value="String" className="bg-[#0B192C]">String</option>
+                             <option value="Micro" className="bg-[#0B192C]">Micro</option>
+                         </select>
+                         <span className="absolute inset-y-0 right-0 flex items-center pr-3 pt-5 pointer-events-none text-slate-400"><ChevronDown className="w-4 h-4"/></span>
+                       </div>
+                       <div>
+                         <label className="text-xs font-bold text-slate-400 mb-1 block">Quantidade de Placas</label>
+                         <input type="text" value={editKitModal.Placas} onChange={(e) => setEditKitModal({...editKitModal, Placas: e.target.value})} className="w-full bg-[#030811] border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-amber-500"/>
+                       </div>
+                   </div>
+
+                   <div className="grid grid-cols-2 gap-4">
+                       <div>
+                         <label className="text-xs font-bold text-slate-400 mb-1 block">Potência (Módulo)</label>
+                         <input type="text" value={editKitModal.Modulo} onChange={(e) => setEditKitModal({...editKitModal, Modulo: e.target.value})} className="w-full bg-[#030811] border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-amber-500"/>
+                       </div>
+                       <div>
+                         <label className="text-xs font-bold text-slate-400 mb-1 block">Inversor</label>
+                         <input type="text" value={editKitModal.Inversor} onChange={(e) => setEditKitModal({...editKitModal, Inversor: e.target.value})} className="w-full bg-[#030811] border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-amber-500"/>
+                       </div>
+                   </div>
+
+                   <div>
+                     <label className="text-xs font-bold text-slate-400 mb-1 block">Valor Final (apenas números e vírgulas)</label>
+                     <input type="text" value={editKitModal.Valor} onChange={(e) => setEditKitModal({...editKitModal, Valor: e.target.value})} className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-amber-500 font-mono text-sm outline-none focus:border-amber-500"/>
+                   </div>
+
+                   <button 
+                     onClick={async () => {
+                        try {
+                            await updateDoc(doc(db, 'kits', editKitModal.id), { 
+                                Kit: editKitModal.Kit, Tipo: editKitModal.Tipo, Placas: editKitModal.Placas, Modulo: editKitModal.Modulo, Inversor: editKitModal.Inversor, Valor: editKitModal.Valor 
+                            });
+                            setEditKitModal(null);
+                            showToast('Kit atualizado com sucesso e sincronizado nos telemóveis!', 'success');
+                        } catch (err) {
+                            console.error(err);
+                            showToast('Erro ao atualizar kit.', 'error');
+                        }
+                     }} 
+                     className="w-full bg-gradient-to-r from-amber-400 to-orange-500 text-slate-900 font-extrabold py-3 rounded-xl mt-2 transition hover:scale-[1.02]">
+                     Salvar e Sincronizar
+                   </button>
+                 </div>
+               </div>
+            </div>
+          )}
+
           {isUploadModalOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm text-left">
                <div className="bg-[#0B192C] border border-slate-800 rounded-3xl p-6 w-full max-w-md shadow-2xl relative">
@@ -1439,13 +1682,13 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
         if (data.vendedorUid === userData.uid || data.vendedor === userData.nome) {
             let dataFormatada = 'Sem Data';
             let msTimestamp = 0;
-            if (data.timestamp) {
+            if (data.timestamp && typeof data.timestamp.toDate === 'function') {
                const date = data.timestamp.toDate();
                msTimestamp = date.getTime();
                dataFormatada = date.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
             } else if (data.data) {
-               dataFormatada = data.data;
-               const [dataPart, timePart] = data.data.split(' ');
+               dataFormatada = String(data.data);
+               const [dataPart, timePart] = dataFormatada.split(' ');
                if(dataPart && timePart) {
                    const [day, month, year] = dataPart.split('/');
                    const [hour, min] = timePart.split(':');
@@ -1470,7 +1713,12 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
     setFormData(newFormData);
   };
 
-  const activeKit = formData.kitString !== '' ? kitsString[formData.kitString] : formData.kitMicro !== '' ? kitsMicro[formData.kitMicro] : null;
+  // BLINDAGEM NO KITS: Garante que o índice não arrebente a aplicação
+  const activeKit = formData.kitString !== '' && kitsString[formData.kitString] 
+        ? kitsString[formData.kitString] 
+        : formData.kitMicro !== '' && kitsMicro[formData.kitMicro] 
+        ? kitsMicro[formData.kitMicro] 
+        : null;
 
   const [nomeEmpresa, setNomeEmpresa] = useState("Energia Solar ☀️");
   
@@ -1493,9 +1741,14 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
     let kitName = '[Kit Selecionado]', placas = '--', modulo = '--', inversor = '--', valor = '--';
 
     if (activeKit) {
-        kitName = activeKit.Kit; placas = activeKit.Placas; modulo = activeKit.Modulo; inversor = activeKit.Inversor; valor = formatarMoeda(activeKit.Valor);
+        kitName = activeKit.Kit || '--'; 
+        placas = activeKit.Placas || '--'; 
+        modulo = activeKit.Modulo || '--'; 
+        inversor = activeKit.Inversor || '--'; 
+        valor = formatarMoeda(activeKit.Valor);
     }
-    const cleanPotencia = modulo.replace(/Módulo\s*/gi, '').trim();
+    // BLINDAGEM DE STRING: Garantir que o valor "módulo" não dá erro na hora do replace
+    const cleanPotencia = String(modulo || '').replace(/Módulo\s*/gi, '').trim() || '--';
 
     return `Empresa: *${nomeEmpresa}*\n\nSegue o seu orçamento personalizado de Energia Solar\n\n👤 *Cliente:* ${clientName}\n📍 *Cidade:* ${clientCity}\n📱 *Zap:* ${clientWhatsapp}\n\n🏠 *Estrutura do Telhado:* ${roofStructure}\n📦 *Kit Selecionado:* ${kitName}\n☀️ *Placas:* ${placas}\n⚡ *Potência:* ${cleanPotencia}\n🔄 *Inversor:* ${inversor}\n\n💰 *Valor do Kit:* ${valor}\n\n✨ *Condições Especiais:*\n\n💳 Financiamos 100% com Zero de Entrada\n\n📅 Primeira parcela com prazo de até 120 dias para começar a pagar\n\n💼 Atendido por: *${sellerName}*\n\nFicamos à disposição para esclarecer dúvidas e realizar o seu projeto.`;
   };
@@ -1504,6 +1757,10 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
     e.preventDefault();
     if (!formData.sellerName || (!formData.kitString && !formData.kitMicro) || !formData.roofStructure || !formData.clientName || !formData.clientWhatsapp || !formData.clientCity) {
       return showToast('Preencha todos os campos obrigatórios!');
+    }
+
+    if (!activeKit) {
+      return showToast('Por favor, selecione um kit válido.', 'error');
     }
 
     let cleanPhone = formData.clientWhatsapp.replace(/\D/g, '');
@@ -1521,8 +1778,8 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
         cidade: formData.clientCity,
         estrutura: formData.roofStructure, 
         tipoKit: formData.kitString !== '' ? 'String' : 'Micro', 
-        kit: activeKit.Kit, 
-        valor: activeKit.Valor, 
+        kit: activeKit.Kit || 'Kit Padrão', 
+        valor: activeKit.Valor || '0', 
         timestamp: serverTimestamp(),
         msTimestamp: dateNow.getTime(),
         empresaId: userData?.empresaId || 'padrao', 
@@ -1549,7 +1806,7 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
   };
 
   const orcamentosVendedorFiltrados = orcamentos.filter(orc => {
-    if (crmStatusFilter !== 'todos' && (orc.status || 'Negociando') !== crmStatusFilter) return false;
+    if (crmStatusFilter !== 'todos' && String(orc.status || 'Negociando') !== crmStatusFilter) return false;
     
     const hojeIncio = new Date();
     hojeIncio.setHours(0, 0, 0, 0);
@@ -1663,7 +1920,7 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
                                     <label className="block text-xs font-semibold text-slate-300 mb-2">1: Kits String *</label>
                                     <select id="kitString" value={formData.kitString} onChange={handleInputChange} className="w-full bg-[#0B192C] border border-slate-700 focus:border-amber-500 rounded-xl py-3.5 pl-11 pr-8 text-sm text-white transition outline-none appearance-none shadow-inner cursor-pointer truncate">
                                       <option value="" disabled>-- Selecione Kit String --</option>
-                                      {kitsString.length === 0 ? <option disabled>Sem kits. Faça Upload no CRM.</option> : kitsString.map((k, i) => <option key={i} value={i} className="bg-[#0B192C] text-white">{k.Kit} - R$ {k.Valor}</option>)}
+                                      {kitsString.length === 0 ? <option disabled>Sem kits. Faça Upload no CRM.</option> : kitsString.map((k, i) => <option key={i} value={i} className="bg-[#0B192C] text-white">{k.Kit || '--'} - R$ {formatarMoeda(k.Valor)}</option>)}
                                     </select>
                                     <span className="absolute inset-y-0 right-0 flex items-center pr-3 mt-6 pointer-events-none text-slate-400"><ChevronDown className="w-4 h-4"/></span>
                                 </div>
@@ -1672,7 +1929,7 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
                                     <label className="block text-xs font-semibold text-slate-300 mb-2">2: Kits Micro *</label>
                                     <select id="kitMicro" value={formData.kitMicro} onChange={handleInputChange} className="w-full bg-[#0B192C] border border-slate-700 focus:border-amber-500 rounded-xl py-3.5 pl-11 pr-8 text-sm text-white transition outline-none appearance-none shadow-inner cursor-pointer truncate">
                                       <option value="" disabled>-- Selecione Kit Micro --</option>
-                                      {kitsMicro.length === 0 ? <option disabled>Sem kits. Faça Upload no CRM.</option> : kitsMicro.map((k, i) => <option key={i} value={i} className="bg-[#0B192C] text-white">{k.Kit} - R$ {k.Valor}</option>)}
+                                      {kitsMicro.length === 0 ? <option disabled>Sem kits. Faça Upload no CRM.</option> : kitsMicro.map((k, i) => <option key={i} value={i} className="bg-[#0B192C] text-white">{k.Kit || '--'} - R$ {formatarMoeda(k.Valor)}</option>)}
                                     </select>
                                     <span className="absolute inset-y-0 right-0 flex items-center pr-3 mt-6 pointer-events-none text-slate-400"><ChevronDown className="w-4 h-4"/></span>
                                 </div>
@@ -1691,10 +1948,11 @@ const VendedorView = ({ setView, kitsString, kitsMicro, userData }) => {
                             </div>
                             <div className="bg-gradient-to-br from-[#0B192C] to-slate-900 border border-slate-700/80 rounded-2xl p-5 sm:p-6 mt-2 grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 relative overflow-hidden shadow-lg">
                                 <div className="absolute -right-8 -bottom-8 text-slate-800/40 pointer-events-none transform rotate-12"><Sun className="w-48 h-48"/></div>
-                                <div className="space-y-1.5 relative z-10"><span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block flex items-center gap-1.5">Qtd. Placas</span><span className="text-base sm:text-lg font-extrabold text-white block truncate">{activeKit ? activeKit.Placas : '--'}</span></div>
-                                <div className="space-y-1.5 relative z-10"><span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block flex items-center gap-1.5">Potência</span><span className="text-base sm:text-lg font-extrabold text-white block truncate">{activeKit ? activeKit.Modulo.replace(/Módulo\s*/gi, '').trim() : '--'}</span></div>
-                                <div className="space-y-1.5 relative z-10"><span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block flex items-center gap-1.5">Inversor</span><span className="text-base sm:text-lg font-extrabold text-white block truncate">{activeKit ? activeKit.Inversor : '--'}</span></div>
-                                <div className="space-y-1.5 relative z-10"><span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block flex items-center gap-1.5"><span className="text-emerald-600">Valor do Kit</span></span><span className="text-base sm:text-lg font-extrabold text-emerald-400 block truncate">{activeKit ? `R$ ${activeKit.Valor}` : '--'}</span></div>
+                                {/* BLINDAGEM VISUAL: Garantir que se a propriedade for nula, não quebra a tela com o replace */}
+                                <div className="space-y-1.5 relative z-10"><span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block flex items-center gap-1.5">Qtd. Placas</span><span className="text-base sm:text-lg font-extrabold text-white block truncate">{activeKit ? (activeKit.Placas || '--') : '--'}</span></div>
+                                <div className="space-y-1.5 relative z-10"><span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block flex items-center gap-1.5">Potência</span><span className="text-base sm:text-lg font-extrabold text-white block truncate">{activeKit ? String(activeKit.Modulo || '').replace(/Módulo\s*/gi, '').trim() || '--' : '--'}</span></div>
+                                <div className="space-y-1.5 relative z-10"><span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block flex items-center gap-1.5">Inversor</span><span className="text-base sm:text-lg font-extrabold text-white block truncate">{activeKit ? (activeKit.Inversor || '--') : '--'}</span></div>
+                                <div className="space-y-1.5 relative z-10"><span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block flex items-center gap-1.5"><span className="text-emerald-600">Valor do Kit</span></span><span className="text-base sm:text-lg font-extrabold text-emerald-400 block truncate">{activeKit && activeKit.Valor ? formatarMoeda(activeKit.Valor) : '--'}</span></div>
                             </div>
                         </div>
 
